@@ -4,6 +4,7 @@ import Relatorios from "./components/Relatorios";
 import Historico from "./components/Historico";
 import Definicoes from "./components/Definicoes";
 import SobreProjeto from "./components/SobreProjeto";
+import Dietas from "./components/Dietas";
 
 import "./App.css";
 
@@ -56,25 +57,51 @@ export default function App() {
         </div>
 
         <nav>
-          <button onClick={() => setPagina("dashboard")}>Dashboard</button>
-          <button onClick={() => setPagina("relatorios")}>Relatórios</button>
-          <button onClick={() => setPagina("historico")}>Histórico</button>
-          <button onClick={() => setPagina("definicoes")}>Definições</button>
-          <button onClick={() => setPagina("sobre")}>Sobre o Projeto</button>
+          <button onClick={() => setPagina("dashboard")}>
+            Dashboard
+          </button>
+
+          <button onClick={() => setPagina("dietas")}>
+            Dietas
+          </button>
+
+          <button onClick={() => setPagina("relatorios")}>
+            Relatórios
+          </button>
+
+          <button onClick={() => setPagina("historico")}>
+            Histórico
+          </button>
+
+          <button onClick={() => setPagina("definicoes")}>
+            Definições
+          </button>
+
+          <button onClick={() => setPagina("sobre")}>
+            Sobre o Projeto
+          </button>
 
           <button onClick={() => setDarkMode(!darkMode)}>
             {darkMode ? "Modo claro" : "Modo escuro"}
           </button>
 
-          <button onClick={() => setAutenticado(false)}>Sair</button>
+          <button onClick={() => setAutenticado(false)}>
+            Sair
+          </button>
         </nav>
       </aside>
 
       <main className="conteudo">
         {pagina === "dashboard" && <Dashboard />}
+
+        {pagina === "dietas" && <Dietas />}
+
         {pagina === "relatorios" && <Relatorios />}
+
         {pagina === "historico" && <Historico />}
+
         {pagina === "definicoes" && <Definicoes />}
+
         {pagina === "sobre" && <SobreProjeto />}
       </main>
     </div>

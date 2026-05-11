@@ -1,185 +1,182 @@
 import { useEffect, useState } from "react";
-import Graficos from "./Graficos";
 
-export default function Dashboard() {
-  const dadosGuardados =
-    JSON.parse(localStorage.getItem("ipssRefeicoes")) || {};
-
-  const historicoGuardado =
-    JSON.parse(localStorage.getItem("ipssHistorico")) || [];
-
-  const [instituicao, setInstituicao] = useState(
-    dadosGuardados.instituicao || "Centro Social / IPSS"
-  );
-
-  const [creche, setCreche] = useState(dadosGuardados.creche || 80);
-  const [lar, setLar] = useState(dadosGuardados.lar || 60);
-  const [apoio, setApoio] = useState(dadosGuardados.apoio || 60);
-  const [trabalhadores, setTrabalhadores] = useState(
-    dadosGuardados.trabalhadores || 40
-  );
-
-  const [custoRefeicao, setCustoRefeicao] = useState(
-    dadosGuardados.custoRefeicao || 3.5
-  );
-
-  const [historico, setHistorico] = useState(historicoGuardado);
+function Dashboard() {
+  const [dadosIPSS, setDadosIPSS] = useState({});
+  const [stocks, setStocks] = useState([]);
+  const [movimentos, setMovimentos] = useState([]);
 
   useEffect(() => {
-    localStorage.setItem(
-      "ipssRefeicoes",
-      JSON.stringify({
-        instituicao,
-        creche,
-        lar,
-        apoio,
-        trabalhadores,
-        custoRefeicao,
-      })
-    );
-  }, [instituicao, creche, lar, apoio, trabalhadores, custoRefeicao]);
+    setDadosIPSS(JSON.parse(localStorage.getItem("dadosIPSS")) || {});
+    setStocks(JSON.parse(localStorage.getItem("ipssStocks")) || []);
+    setMovimentos(JSON.parse(localStorage.getItem("ipssMovimentosStock")) || []);
+  }, []);
 
-  const totalRefeicoes = creche + lar + apoio + trabalhadores;
-  const custoDiario = totalRefeicoes * custoRefeicao;
-  const custoMensal = custoDiario * 30;
-  const litrosSopa = totalRefeicoes * 0.25;
+  const produtosStockBaixo = stocks.filter(
+    (item) => Number(item.quantidade) <= Number(item.stockMinimo || 0)
+  );
 
-  function guardarDia() {
-    const novoRegisto = {
-      id: Date.now(),
-      data: new Date().toLocaleDateString("pt-PT"),
-      instituicao,
-      creche,
-      lar,
-      apoio,
-      trabalhadores,
-      totalRefeicoes,
-      custoRefeicao,
-      custoDiario,
-      custoMensal,
-      litrosSopa,
-    };
+  const totalEntradas = movimentos.filter((m) => m.tipo === "Entrada").length;
+  const totalSaidas = movimentos.filter((m) => m.tipo === "Saída").length;
 
-    const novoHistorico = [novoRegisto, ...historico];
-
-    setHistorico(novoHistorico);
-    localStorage.setItem("ipssHistorico", JSON.stringify(novoHistorico));
-  }
+  const maxQuantidade = Math.max(
+    ...stocks.map((item) => Number(item.quantidade) || 0),
+    1
+  );
 
   return (
-    <div>
-      <div className="topo-dashboard">
-        <div>
-          <h2>Dashboard</h2>
-          <p className="subtitulo">{instituicao}</p>
+    <div className="dashboard">
+      <h1>Dashboard Geral</h1>
+
+      <p className="dashboard-subtitle">
+        Visão global da gestão alimentar da IPSS.
+      </p>
+
+      <div className="dashboard-section">
+        <h2>Identificação da IPSS</h2>
+        <p><strong>Instituição:</strong> {dadosIPSS.nomeInstituicao || "Não preenchido"}</p>
+        <p><strong>Localidade:</strong> {dadosIPSS.localidade || "Não preenchido"}</p>
+        <p><strong>Responsável pela cozinha:</strong> {dadosIPSS.responsavelCozinha || "Não preenchido"}</p>
+      </div>
+
+      <div className="dashboard-cards">
+        <div className="dashboard-card">
+          <h3>Produtos em Stock</h3>
+          <p>{stocks.length}</p>
+          <span>produtos registados</span>
         </div>
 
-        <div className="data-box">
-          <span>{new Date().toLocaleDateString("pt-PT")}</span>
+        <div className="dashboard-card">
+          <h3>Stock Baixo</h3>
+          <p>{produtosStockBaixo.length}</p>
+          <span>produtos a repor</span>
+        </div>
+
+        <div className="dashboard-card">
+          <h3>Entradas</h3>
+          <p>{totalEntradas}</p>
+          <span>movimentos de entrada</span>
+        </div>
+
+        <div className="dashboard-card">
+          <h3>Saídas</h3>
+          <p>{totalSaidas}</p>
+          <span>movimentos de saída</span>
         </div>
       </div>
 
-      <div className="cards-grid">
-        <div className="card destaque">
-          <span>Total refeições</span>
-          <strong>{totalRefeicoes}</strong>
-        </div>
+      <div className="dashboard-section">
+        <h2>Gráfico de Quantidades em Stock</h2>
 
-        <div className="card">
-          <span>Creche</span>
-          <strong>{creche}</strong>
-        </div>
+        {stocks.length === 0 ? (
+          <p>Ainda não existem produtos registados.</p>
+        ) : (
+          <div className="grafico-barras">
+            {stocks.slice(0, 8).map((item, index) => {
+              const percentagem =
+                (Number(item.quantidade) / maxQuantidade) * 100;
 
-        <div className="card">
-          <span>Lar</span>
-          <strong>{lar}</strong>
-        </div>
+              return (
+                <div className="linha-grafico" key={index}>
+                  <span className="nome-produto">
+                    {item.nome || item.produto}
+                  </span>
 
-        <div className="card">
-          <span>Apoio domiciliário</span>
-          <strong>{apoio}</strong>
-        </div>
+                  <div className="barra-fundo">
+                    <div
+                      className="barra-preenchida"
+                      style={{ width: `${percentagem}%` }}
+                    ></div>
+                  </div>
 
-        <div className="card">
-          <span>Trabalhadores</span>
-          <strong>{trabalhadores}</strong>
-        </div>
+                  <span className="valor-produto">
+                    {item.quantidade} {item.unidade}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
-        <div className="card">
-          <span>Custo diário</span>
-          <strong>{custoDiario.toFixed(2)}€</strong>
-        </div>
+      <div className="dashboard-section">
+        <h2>Resumo de Movimentos</h2>
 
-        <div className="card">
-          <span>Custo mensal</span>
-          <strong>{custoMensal.toFixed(2)}€</strong>
-        </div>
+        <div className="grafico-movimentos">
+          <div className="movimento-card">
+            <strong>Entradas</strong>
+            <span>{totalEntradas}</span>
+          </div>
 
-        <div className="card">
-          <span>Litros de sopa</span>
-          <strong>{litrosSopa.toFixed(1)}L</strong>
+          <div className="movimento-card">
+            <strong>Saídas</strong>
+            <span>{totalSaidas}</span>
+          </div>
         </div>
       </div>
 
-      <div className="painel">
-        <h3>Dados da instituição</h3>
+      <div className="dashboard-section">
+        <h2>Alertas de Stock</h2>
 
-        <label>Nome da instituição</label>
-        <input
-          type="text"
-          value={instituicao}
-          onChange={(e) => setInstituicao(e.target.value)}
-        />
+        {produtosStockBaixo.length === 0 ? (
+          <p className="success-message">Não existem produtos com stock baixo.</p>
+        ) : (
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Quantidade atual</th>
+                <th>Stock mínimo</th>
+                <th>Unidade</th>
+              </tr>
+            </thead>
 
-        <label>Refeições da creche</label>
-        <input
-          type="number"
-          value={creche}
-          onChange={(e) => setCreche(Number(e.target.value))}
-        />
-
-        <label>Refeições do lar</label>
-        <input
-          type="number"
-          value={lar}
-          onChange={(e) => setLar(Number(e.target.value))}
-        />
-
-        <label>Apoio domiciliário</label>
-        <input
-          type="number"
-          value={apoio}
-          onChange={(e) => setApoio(Number(e.target.value))}
-        />
-
-        <label>Trabalhadores</label>
-        <input
-          type="number"
-          value={trabalhadores}
-          onChange={(e) => setTrabalhadores(Number(e.target.value))}
-        />
-
-        <label>Custo médio por refeição (€)</label>
-        <input
-          type="number"
-          step="0.1"
-          value={custoRefeicao}
-          onChange={(e) => setCustoRefeicao(Number(e.target.value))}
-        />
-
-        <button className="botao-principal" onClick={guardarDia}>
-          Guardar registo diário
-        </button>
+            <tbody>
+              {produtosStockBaixo.map((item, index) => (
+                <tr key={index}>
+                  <td>{item.nome || item.produto}</td>
+                  <td>{item.quantidade}</td>
+                  <td>{item.stockMinimo}</td>
+                  <td>{item.unidade}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      <div className="grafico-container">
-        <Graficos
-          creche={creche}
-          lar={lar}
-          apoio={apoio}
-          trabalhadores={trabalhadores}
-        />
+      <div className="dashboard-section">
+        <h2>Últimos movimentos de stock</h2>
+
+        {movimentos.length === 0 ? (
+          <p>Ainda não existem movimentos registados.</p>
+        ) : (
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Tipo</th>
+                <th>Produto</th>
+                <th>Quantidade</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {movimentos.slice(-5).reverse().map((movimento, index) => (
+                <tr key={index}>
+                  <td>{movimento.data || "Sem data"}</td>
+                  <td>{movimento.tipo || "Movimento"}</td>
+                  <td>{movimento.produto}</td>
+                  <td>
+                    {movimento.quantidade} {movimento.unidade}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
 }
+
+export default Dashboard;

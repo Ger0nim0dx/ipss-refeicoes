@@ -63,62 +63,42 @@ export default function App() {
         </div>
 
         <nav>
-          <button onClick={() => setPagina("dashboard")}>
-            Dashboard
+          <button onClick={() => setPagina("dashboard")}>Dashboard</button>
+
+          <button onClick={() => setPagina("dados-ipss")}>
+            Dados da IPSS
           </button>
 
-          <button onClick={() => setPagina("capitacoes")}>
-            Capitações
-          </button>
+          <button onClick={() => setPagina("capitacoes")}>Capitações</button>
 
-          <button onClick={() => setPagina("ementa")}>
-            Ementa
-          </button>
+          <button onClick={() => setPagina("ementa")}>Ementa</button>
 
-          <button onClick={() => setPagina("custos")}>
-            Custos
-          </button>
+          <button onClick={() => setPagina("custos")}>Custos</button>
 
-          <button onClick={() => setPagina("dietas")}>
-            Dietas
-          </button>
+          <button onClick={() => setPagina("dietas")}>Dietas</button>
 
-          <button onClick={() => setPagina("fichas")}>
-            Fichas Técnicas
-          </button>
+          <button onClick={() => setPagina("fichas")}>Fichas Técnicas</button>
 
-          <button onClick={() => setPagina("stocks")}>
-            Stocks
-          </button>
+          <button onClick={() => setPagina("stocks")}>Stocks</button>
 
-          <button onClick={() => setPagina("relatorios")}>
-            Relatórios
-          </button>
+          <button onClick={() => setPagina("relatorios")}>Relatórios</button>
 
-          <button onClick={() => setPagina("historico")}>
-            Histórico
-          </button>
+          <button onClick={() => setPagina("historico")}>Histórico</button>
 
-          <button onClick={() => setPagina("definicoes")}>
-            Definições
-          </button>
-
-          <button onClick={() => setPagina("sobre")}>
-            Sobre o Projeto
-          </button>
+          <button onClick={() => setPagina("sobre")}>Sobre o Projeto</button>
 
           <button onClick={() => setDarkMode(!darkMode)}>
             {darkMode ? "Modo claro" : "Modo escuro"}
           </button>
 
-          <button onClick={() => setAutenticado(false)}>
-            Sair
-          </button>
+          <button onClick={() => setAutenticado(false)}>Sair</button>
         </nav>
       </aside>
 
       <main className="conteudo">
         {pagina === "dashboard" && <Dashboard />}
+
+        {pagina === "dados-ipss" && <Definicoes />}
 
         {pagina === "capitacoes" && <Capitacoes />}
 
@@ -135,8 +115,6 @@ export default function App() {
         {pagina === "relatorios" && <Relatorios />}
 
         {pagina === "historico" && <Historico />}
-
-        {pagina === "definicoes" && <Definicoes />}
 
         {pagina === "sobre" && <SobreProjeto />}
       </main>

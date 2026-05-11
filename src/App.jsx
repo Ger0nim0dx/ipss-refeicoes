@@ -5,6 +5,11 @@ import Historico from "./components/Historico";
 import Definicoes from "./components/Definicoes";
 import SobreProjeto from "./components/SobreProjeto";
 import Dietas from "./components/Dietas";
+import Capitacoes from "./components/Capitacoes";
+import Ementa from "./components/Ementa";
+import Custos from "./components/Custos";
+import FichasTecnicas from "./components/FichasTecnicas";
+import Stocks from "./components/Stocks";
 
 import "./App.css";
 
@@ -22,8 +27,9 @@ export default function App() {
           <h1>Gestão de Refeições</h1>
 
           <p>
-            Plataforma digital para apoio à gestão de refeições,
-            custos e relatórios em contexto IPSS.
+            Plataforma digital para apoio à gestão de refeições, custos,
+            ementas, dietas, fichas técnicas, stocks e relatórios em contexto
+            IPSS.
           </p>
 
           <button
@@ -61,8 +67,28 @@ export default function App() {
             Dashboard
           </button>
 
+          <button onClick={() => setPagina("capitacoes")}>
+            Capitações
+          </button>
+
+          <button onClick={() => setPagina("ementa")}>
+            Ementa
+          </button>
+
+          <button onClick={() => setPagina("custos")}>
+            Custos
+          </button>
+
           <button onClick={() => setPagina("dietas")}>
             Dietas
+          </button>
+
+          <button onClick={() => setPagina("fichas")}>
+            Fichas Técnicas
+          </button>
+
+          <button onClick={() => setPagina("stocks")}>
+            Stocks
           </button>
 
           <button onClick={() => setPagina("relatorios")}>
@@ -94,7 +120,17 @@ export default function App() {
       <main className="conteudo">
         {pagina === "dashboard" && <Dashboard />}
 
+        {pagina === "capitacoes" && <Capitacoes />}
+
+        {pagina === "ementa" && <Ementa />}
+
+        {pagina === "custos" && <Custos />}
+
         {pagina === "dietas" && <Dietas />}
+
+        {pagina === "fichas" && <FichasTecnicas />}
+
+        {pagina === "stocks" && <Stocks />}
 
         {pagina === "relatorios" && <Relatorios />}
 

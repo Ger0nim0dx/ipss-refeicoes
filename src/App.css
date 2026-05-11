@@ -1,0 +1,508 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  background: #f3f4f6;
+}
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* SIDEBAR */
+
+.sidebar {
+  width: 260px;
+  background: linear-gradient(180deg, #145c2a, #0f3d1d);
+  color: white;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  border-top-right-radius: 25px;
+  border-bottom-right-radius: 25px;
+}
+
+.logo-area {
+  margin-bottom: 50px;
+}
+
+.logo-area h1 {
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+
+.logo-area p {
+  opacity: 0.8;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sidebar button {
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 14px;
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 17px;
+  transition: 0.3s;
+}
+
+.sidebar button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* CONTEÚDO */
+
+.conteudo {
+  flex: 1;
+  padding: 40px;
+}
+
+/* TOPO */
+
+.topo-dashboard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.topo-dashboard h2 {
+  font-size: 40px;
+  color: #111827;
+}
+
+.subtitulo {
+  color: #6b7280;
+  margin-top: 8px;
+}
+
+.data-box {
+  background: white;
+  padding: 14px 20px;
+  border-radius: 14px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  font-weight: bold;
+}
+
+/* CARDS */
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  margin-bottom: 35px;
+}
+
+.card {
+  background: white;
+  padding: 25px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  transition: transform 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+.card span {
+  color: #6b7280;
+}
+
+.card strong {
+  font-size: 34px;
+  color: #145c2a;
+}
+
+.destaque {
+  background: linear-gradient(135deg, #145c2a, #1b7a3a);
+  color: white;
+}
+
+.destaque span,
+.destaque strong {
+  color: white;
+}
+
+/* PAINEL */
+
+.painel {
+  background: white;
+  padding: 30px;
+  border-radius: 22px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+
+  margin-bottom: 35px;
+}
+
+.painel h3 {
+  margin-bottom: 10px;
+  color: #111827;
+}
+
+.painel label {
+  font-weight: bold;
+  color: #374151;
+}
+
+.painel input {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  font-size: 16px;
+}
+
+.painel input:focus {
+  outline: none;
+  border-color: #145c2a;
+}
+
+/* GRÁFICO */
+
+.grafico-container {
+  background: white;
+  padding: 30px;
+  border-radius: 22px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.grafico-container h3 {
+  margin-bottom: 20px;
+  color: #111827;
+}
+/* HISTÓRICO */
+
+.historico-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.historico-card {
+  background: white;
+  padding: 25px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  transition: transform 0.2s;
+}
+
+.historico-card:hover {
+  transform: translateY(-5px);
+}
+
+.historico-card h3 {
+  color: #145c2a;
+  margin-bottom: 10px;
+}
+
+.historico-card p {
+  color: #374151;
+}
+
+/* BOTÃO */
+
+.botao-principal {
+  background: #145c2a;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: 0.3s;
+}
+
+.botao-principal:hover {
+  background: #0f3d1d;
+}
+/* LOGIN */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background: linear-gradient(135deg, #145c2a, #0f3d1d);
+}
+
+.login-card {
+  width: 420px;
+
+  background: white;
+
+  padding: 50px;
+
+  border-radius: 30px;
+
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+
+  text-align: center;
+}
+
+.login-logo {
+  width: 100px;
+  height: 100px;
+
+  margin: 0 auto;
+
+  border-radius: 50%;
+
+  background: linear-gradient(135deg, #145c2a, #1b7a3a);
+
+  color: white;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.login-card h1 {
+  color: #111827;
+  font-size: 34px;
+}
+
+.login-card p {
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.login-footer {
+  color: #9ca3af;
+  font-size: 14px;
+}
+/* DARK MODE */
+
+.dark {
+  background: #111827;
+  color: white;
+}
+
+.dark .conteudo {
+  background: #111827;
+}
+
+.dark .card,
+.dark .painel,
+.dark .grafico-container,
+.dark .historico-card,
+.dark .data-box,
+.dark .login-card {
+  background: #1f2937;
+  color: white;
+}
+
+.dark .card span,
+.dark .subtitulo,
+.dark .historico-card p,
+.dark .login-card p,
+.dark .login-footer {
+  color: #d1d5db;
+}
+
+.dark .painel label,
+.dark .topo-dashboard h2,
+.dark .historico-card h3,
+.dark .login-card h1 {
+  color: white;
+}
+
+.dark .painel input {
+  background: #374151;
+  color: white;
+  border: 1px solid #4b5563;
+}
+
+.botao-secundario {
+  background: #374151;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.botao-secundario:hover {
+  background: #4b5563;
+}
+/* RESPONSIVO */
+
+@media (max-width: 1024px) {
+  .conteudo {
+    padding: 25px;
+  }
+
+  .cards-grid {
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(180px, 1fr)
+    );
+  }
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-radius: 0;
+
+    padding: 20px;
+  }
+
+  .sidebar nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .sidebar button {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+  }
+
+  .conteudo {
+    padding: 20px;
+  }
+
+  .topo-dashboard {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .painel {
+    padding: 20px;
+  }
+
+  .grafico-container {
+    padding: 20px;
+  }
+
+  .login-card {
+    width: 90%;
+    padding: 35px 25px;
+  }
+}
+
+@media (max-width: 480px) {
+  .topo-dashboard h2 {
+    font-size: 28px;
+  }
+
+  .card strong {
+    font-size: 28px;
+  }
+
+  .sidebar nav {
+    flex-direction: column;
+  }
+
+  .sidebar button {
+    width: 100%;
+  }
+
+  .login-logo {
+    width: 80px;
+    height: 80px;
+    font-size: 24px;
+  }
+
+  .login-card h1 {
+    font-size: 28px;
+  }
+}
+/* SOBRE O PROJETO */
+
+.sobre-container {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.sobre-card {
+  background: white;
+  padding: 35px;
+  border-radius: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sobre-card h3 {
+  color: #145c2a;
+}
+
+.sobre-card p {
+  color: #374151;
+  line-height: 1.7;
+}
+
+.sobre-card ul {
+  padding-left: 20px;
+  color: #374151;
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* DARK */
+
+.dark .sobre-card {
+  background: #1f2937;
+}
+
+.dark .sobre-card p,
+.dark .sobre-card ul {
+  color: #d1d5db;
+}
+
+.dark .sobre-card h3 {
+  color: #4ade80;
+}

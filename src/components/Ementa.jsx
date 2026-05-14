@@ -1,223 +1,489 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function Ementa() {
-  const ementasGuardadas =
-    JSON.parse(localStorage.getItem("ipssEmentas")) || [];
+  const [fichas, setFichas] = useState([]);
+  const [stocks, setStocks] = useState([]);
 
-  const refeicoesGuardadas =
-    JSON.parse(localStorage.getItem("ipssRefeicoes")) || {};
-
-  const capitacoesGuardadas =
-    JSON.parse(localStorage.getItem("ipssCapitacoes")) || {};
-
-  const totalRefeicoes =
-    (refeicoesGuardadas.creche || 0) +
-    (refeicoesGuardadas.lar || 0) +
-    (refeicoesGuardadas.apoio || 0) +
-    (refeicoesGuardadas.trabalhadores || 0);
-
-  const sopaMl = capitacoesGuardadas.sopaMl || 250;
-  const carnePeixeG = capitacoesGuardadas.carnePeixeG || 120;
-  const acompanhamentoG = capitacoesGuardadas.acompanhamentoG || 180;
-  const legumesG = capitacoesGuardadas.legumesG || 100;
-  const paoG = capitacoesGuardadas.paoG || 50;
-  const sobremesaG = capitacoesGuardadas.sobremesaG || 120;
-
-  const litrosSopa = (totalRefeicoes * sopaMl) / 1000;
-  const kgCarnePeixe = (totalRefeicoes * carnePeixeG) / 1000;
-  const kgAcompanhamento = (totalRefeicoes * acompanhamentoG) / 1000;
-  const kgLegumes = (totalRefeicoes * legumesG) / 1000;
-  const kgPao = (totalRefeicoes * paoG) / 1000;
-  const kgSobremesa = (totalRefeicoes * sobremesaG) / 1000;
-
-  const [data, setData] = useState(
-    new Date().toISOString().split("T")[0]
+  const [ementa, setEmenta] = useState(
+    JSON.parse(localStorage.getItem("ipssEmenta")) || {}
   );
-  const [sopa, setSopa] = useState("");
-  const [prato, setPrato] = useState("");
-  const [dietaAlternativa, setDietaAlternativa] = useState("");
-  const [sobremesa, setSobremesa] = useState("");
-  const [observacoes, setObservacoes] = useState("");
 
-  const [listaEmentas, setListaEmentas] = useState(ementasGuardadas);
+  useEffect(() => {
+    const fichasGuardadas =
+      JSON.parse(localStorage.getItem("ipssFichasTecnicas")) || [];
 
-  function guardarEmenta() {
-    if (!sopa && !prato && !sobremesa) return;
+    const stocksGuardados =
+      JSON.parse(localStorage.getItem("ipssStocks")) || [];
 
+    setFichas(fichasGuardadas);
+    setStocks(stocksGuardados);
+  }, []);
+
+  const diasSemana = [
+    "Segunda-feira",
+    "Terça-feira",
+    "Quarta-feira",
+    "Quinta-feira",
+    "Sexta-feira",
+    "Sábado",
+    "Domingo",
+  ];
+
+  const refeicoes = [
+    "Pequeno-almoço",
+    "Reforço da manhã",
+    "Almoço",
+    "Lanche",
+    "Jantar",
+    "Reforço da noite",
+  ];
+
+  function atualizarEmenta(dia, refeicao, receitaId) {
     const novaEmenta = {
-      id: Date.now(),
-      data,
-      sopa,
-      prato,
-      dietaAlternativa,
-      sobremesa,
-      observacoes,
-      totalRefeicoes,
-      litrosSopa,
-      kgCarnePeixe,
-      kgAcompanhamento,
-      kgLegumes,
-      kgPao,
-      kgSobremesa,
+      ...ementa,
+      [dia]: {
+        ...ementa[dia],
+        [refeicao]: receitaId,
+      },
     };
 
-    const novaLista = [novaEmenta, ...listaEmentas];
+    setEmenta(novaEmenta);
+    localStorage.setItem("ipssEmenta", JSON.stringify(novaEmenta));
+  }
 
-    setListaEmentas(novaLista);
+  function obterFicha(id) {
+    return fichas.find((ficha) => String(ficha.id) === String(id));
+  }
 
-    localStorage.setItem(
-      "ipssEmentas",
-      JSON.stringify(novaLista)
+  function normalizarTexto(texto) {
+    return String(texto || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function converterParaGramas(quantidade, unidade) {
+    const valor = Number(quantidade) || 0;
+
+    if (unidade === "kg") return valor * 1000;
+    if (unidade === "g") return valor;
+    if (unidade === "L") return valor * 1000;
+    if (unidade === "ml") return valor;
+
+    return valor;
+  }
+
+  function formatarQuantidade(gramas) {
+    if (gramas >= 1000) {
+      return `${(gramas / 1000).toFixed(2)} kg`;
+    }
+
+    return `${gramas.toFixed(0)} g`;
+  }
+
+  const receitasPlaneadas = [];
+
+  diasSemana.forEach((dia) => {
+    refeicoes.forEach((refeicao) => {
+      const receitaId = ementa[dia]?.[refeicao];
+      const ficha = obterFicha(receitaId);
+
+      if (ficha) {
+        receitasPlaneadas.push({
+          dia,
+          refeicao,
+          ficha,
+        });
+      }
+    });
+  });
+
+  const custoSemanal = receitasPlaneadas.reduce(
+    (total, item) => total + Number(item.ficha.custoTotal || 0),
+    0
+  );
+
+  const kcalSemanais = receitasPlaneadas.reduce(
+    (total, item) => total + Number(item.ficha.nutrientesTotais?.kcal || 0),
+    0
+  );
+
+  const ingredientesSemana = receitasPlaneadas.reduce((acumulador, item) => {
+    item.ficha.ingredientes?.forEach((ingrediente) => {
+      const nomeNormalizado = normalizarTexto(ingrediente.nome);
+
+      if (!acumulador[nomeNormalizado]) {
+        acumulador[nomeNormalizado] = {
+          nome: ingrediente.nome,
+          quantidadeNecessaria: 0,
+        };
+      }
+
+      acumulador[nomeNormalizado].quantidadeNecessaria += Number(
+        ingrediente.quantidade || 0
+      );
+    });
+
+    return acumulador;
+  }, {});
+
+  const listaIngredientesSemana = Object.values(ingredientesSemana);
+
+  const verificacaoStockSemanal = listaIngredientesSemana.map((ingrediente) => {
+    const produtoStock = stocks.find(
+      (item) =>
+        normalizarTexto(item.produto) === normalizarTexto(ingrediente.nome)
     );
 
-    setSopa("");
-    setPrato("");
-    setDietaAlternativa("");
-    setSobremesa("");
-    setObservacoes("");
+    const stockDisponivel = produtoStock
+      ? converterParaGramas(produtoStock.quantidade, produtoStock.unidade)
+      : 0;
+
+    const diferenca = stockDisponivel - ingrediente.quantidadeNecessaria;
+
+    return {
+      nome: ingrediente.nome,
+      quantidadeNecessaria: ingrediente.quantidadeNecessaria,
+      stockDisponivel,
+      diferenca,
+      suficiente: diferenca >= 0,
+    };
+  });
+
+  const listaComprasSemanal = verificacaoStockSemanal.filter(
+    (item) => !item.suficiente
+  );
+
+  function exportarEmentaPDF() {
+    const doc = new jsPDF("landscape");
+
+    doc.setFontSize(18);
+    doc.text("Ementa Semanal - IPSS", 14, 18);
+
+    doc.setFontSize(10);
+    doc.text(`Custo semanal estimado: ${custoSemanal.toFixed(2)} €`, 14, 26);
+    doc.text(`Energia semanal estimada: ${kcalSemanais.toFixed(0)} kcal`, 14, 32);
+    doc.text(`Refeições planeadas: ${receitasPlaneadas.length}`, 14, 38);
+
+    autoTable(doc, {
+      startY: 46,
+      head: [["Dia", ...refeicoes]],
+      body: diasSemana.map((dia) => [
+        dia,
+        ...refeicoes.map((refeicao) => {
+          const receitaId = ementa[dia]?.[refeicao];
+          const ficha = obterFicha(receitaId);
+          return ficha ? ficha.nome : "-";
+        }),
+      ]),
+      styles: {
+        fontSize: 8,
+        cellWidth: "wrap",
+        valign: "top",
+      },
+      headStyles: {
+        fillColor: [20, 92, 42],
+      },
+    });
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 10,
+      head: [["Dia", "Refeições planeadas", "Custo diário", "Energia diária"]],
+      body: diasSemana.map((dia) => {
+        const receitasDia = receitasPlaneadas.filter((item) => item.dia === dia);
+
+        const custoDia = receitasDia.reduce(
+          (total, item) => total + Number(item.ficha.custoTotal || 0),
+          0
+        );
+
+        const kcalDia = receitasDia.reduce(
+          (total, item) => total + Number(item.ficha.nutrientesTotais?.kcal || 0),
+          0
+        );
+
+        return [
+          dia,
+          receitasDia.length,
+          `${custoDia.toFixed(2)} €`,
+          `${kcalDia.toFixed(0)} kcal`,
+        ];
+      }),
+      styles: {
+        fontSize: 9,
+      },
+      headStyles: {
+        fillColor: [20, 92, 42],
+      },
+    });
+
+    if (listaComprasSemanal.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [["Produto", "Quantidade em falta", "Observação"]],
+        body: listaComprasSemanal.map((item) => [
+          item.nome,
+          formatarQuantidade(Math.abs(item.diferenca)),
+          "Comprar para cumprir a ementa semanal",
+        ]),
+        styles: {
+          fontSize: 9,
+        },
+        headStyles: {
+          fillColor: [220, 38, 38],
+        },
+      });
+    }
+
+    doc.save("ementa-semanal-ipss.pdf");
   }
 
   return (
-    <div>
-      <h2>Ementa</h2>
+    <div className="pagina">
+      <h1>Planeamento de Ementas</h1>
 
-      <p className="subtitulo">
-        Planeamento diário das refeições com cálculo automático de quantidades.
+      <p className="descricao">
+        Organização semanal das refeições, com cálculo automático de custos,
+        valor nutricional, ingredientes necessários e lista semanal de compras.
       </p>
 
-      <div className="cards-grid">
-        <div className="card destaque">
-          <span>Total de refeições</span>
-          <strong>{totalRefeicoes}</strong>
+      <button className="botao-principal" onClick={exportarEmentaPDF}>
+        Exportar ementa PDF
+      </button>
+
+      <div className="dashboard-cards">
+        <div className="dashboard-card">
+          <h3>Receitas disponíveis</h3>
+          <p>{fichas.length}</p>
+          <span>Fichas técnicas</span>
         </div>
 
-        <div className="card">
-          <span>Sopa estimada</span>
-          <strong>{litrosSopa.toFixed(1)}L</strong>
+        <div className="dashboard-card">
+          <h3>Refeições planeadas</h3>
+          <p>{receitasPlaneadas.length}</p>
+          <span>Semana atual</span>
         </div>
 
-        <div className="card">
-          <span>Carne/peixe</span>
-          <strong>{kgCarnePeixe.toFixed(1)}kg</strong>
+        <div className="dashboard-card">
+          <h3>Custo semanal</h3>
+          <p>{custoSemanal.toFixed(2)} €</p>
+          <span>Total estimado</span>
         </div>
 
-        <div className="card">
-          <span>Acompanhamento</span>
-          <strong>{kgAcompanhamento.toFixed(1)}kg</strong>
+        <div className="dashboard-card">
+          <h3>Energia semanal</h3>
+          <p>{kcalSemanais.toFixed(0)} kcal</p>
+          <span>Total planeado</span>
         </div>
 
-        <div className="card">
-          <span>Legumes</span>
-          <strong>{kgLegumes.toFixed(1)}kg</strong>
-        </div>
-
-        <div className="card">
-          <span>Pão</span>
-          <strong>{kgPao.toFixed(1)}kg</strong>
-        </div>
-
-        <div className="card">
-          <span>Sobremesa</span>
-          <strong>{kgSobremesa.toFixed(1)}kg</strong>
+        <div className="dashboard-card">
+          <h3>Compras</h3>
+          <p>{listaComprasSemanal.length}</p>
+          <span>Produtos em falta</span>
         </div>
       </div>
 
-      <div className="painel">
-        <h3>Nova ementa</h3>
+      <div className="dashboard-section">
+        <h2>Ementa semanal</h2>
 
-        <label>Data</label>
-        <input
-          type="date"
-          value={data}
-          onChange={(e) => setData(e.target.value)}
-        />
+        <table className="dashboard-table">
+          <thead>
+            <tr>
+              <th>Dia</th>
+              {refeicoes.map((refeicao) => (
+                <th key={refeicao}>{refeicao}</th>
+              ))}
+            </tr>
+          </thead>
 
-        <label>Sopa do dia</label>
-        <input
-          type="text"
-          value={sopa}
-          onChange={(e) => setSopa(e.target.value)}
-        />
+          <tbody>
+            {diasSemana.map((dia) => (
+              <tr key={dia}>
+                <td>
+                  <strong>{dia}</strong>
+                </td>
 
-        <label>Prato principal</label>
-        <input
-          type="text"
-          value={prato}
-          onChange={(e) => setPrato(e.target.value)}
-        />
+                {refeicoes.map((refeicao) => {
+                  const receitaId = ementa[dia]?.[refeicao];
+                  const ficha = obterFicha(receitaId);
 
-        <label>Dieta alternativa</label>
-        <input
-          type="text"
-          value={dietaAlternativa}
-          onChange={(e) => setDietaAlternativa(e.target.value)}
-        />
+                  return (
+                    <td key={refeicao}>
+                      <select
+                        value={receitaId || ""}
+                        onChange={(e) =>
+                          atualizarEmenta(dia, refeicao, e.target.value)
+                        }
+                      >
+                        <option value="">Selecionar receita</option>
 
-        <label>Sobremesa</label>
-        <input
-          type="text"
-          value={sobremesa}
-          onChange={(e) => setSobremesa(e.target.value)}
-        />
+                        {fichas.map((ficha) => (
+                          <option key={ficha.id} value={ficha.id}>
+                            {ficha.nome}
+                          </option>
+                        ))}
+                      </select>
 
-        <label>Observações para a cozinha</label>
-        <textarea
-          value={observacoes}
-          onChange={(e) => setObservacoes(e.target.value)}
-        />
-
-        <button className="botao-principal" onClick={guardarEmenta}>
-          Guardar ementa
-        </button>
+                      {ficha && (
+                        <div style={{ marginTop: "8px", fontSize: "0.85rem" }}>
+                          <p>💰 {Number(ficha.custoTotal || 0).toFixed(2)} €</p>
+                          <p>
+                            🔥{" "}
+                            {Number(ficha.nutrientesTotais?.kcal || 0).toFixed(
+                              0
+                            )}{" "}
+                            kcal
+                          </p>
+                        </div>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      <div className="historico-grid">
-        {listaEmentas.map((item) => (
-          <div className="historico-card" key={item.id}>
-            <h3>{item.data}</h3>
+      <div className="dashboard-section">
+        <h2>Resumo semanal</h2>
 
-            <p>
-              <strong>Sopa:</strong> {item.sopa || "-"}
-            </p>
+        <table className="dashboard-table">
+          <thead>
+            <tr>
+              <th>Dia</th>
+              <th>Refeições planeadas</th>
+              <th>Custo diário</th>
+              <th>Energia diária</th>
+            </tr>
+          </thead>
 
-            <p>
-              <strong>Prato:</strong> {item.prato || "-"}
-            </p>
+          <tbody>
+            {diasSemana.map((dia) => {
+              const receitasDia = receitasPlaneadas.filter(
+                (item) => item.dia === dia
+              );
 
-            <p>
-              <strong>Dieta alternativa:</strong>{" "}
-              {item.dietaAlternativa || "-"}
-            </p>
+              const custoDia = receitasDia.reduce(
+                (total, item) => total + Number(item.ficha.custoTotal || 0),
+                0
+              );
 
-            <p>
-              <strong>Sobremesa:</strong> {item.sobremesa || "-"}
-            </p>
+              const kcalDia = receitasDia.reduce(
+                (total, item) =>
+                  total + Number(item.ficha.nutrientesTotais?.kcal || 0),
+                0
+              );
 
-            <p>
-              <strong>Total refeições:</strong> {item.totalRefeicoes}
-            </p>
-
-            <p>
-              <strong>Sopa estimada:</strong>{" "}
-              {item.litrosSopa.toFixed(1)}L
-            </p>
-
-            <p>
-              <strong>Carne/peixe:</strong>{" "}
-              {item.kgCarnePeixe.toFixed(1)}kg
-            </p>
-
-            <p>
-              <strong>Acompanhamento:</strong>{" "}
-              {item.kgAcompanhamento.toFixed(1)}kg
-            </p>
-
-            <p>
-              <strong>Observações:</strong> {item.observacoes || "-"}
-            </p>
-          </div>
-        ))}
+              return (
+                <tr key={dia}>
+                  <td>{dia}</td>
+                  <td>{receitasDia.length}</td>
+                  <td>{custoDia.toFixed(2)} €</td>
+                  <td>{kcalDia.toFixed(0)} kcal</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
+
+      <div className="dashboard-section">
+        <h2>Ingredientes necessários na semana</h2>
+
+        {listaIngredientesSemana.length === 0 ? (
+          <p>Ainda não existem refeições planeadas.</p>
+        ) : (
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Ingrediente</th>
+                <th>Quantidade semanal</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {listaIngredientesSemana.map((item, index) => (
+                <tr key={index}>
+                  <td>{item.nome}</td>
+                  <td>{formatarQuantidade(item.quantidadeNecessaria)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="dashboard-section">
+        <h2>Verificação semanal de stock</h2>
+
+        {verificacaoStockSemanal.length === 0 ? (
+          <p>Ainda não existem dados para verificar stock.</p>
+        ) : (
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Necessário</th>
+                <th>Disponível</th>
+                <th>Diferença</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {verificacaoStockSemanal.map((item, index) => (
+                <tr key={index}>
+                  <td>{item.nome}</td>
+                  <td>{formatarQuantidade(item.quantidadeNecessaria)}</td>
+                  <td>{formatarQuantidade(item.stockDisponivel)}</td>
+                  <td>{formatarQuantidade(Math.abs(item.diferenca))}</td>
+                  <td>
+                    {item.suficiente ? (
+                      <span style={{ color: "#16a34a", fontWeight: "bold" }}>
+                        ✔ Suficiente
+                      </span>
+                    ) : (
+                      <span style={{ color: "#dc2626", fontWeight: "bold" }}>
+                        ⚠ Em falta
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {listaComprasSemanal.length > 0 && (
+        <div className="dashboard-section">
+          <h2>Lista semanal de compras</h2>
+
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Quantidade em falta</th>
+                <th>Observação</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {listaComprasSemanal.map((item, index) => (
+                <tr key={index}>
+                  <td>{item.nome}</td>
+                  <td>{formatarQuantidade(Math.abs(item.diferenca))}</td>
+                  <td>Comprar para cumprir a ementa semanal</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

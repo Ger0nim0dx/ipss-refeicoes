@@ -1,4 +1,5 @@
 import { useState } from "react";
+
 import Dashboard from "./components/Dashboard";
 import Relatorios from "./components/Relatorios";
 import Historico from "./components/Historico";
@@ -10,6 +11,7 @@ import Ementa from "./components/Ementa";
 import Custos from "./components/Custos";
 import FichasTecnicas from "./components/FichasTecnicas";
 import Stocks from "./components/Stocks";
+import ValorNutricional from "./components/ValorNutricional";
 
 import "./App.css";
 
@@ -28,8 +30,8 @@ export default function App() {
 
           <p>
             Plataforma digital para apoio à gestão de refeições, custos,
-            ementas, dietas, fichas técnicas, stocks e relatórios em contexto
-            IPSS.
+            ementas, dietas, fichas técnicas, stocks, valor nutricional e
+            relatórios em contexto IPSS.
           </p>
 
           <button
@@ -63,35 +65,61 @@ export default function App() {
         </div>
 
         <nav>
-          <button onClick={() => setPagina("dashboard")}>Dashboard</button>
+          <button onClick={() => setPagina("dashboard")}>
+            Dashboard
+          </button>
 
           <button onClick={() => setPagina("dados-ipss")}>
             Dados da IPSS
           </button>
 
-          <button onClick={() => setPagina("capitacoes")}>Capitações</button>
+          <button onClick={() => setPagina("capitacoes")}>
+            Capitações
+          </button>
 
-          <button onClick={() => setPagina("ementa")}>Ementa</button>
+          <button onClick={() => setPagina("ementa")}>
+            Ementa
+          </button>
 
-          <button onClick={() => setPagina("custos")}>Custos</button>
+          <button onClick={() => setPagina("custos")}>
+            Custos
+          </button>
 
-          <button onClick={() => setPagina("dietas")}>Dietas</button>
+          <button onClick={() => setPagina("dietas")}>
+            Dietas
+          </button>
 
-          <button onClick={() => setPagina("fichas")}>Fichas Técnicas</button>
+          <button onClick={() => setPagina("fichas")}>
+            Fichas Técnicas
+          </button>
 
-          <button onClick={() => setPagina("stocks")}>Stocks</button>
+          <button onClick={() => setPagina("valor-nutricional")}>
+            Valor Nutricional
+          </button>
 
-          <button onClick={() => setPagina("relatorios")}>Relatórios</button>
+          <button onClick={() => setPagina("stocks")}>
+            Stocks
+          </button>
 
-          <button onClick={() => setPagina("historico")}>Histórico</button>
+          <button onClick={() => setPagina("relatorios")}>
+            Relatórios
+          </button>
 
-          <button onClick={() => setPagina("sobre")}>Sobre o Projeto</button>
+          <button onClick={() => setPagina("historico")}>
+            Histórico
+          </button>
+
+          <button onClick={() => setPagina("sobre")}>
+            Sobre o Projeto
+          </button>
 
           <button onClick={() => setDarkMode(!darkMode)}>
             {darkMode ? "Modo claro" : "Modo escuro"}
           </button>
 
-          <button onClick={() => setAutenticado(false)}>Sair</button>
+          <button onClick={() => setAutenticado(false)}>
+            Sair
+          </button>
         </nav>
       </aside>
 
@@ -109,6 +137,10 @@ export default function App() {
         {pagina === "dietas" && <Dietas />}
 
         {pagina === "fichas" && <FichasTecnicas />}
+
+        {pagina === "valor-nutricional" && (
+          <ValorNutricional />
+        )}
 
         {pagina === "stocks" && <Stocks />}
 

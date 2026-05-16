@@ -1,5 +1,28 @@
 import { useEffect, useState } from "react";
 
+import {
+  Package,
+  AlertTriangle,
+  ShoppingCart,
+  TrendingUp,
+  TrendingDown,
+  Euro,
+  ClipboardList,
+  Clock3,
+  ShieldAlert,
+  CheckCircle2,
+} from "lucide-react";
+
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts";
+
 function Dashboard() {
   const [dadosIPSS, setDadosIPSS] = useState({});
   const [stocks, setStocks] = useState([]);
@@ -81,51 +104,70 @@ function Dashboard() {
       ? custoTotalReceitas / fichas.length
       : 0;
 
-  const maxQuantidade = Math.max(
-    ...stocks.map(
-      (item) => Number(item.quantidade) || 0
-    ),
-    1
-  );
-
   const comprasPendentes =
     produtosStockBaixo.length +
     produtosExpirados.length;
 
+  const dadosGrafico = stocks
+    .slice(0, 8)
+    .map((item) => ({
+      nome: item.nome || item.produto,
+      quantidade: Number(item.quantidade) || 0,
+    }));
+
   return (
     <div className="dashboard">
-      <h1>Dashboard Geral</h1>
+      <div className="topo-dashboard">
+        <div>
+          <h1>Dashboard Geral</h1>
 
-      <p className="dashboard-subtitle">
-        Visão global da gestão alimentar da IPSS.
-      </p>
+          <p className="dashboard-subtitle">
+            Gestão alimentar inteligente da IPSS.
+          </p>
+        </div>
+
+        <div className="data-box">
+          {new Date().toLocaleDateString("pt-PT")}
+        </div>
+      </div>
 
       <div className="dashboard-section">
-        <h2>Identificação da IPSS</h2>
+        <h2>Identificação da Instituição</h2>
 
-        <p>
-          <strong>Instituição:</strong>{" "}
-          {dadosIPSS.nomeInstituicao ||
-            "Não preenchido"}
-        </p>
+        <div className="summary-grid">
+          <div className="summary-box">
+            <strong>Instituição</strong>
 
-        <p>
-          <strong>Localidade:</strong>{" "}
-          {dadosIPSS.localidade ||
-            "Não preenchido"}
-        </p>
+            <p>
+              {dadosIPSS.nomeInstituicao ||
+                "Não preenchido"}
+            </p>
+          </div>
 
-        <p>
-          <strong>
-            Responsável pela cozinha:
-          </strong>{" "}
-          {dadosIPSS.responsavelCozinha ||
-            "Não preenchido"}
-        </p>
+          <div className="summary-box">
+            <strong>Localidade</strong>
+
+            <p>
+              {dadosIPSS.localidade ||
+                "Não preenchido"}
+            </p>
+          </div>
+
+          <div className="summary-box">
+            <strong>Responsável</strong>
+
+            <p>
+              {dadosIPSS.responsavelCozinha ||
+                "Não preenchido"}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="dashboard-cards">
         <div className="dashboard-card">
+          <ClipboardList size={32} />
+
           <h3>Receitas</h3>
 
           <p>{fichas.length}</p>
@@ -134,6 +176,8 @@ function Dashboard() {
         </div>
 
         <div className="dashboard-card">
+          <Package size={32} />
+
           <h3>Produtos</h3>
 
           <p>{stocks.length}</p>
@@ -142,6 +186,8 @@ function Dashboard() {
         </div>
 
         <div className="dashboard-card">
+          <AlertTriangle size={32} />
+
           <h3>Stock baixo</h3>
 
           <p>{produtosStockBaixo.length}</p>
@@ -150,6 +196,8 @@ function Dashboard() {
         </div>
 
         <div className="dashboard-card">
+          <ShieldAlert size={32} />
+
           <h3>Expirados</h3>
 
           <p>{produtosExpirados.length}</p>
@@ -158,6 +206,8 @@ function Dashboard() {
         </div>
 
         <div className="dashboard-card">
+          <Clock3 size={32} />
+
           <h3>A expirar</h3>
 
           <p>{produtosAExpirar.length}</p>
@@ -166,6 +216,8 @@ function Dashboard() {
         </div>
 
         <div className="dashboard-card">
+          <TrendingUp size={32} />
+
           <h3>Entradas</h3>
 
           <p>{totalEntradas}</p>
@@ -174,6 +226,8 @@ function Dashboard() {
         </div>
 
         <div className="dashboard-card">
+          <TrendingDown size={32} />
+
           <h3>Saídas</h3>
 
           <p>{totalSaidas}</p>
@@ -182,6 +236,8 @@ function Dashboard() {
         </div>
 
         <div className="dashboard-card">
+          <Euro size={32} />
+
           <h3>Custo médio</h3>
 
           <p>
@@ -191,12 +247,44 @@ function Dashboard() {
           <span>Por receita</span>
         </div>
 
-        <div className="dashboard-card">
+        <div className="dashboard-card destaque">
+          <ShoppingCart size={32} />
+
           <h3>Compras</h3>
 
           <p>{comprasPendentes}</p>
 
           <span>Pendentes</span>
+        </div>
+      </div>
+
+      <div className="dashboard-section">
+        <h2>Indicadores Operacionais</h2>
+
+        <div className="grafico-movimentos">
+          <div className="movimento-card">
+            <strong>Receitas registadas</strong>
+
+            <span>{fichas.length}</span>
+          </div>
+
+          <div className="movimento-card">
+            <strong>Produtos em stock</strong>
+
+            <span>{stocks.length}</span>
+          </div>
+
+          <div className="movimento-card">
+            <strong>Movimentos</strong>
+
+            <span>{movimentos.length}</span>
+          </div>
+
+          <div className="movimento-card">
+            <strong>Compras pendentes</strong>
+
+            <span>{comprasPendentes}</span>
+          </div>
         </div>
       </div>
 
@@ -209,50 +297,39 @@ function Dashboard() {
             registados.
           </p>
         ) : (
-          <div className="grafico-barras">
-            {stocks
-              .slice(0, 8)
-              .map((item, index) => {
-                const percentagem =
-                  (Number(item.quantidade) /
-                    maxQuantidade) *
-                  100;
+          <div
+            style={{
+              width: "100%",
+              height: 350,
+            }}
+          >
+            <ResponsiveContainer>
+              <BarChart data={dadosGrafico}>
+                <CartesianGrid strokeDasharray="3 3" />
 
-                return (
-                  <div
-                    className="linha-grafico"
-                    key={index}
-                  >
-                    <span className="nome-produto">
-                      {item.nome ||
-                        item.produto}
-                    </span>
+                <XAxis dataKey="nome" />
 
-                    <div className="barra-fundo">
-                      <div
-                        className="barra-preenchida"
-                        style={{
-                          width: `${percentagem}%`,
-                        }}
-                      ></div>
-                    </div>
+                <YAxis />
 
-                    <span className="valor-produto">
-                      {item.quantidade}{" "}
-                      {item.unidade}
-                    </span>
-                  </div>
-                );
-              })}
+                <Tooltip />
+
+                <Bar
+                  dataKey="quantidade"
+                  radius={[10, 10, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         )}
       </div>
 
       <div className="dashboard-section">
-        <h2>Resumo financeiro</h2>
+        <h2>Resumo Financeiro</h2>
 
         <div className="dashboard-cards">
           <div className="dashboard-card">
+            <Euro size={32} />
+
             <h3>Custo total receitas</h3>
 
             <p>
@@ -265,6 +342,8 @@ function Dashboard() {
           </div>
 
           <div className="dashboard-card">
+            <TrendingUp size={32} />
+
             <h3>Custo médio</h3>
 
             <p>
@@ -283,7 +362,8 @@ function Dashboard() {
         produtosAExpirar.length === 0 &&
         produtosExpirados.length === 0 ? (
           <p className="success-message">
-            Não existem alertas críticos.
+            <CheckCircle2 size={18} /> Não existem
+            alertas críticos.
           </p>
         ) : (
           <>
@@ -293,6 +373,7 @@ function Dashboard() {
                 style={{
                   color: "#dc2626",
                   fontWeight: "bold",
+                  marginBottom: "10px",
                 }}
               >
                 ⚠ Existem{" "}
@@ -309,6 +390,7 @@ function Dashboard() {
                 style={{
                   color: "#ca8a04",
                   fontWeight: "bold",
+                  marginBottom: "10px",
                 }}
               >
                 ⚠ Existem{" "}
@@ -340,9 +422,7 @@ function Dashboard() {
       </div>
 
       <div className="dashboard-section">
-        <h2>
-          Receitas mais recentes
-        </h2>
+        <h2>Receitas mais recentes</h2>
 
         {fichas.length === 0 ? (
           <p>

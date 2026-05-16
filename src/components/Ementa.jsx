@@ -11,14 +11,8 @@ export default function Ementa() {
   );
 
   useEffect(() => {
-    const fichasGuardadas =
-      JSON.parse(localStorage.getItem("ipssFichasTecnicas")) || [];
-
-    const stocksGuardados =
-      JSON.parse(localStorage.getItem("ipssStocks")) || [];
-
-    setFichas(fichasGuardadas);
-    setStocks(stocksGuardados);
+    setFichas(JSON.parse(localStorage.getItem("ipssFichasTecnicas")) || []);
+    setStocks(JSON.parse(localStorage.getItem("ipssStocks")) || []);
   }, []);
 
   const diasSemana = [
@@ -57,12 +51,124 @@ export default function Ementa() {
     return fichas.find((ficha) => String(ficha.id) === String(id));
   }
 
-  function normalizarTexto(texto) {
+  function textoNormalizado(texto) {
     return String(texto || "")
-      .trim()
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function obterKcal(ficha) {
+    return Number(ficha.nutrientesTotais?.kcal || 0);
+  }
+
+  function obterCusto(ficha) {
+    return Number(ficha.custoTotal || 0);
+  }
+
+  function receitaAdequada(ficha, refeicao) {
+    const texto = textoNormalizado(
+      `${ficha.nome} ${ficha.categoria} ${ficha.tipo}`
+    );
+
+    if (refeicao === "Almoço" || refeicao === "Jantar") {
+      return (
+        texto.includes("principal") ||
+        texto.includes("carne") ||
+        texto.includes("peixe") ||
+        texto.includes("prato") ||
+        texto.includes("sopa")
+      );
+    }
+
+    if (
+      refeicao === "Pequeno-almoço" ||
+      refeicao === "Lanche" ||
+      refeicao.includes("Reforço")
+    ) {
+      return (
+        texto.includes("lanche") ||
+        texto.includes("pequeno") ||
+        texto.includes("reforco") ||
+        texto.includes("iogurte") ||
+        texto.includes("fruta") ||
+        texto.includes("pao") ||
+        texto.includes("leite")
+      );
+    }
+
+    return true;
+  }
+
+  function pontuarReceita(ficha, refeicao, usadasSemana, usadasDia) {
+    let pontos = 100;
+
+    const kcal = obterKcal(ficha);
+    const custo = obterCusto(ficha);
+
+    if (usadasDia.includes(ficha.id)) pontos -= 80;
+
+    const vezesUsada = usadasSemana.filter((id) => id === ficha.id).length;
+    pontos -= vezesUsada * 25;
+
+    if (receitaAdequada(ficha, refeicao)) pontos += 35;
+
+    if (refeicao === "Almoço" || refeicao === "Jantar") {
+      if (kcal >= 350 && kcal <= 850) pontos += 20;
+      if (custo > 0 && custo <= 4.5) pontos += 15;
+    } else {
+      if (kcal > 0 && kcal <= 350) pontos += 20;
+      if (custo > 0 && custo <= 2.0) pontos += 15;
+    }
+
+    pontos += Math.random() * 10;
+
+    return pontos;
+  }
+
+  function gerarEmentaAutomatica() {
+    if (fichas.length === 0) {
+      alert("Ainda não existem fichas técnicas registadas.");
+      return;
+    }
+
+    const novaEmenta = {};
+    const usadasSemana = [];
+
+    diasSemana.forEach((dia) => {
+      novaEmenta[dia] = {};
+      const usadasDia = [];
+
+      refeicoes.forEach((refeicao) => {
+        const receitasOrdenadas = [...fichas].sort(
+          (a, b) =>
+            pontuarReceita(b, refeicao, usadasSemana, usadasDia) -
+            pontuarReceita(a, refeicao, usadasSemana, usadasDia)
+        );
+
+        const escolhida = receitasOrdenadas[0];
+
+        novaEmenta[dia][refeicao] = escolhida.id;
+        usadasDia.push(escolhida.id);
+        usadasSemana.push(escolhida.id);
+      });
+    });
+
+    setEmenta(novaEmenta);
+    localStorage.setItem("ipssEmenta", JSON.stringify(novaEmenta));
+  }
+
+  function limparEmenta() {
+    if (!window.confirm("Tem a certeza que pretende limpar toda a ementa?")) {
+      return;
+    }
+
+    setEmenta({});
+    localStorage.removeItem("ipssEmenta");
+  }
+
+  function normalizarTexto(texto) {
+    return textoNormalizado(texto);
   }
 
   function converterParaGramas(quantidade, unidade) {
@@ -92,11 +198,7 @@ export default function Ementa() {
       const ficha = obterFicha(receitaId);
 
       if (ficha) {
-        receitasPlaneadas.push({
-          dia,
-          refeicao,
-          ficha,
-        });
+        receitasPlaneadas.push({ dia, refeicao, ficha });
       }
     });
   });
@@ -181,62 +283,11 @@ export default function Ementa() {
       ]),
       styles: {
         fontSize: 8,
-        cellWidth: "wrap",
-        valign: "top",
       },
       headStyles: {
         fillColor: [20, 92, 42],
       },
     });
-
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
-      head: [["Dia", "Refeições planeadas", "Custo diário", "Energia diária"]],
-      body: diasSemana.map((dia) => {
-        const receitasDia = receitasPlaneadas.filter((item) => item.dia === dia);
-
-        const custoDia = receitasDia.reduce(
-          (total, item) => total + Number(item.ficha.custoTotal || 0),
-          0
-        );
-
-        const kcalDia = receitasDia.reduce(
-          (total, item) => total + Number(item.ficha.nutrientesTotais?.kcal || 0),
-          0
-        );
-
-        return [
-          dia,
-          receitasDia.length,
-          `${custoDia.toFixed(2)} €`,
-          `${kcalDia.toFixed(0)} kcal`,
-        ];
-      }),
-      styles: {
-        fontSize: 9,
-      },
-      headStyles: {
-        fillColor: [20, 92, 42],
-      },
-    });
-
-    if (listaComprasSemanal.length > 0) {
-      autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 10,
-        head: [["Produto", "Quantidade em falta", "Observação"]],
-        body: listaComprasSemanal.map((item) => [
-          item.nome,
-          formatarQuantidade(Math.abs(item.diferenca)),
-          "Comprar para cumprir a ementa semanal",
-        ]),
-        styles: {
-          fontSize: 9,
-        },
-        headStyles: {
-          fillColor: [220, 38, 38],
-        },
-      });
-    }
 
     doc.save("ementa-semanal-ipss.pdf");
   }
@@ -246,13 +297,24 @@ export default function Ementa() {
       <h1>Planeamento de Ementas</h1>
 
       <p className="descricao">
-        Organização semanal das refeições, com cálculo automático de custos,
-        valor nutricional, ingredientes necessários e lista semanal de compras.
+        Organização semanal das refeições, com geração automática inteligente,
+        controlo de custos, valor nutricional, ingredientes necessários e lista
+        semanal de compras.
       </p>
 
-      <button className="botao-principal" onClick={exportarEmentaPDF}>
-        Exportar ementa PDF
-      </button>
+      <div className="botoes-formulario">
+        <button className="botao-principal" onClick={gerarEmentaAutomatica}>
+          Gerar ementa inteligente
+        </button>
+
+        <button className="botao-secundario" onClick={exportarEmentaPDF}>
+          Exportar ementa PDF
+        </button>
+
+        <button className="botao-secundario" onClick={limparEmenta}>
+          Limpar ementa
+        </button>
+      </div>
 
       <div className="dashboard-cards">
         <div className="dashboard-card">
@@ -279,7 +341,7 @@ export default function Ementa() {
           <span>Total planeado</span>
         </div>
 
-        <div className="dashboard-card">
+        <div className="dashboard-card destaque">
           <h3>Compras</h3>
           <p>{listaComprasSemanal.length}</p>
           <span>Produtos em falta</span>
@@ -287,31 +349,24 @@ export default function Ementa() {
       </div>
 
       <div className="dashboard-section">
-        <h2>Ementa semanal</h2>
+        <h2>Calendário semanal de refeições</h2>
 
-        <table className="dashboard-table">
-          <thead>
-            <tr>
-              <th>Dia</th>
-              {refeicoes.map((refeicao) => (
-                <th key={refeicao}>{refeicao}</th>
-              ))}
-            </tr>
-          </thead>
+        <div className="ementa-calendar">
+          {diasSemana.map((dia) => (
+            <div className="ementa-dia-card" key={dia}>
+              <div className="ementa-dia-header">
+                <h3>{dia}</h3>
+              </div>
 
-          <tbody>
-            {diasSemana.map((dia) => (
-              <tr key={dia}>
-                <td>
-                  <strong>{dia}</strong>
-                </td>
-
+              <div className="ementa-refeicoes">
                 {refeicoes.map((refeicao) => {
                   const receitaId = ementa[dia]?.[refeicao];
                   const ficha = obterFicha(receitaId);
 
                   return (
-                    <td key={refeicao}>
+                    <div className="ementa-refeicao-card" key={refeicao}>
+                      <strong>{refeicao}</strong>
+
                       <select
                         value={receitaId || ""}
                         onChange={(e) =>
@@ -328,24 +383,27 @@ export default function Ementa() {
                       </select>
 
                       {ficha && (
-                        <div style={{ marginTop: "8px", fontSize: "0.85rem" }}>
-                          <p>💰 {Number(ficha.custoTotal || 0).toFixed(2)} €</p>
-                          <p>
+                        <div className="ementa-info">
+                          <span>
+                            💰 {Number(ficha.custoTotal || 0).toFixed(2)} €
+                          </span>
+
+                          <span>
                             🔥{" "}
                             {Number(ficha.nutrientesTotais?.kcal || 0).toFixed(
                               0
                             )}{" "}
                             kcal
-                          </p>
+                          </span>
                         </div>
                       )}
-                    </td>
+                    </div>
                   );
                 })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="dashboard-section">

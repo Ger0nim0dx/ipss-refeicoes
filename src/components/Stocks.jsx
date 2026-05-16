@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../services/supabaseClient";
 
 export default function Stocks() {
   const fichasGuardadas =

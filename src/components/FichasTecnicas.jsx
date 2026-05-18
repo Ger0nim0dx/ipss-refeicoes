@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { alimentos } from "../data/alimentos";
-
+import { supabase } from "../supabaseClient";
 export default function FichasTecnicas() {
   const [listaFichas, setListaFichas] = useState([]);
 
@@ -423,10 +423,22 @@ export default function FichasTecnicas() {
                   <td>
                     <input
                       type="number"
-                      value={item.quantidade}
+                      min="0"
+                      value={item.quantidade || ""}
                       onChange={(e) =>
                         atualizarIngrediente(index, "quantidade", e.target.value)
                       }
+                      style={{
+                        width: "90px",
+                        minWidth: "90px",
+                        padding: "10px",
+                        fontSize: "16px",
+                        textAlign: "center",
+                        borderRadius: "12px",
+                        border: "2px solid #0b6b2d",
+                        backgroundColor: "#fff",
+                        color: "#000",
+                      }}
                     />
                   </td>
 
@@ -434,10 +446,21 @@ export default function FichasTecnicas() {
                     <input
                       type="number"
                       step="0.01"
-                      value={item.precoKg}
+                      min="0"
+                      value={item.precoKg || ""}
                       onChange={(e) =>
                         atualizarIngrediente(index, "precoKg", e.target.value)
                       }
+                      style={{
+                        width: "100px",
+                        minWidth: "100px",
+                        padding: "10px",
+                        fontSize: "16px",
+                        borderRadius: "12px",
+                        border: "2px solid #0b6b2d",
+                        backgroundColor: "#fff",
+                        color: "#000",
+                      }}
                     />
                   </td>
 

@@ -1,0 +1,109 @@
+.accessibility-panel {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 9999;
+  }
+  
+  .accessibility-main-button {
+    background: #145c2a;
+    color: white;
+    border: none;
+    border-radius: 999px;
+    padding: 14px 18px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+  }
+  
+  .accessibility-main-button:hover {
+    transform: translateY(-2px);
+  }
+  
+  .accessibility-menu {
+    margin-top: 10px;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 18px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+  }
+  
+  .accessibility-menu button {
+    border: none;
+    background: #f3f4f6;
+    color: #111827;
+    border-radius: 12px;
+    padding: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  
+  .accessibility-menu button:hover {
+    background: #e5e7eb;
+  }
+  
+  /* FOCUS ACESSÍVEL */
+  
+  button:focus,
+  input:focus,
+  textarea:focus,
+  select:focus,
+  a:focus {
+    outline: 3px solid #f59e0b;
+    outline-offset: 3px;
+  }
+  
+  /* TAMANHO TEXTO */
+  
+  .font-large {
+    font-size: 115%;
+  }
+  
+  .font-small {
+    font-size: 90%;
+  }
+  
+  /* ALTO CONTRASTE */
+  
+  .high-contrast body,
+  .high-contrast .app-container,
+  .high-contrast .conteudo,
+  .high-contrast .card,
+  .high-contrast .painel,
+  .high-contrast .dashboard-card,
+  .high-contrast .dashboard-section,
+  .high-contrast .formulario,
+  .high-contrast .topbar,
+  .high-contrast .ementa-dia-card,
+  .high-contrast .ementa-refeicao-card {
+    background: #000 !important;
+    color: #fff !important;
+  }
+  
+  .high-contrast .sidebar {
+    background: #000 !important;
+  }
+  
+  .high-contrast button {
+    background: #000 !important;
+    color: #fff !important;
+    border: 2px solid #fff !important;
+  }
+  
+  .high-contrast input,
+  .high-contrast textarea,
+  .high-contrast select {
+    background: #000 !important;
+    color: #fff !important;
+    border: 2px solid #fff !important;
+  }
+  
+  .high-contrast a {
+    color: yellow !important;
+  }

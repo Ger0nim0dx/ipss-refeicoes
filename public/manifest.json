@@ -1,0 +1,22 @@
+{
+    "name": "Gestão de Refeições IPSS",
+    "short_name": "IPSS Gestão",
+    "description": "Aplicação para gestão de refeições, ementas, dietas, stocks, HACCP e relatórios em contexto IPSS.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#f4f7f5",
+    "theme_color": "#145c2a",
+    "orientation": "portrait-primary",
+    "icons": [
+      {
+        "src": "/icon-192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "/icon-512.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ]
+  }

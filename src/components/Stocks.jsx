@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { supabase } from "../supabaseClient";
 
 export default function Stocks() {
   const fichasGuardadas =
@@ -26,13 +27,15 @@ export default function Stocks() {
   }, []);
 
   async function carregarStocks() {
+    console.log("URL:", import.meta.env.VITE_SUPABASE_URL);
+console.log("KEY:", import.meta.env.VITE_SUPABASE_ANON_KEY);
     const { data, error } = await supabase
       .from("stocks")
       .select("*")
       .order("created_at", { ascending: false });
 
     if (error) {
-      alert("Erro ao carregar stocks.");
+      alert(error.message);
       console.error(error);
       return;
     }
@@ -84,7 +87,10 @@ export default function Stocks() {
 
   function guardarMovimentos(novosMovimentos) {
     setMovimentos(novosMovimentos);
-    localStorage.setItem("ipssMovimentosStock", JSON.stringify(novosMovimentos));
+    localStorage.setItem(
+      "ipssMovimentosStock",
+      JSON.stringify(novosMovimentos)
+    );
   }
 
   async function adicionarProduto() {
@@ -106,7 +112,7 @@ export default function Stocks() {
     ]);
 
     if (error) {
-      alert("Erro ao guardar stock no Supabase.");
+      alert(error.message);
       console.error(error);
       return;
     }
@@ -146,7 +152,7 @@ export default function Stocks() {
       .eq("id", id);
 
     if (error) {
-      alert("Erro ao atualizar entrada de stock.");
+      alert(error.message);
       console.error(error);
       return;
     }
@@ -184,7 +190,7 @@ export default function Stocks() {
       .eq("id", id);
 
     if (error) {
-      alert("Erro ao atualizar saída de stock.");
+      alert(error.message);
       console.error(error);
       return;
     }
@@ -209,7 +215,7 @@ export default function Stocks() {
     const { error } = await supabase.from("stocks").delete().eq("id", id);
 
     if (error) {
-      alert("Erro ao apagar produto.");
+      alert(error.message);
       console.error(error);
       return;
     }
@@ -331,7 +337,7 @@ export default function Stocks() {
         .eq("id", produtoStock.id);
 
       if (error) {
-        alert(`Erro ao descontar ${produtoStock.produto}.`);
+        alert(error.message);
         console.error(error);
         return;
       }

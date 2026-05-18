@@ -37,6 +37,8 @@ import Stocks from "./components/Stocks";
 import ValorNutricional from "./components/ValorNutricional";
 import HACCP from "./components/HACCP";
 
+import AccessibilityPanel from "./AccessibilityPanel";
+
 import "./App.css";
 
 export default function App() {
@@ -67,163 +69,199 @@ export default function App() {
 
   if (!autenticado) {
     return (
-      <div className={darkMode ? "login-page dark" : "login-page"}>
-        <div className="login-card">
-          <div className="login-logo">
-            <UtensilsCrossed size={42} />
+      <>
+        <div className={darkMode ? "login-page dark" : "login-page"}>
+          <div className="login-card">
+            <div
+              className="login-logo"
+              aria-label="Logótipo da aplicação"
+            >
+              <UtensilsCrossed size={42} />
+            </div>
+
+            <h1>Gestão de Refeições</h1>
+
+            <p>
+              Plataforma digital para apoio à gestão de refeições,
+              custos, ementas, dietas, fichas técnicas, stocks,
+              valor nutricional, HACCP e relatórios em contexto IPSS.
+            </p>
+
+            <button
+              className="botao-principal"
+              onClick={() => setAutenticado(true)}
+              aria-label="Entrar na aplicação"
+            >
+              Entrar na aplicação
+            </button>
+
+            <button
+              className="botao-secundario"
+              onClick={() => setDarkMode(!darkMode)}
+              aria-label="Alternar modo escuro"
+            >
+              {darkMode ? (
+                <>
+                  <Sun size={18} /> Modo claro
+                </>
+              ) : (
+                <>
+                  <Moon size={18} /> Modo escuro
+                </>
+              )}
+            </button>
+
+            <span className="login-footer">
+              Projeto desenvolvido por Frederico Pinto
+            </span>
           </div>
-
-          <h1>Gestão de Refeições</h1>
-
-          <p>
-            Plataforma digital para apoio à gestão de refeições, custos,
-            ementas, dietas, fichas técnicas, stocks, valor nutricional,
-            HACCP e relatórios em contexto IPSS.
-          </p>
-
-          <button
-            className="botao-principal"
-            onClick={() => setAutenticado(true)}
-          >
-            Entrar na aplicação
-          </button>
-
-          <button
-            className="botao-secundario"
-            onClick={() => setDarkMode(!darkMode)}
-          >
-            {darkMode ? (
-              <>
-                <Sun size={18} /> Modo claro
-              </>
-            ) : (
-              <>
-                <Moon size={18} /> Modo escuro
-              </>
-            )}
-          </button>
-
-          <span className="login-footer">
-            Projeto desenvolvido por Frederico Pinto
-          </span>
         </div>
-      </div>
+
+        <AccessibilityPanel />
+      </>
     );
   }
 
   return (
-    <div className={darkMode ? "app-container dark" : "app-container"}>
-      <aside className={sidebarFechada ? "sidebar fechada" : "sidebar"}>
-        <div className="logo-area">
-          <div className="logo-mini">IP</div>
-
-          {!sidebarFechada && (
-            <div>
-              <h1>IPSS Gestão</h1>
-              <p>Frederico Pinto</p>
+    <>
+      <div className={darkMode ? "app-container dark" : "app-container"}>
+        <aside
+          className={sidebarFechada ? "sidebar fechada" : "sidebar"}
+        >
+          <div className="logo-area">
+            <div
+              className="logo-mini"
+              aria-label="Logótipo da aplicação"
+            >
+              IP
             </div>
-          )}
-        </div>
-
-        <nav>
-          {menuItems.map((item) => {
-            const Icone = item.icon;
-
-            return (
-              <button
-                key={item.id}
-                className={pagina === item.id ? "ativo" : ""}
-                onClick={() => setPagina(item.id)}
-                title={sidebarFechada ? item.label : ""}
-              >
-                <Icone size={19} />
-
-                {!sidebarFechada && <span>{item.label}</span>}
-              </button>
-            );
-          })}
-
-          <button onClick={() => setDarkMode(!darkMode)}>
-            {darkMode ? <Sun size={19} /> : <Moon size={19} />}
 
             {!sidebarFechada && (
-              <span>{darkMode ? "Modo claro" : "Modo escuro"}</span>
+              <div>
+                <h1>IPSS Gestão</h1>
+                <p>Frederico Pinto</p>
+              </div>
             )}
-          </button>
-
-          <button onClick={() => setAutenticado(false)}>
-            <LogOut size={19} />
-
-            {!sidebarFechada && <span>Sair</span>}
-          </button>
-        </nav>
-      </aside>
-
-      <main className="conteudo">
-        <header className="topbar">
-          <button
-            className="botao-menu"
-            onClick={() => setSidebarFechada(!sidebarFechada)}
-          >
-            <Menu size={22} />
-          </button>
-
-          <div className="topbar-search">
-            <Search size={18} />
-
-            <input
-              type="text"
-              placeholder="Pesquisar na aplicação..."
-            />
           </div>
 
-          <div className="topbar-actions">
-            <button className="topbar-icon">
-              <Bell size={20} />
+          <nav aria-label="Menu principal">
+            {menuItems.map((item) => {
+              const Icone = item.icon;
 
-              <span className="notification-dot"></span>
+              return (
+                <button
+                  key={item.id}
+                  className={pagina === item.id ? "ativo" : ""}
+                  onClick={() => setPagina(item.id)}
+                  title={sidebarFechada ? item.label : ""}
+                  aria-label={item.label}
+                >
+                  <Icone size={19} />
+
+                  {!sidebarFechada && <span>{item.label}</span>}
+                </button>
+              );
+            })}
+
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              aria-label="Alternar modo escuro"
+            >
+              {darkMode ? <Sun size={19} /> : <Moon size={19} />}
+
+              {!sidebarFechada && (
+                <span>
+                  {darkMode ? "Modo claro" : "Modo escuro"}
+                </span>
+              )}
             </button>
 
-            <div className="user-box">
-              <UserCircle size={26} />
+            <button
+              onClick={() => setAutenticado(false)}
+              aria-label="Sair da aplicação"
+            >
+              <LogOut size={19} />
 
-              <div>
-                <strong>Frederico Pinto</strong>
+              {!sidebarFechada && <span>Sair</span>}
+            </button>
+          </nav>
+        </aside>
 
-                <span>Técnico responsável</span>
+        <main className="conteudo">
+          <header className="topbar">
+            <button
+              className="botao-menu"
+              onClick={() =>
+                setSidebarFechada(!sidebarFechada)
+              }
+              aria-label="Abrir ou fechar menu lateral"
+            >
+              <Menu size={22} />
+            </button>
+
+            <div className="topbar-search">
+              <Search size={18} />
+
+              <input
+                type="text"
+                placeholder="Pesquisar na aplicação..."
+                aria-label="Pesquisar na aplicação"
+              />
+            </div>
+
+            <div className="topbar-actions">
+              <button
+                className="topbar-icon"
+                aria-label="Notificações"
+              >
+                <Bell size={20} />
+
+                <span className="notification-dot"></span>
+              </button>
+
+              <div className="user-box">
+                <UserCircle size={26} />
+
+                <div>
+                  <strong>Frederico Pinto</strong>
+
+                  <span>Técnico responsável</span>
+                </div>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        {pagina === "dashboard" && <Dashboard />}
+          {pagina === "dashboard" && <Dashboard />}
 
-        {pagina === "dados-ipss" && <Definicoes />}
+          {pagina === "dados-ipss" && <Definicoes />}
 
-        {pagina === "capitacoes" && <Capitacoes />}
+          {pagina === "capitacoes" && <Capitacoes />}
 
-        {pagina === "ementa" && <Ementa />}
+          {pagina === "ementa" && <Ementa />}
 
-        {pagina === "custos" && <Custos />}
+          {pagina === "custos" && <Custos />}
 
-        {pagina === "dietas" && <Dietas />}
+          {pagina === "dietas" && <Dietas />}
 
-        {pagina === "fichas" && <FichasTecnicas />}
+          {pagina === "fichas" && <FichasTecnicas />}
 
-        {pagina === "valor-nutricional" && (
-          <ValorNutricional />
-        )}
+          {pagina === "valor-nutricional" && (
+            <ValorNutricional />
+          )}
 
-        {pagina === "stocks" && <Stocks />}
+          {pagina === "stocks" && <Stocks />}
 
-        {pagina === "haccp" && <HACCP />}
+          {pagina === "haccp" && <HACCP />}
 
-        {pagina === "relatorios" && <Relatorios />}
+          {pagina === "relatorios" && <Relatorios />}
 
-        {pagina === "historico" && <Historico />}
+          {pagina === "historico" && <Historico />}
 
-        {pagina === "sobre" && <SobreProjeto />}
-      </main>
-    </div>
+          {pagina === "sobre" && <SobreProjeto />}
+        </main>
+      </div>
+
+      <AccessibilityPanel />
+    </>
   );
 }

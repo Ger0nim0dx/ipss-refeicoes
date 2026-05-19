@@ -1,19 +1,91 @@
 import { useEffect, useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { supabase } from "../supabaseClient";
 
 export default function Ementa() {
   const [fichas, setFichas] = useState([]);
   const [stocks, setStocks] = useState([]);
 
-  const [ementa, setEmenta] = useState(
-    JSON.parse(localStorage.getItem("ipssEmenta")) || {}
-  );
+  const [ementa, setEmenta] = useState({});
 
   useEffect(() => {
-    setFichas(JSON.parse(localStorage.getItem("ipssFichasTecnicas")) || []);
-    setStocks(JSON.parse(localStorage.getItem("ipssStocks")) || []);
+    carregarDados();
   }, []);
+
+  async function carregarDados() {
+    await carregarFichas();
+    await carregarStocks();
+    await carregarEmenta();
+  }
+
+  async function carregarFichas() {
+    const { data, error } = await supabase
+      .from("fichas_tecnicas")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      alert(error.message);
+      console.error(error);
+      return;
+    }
+
+    const fichasFormatadas = (data || []).map((ficha) => ({
+      id: ficha.id,
+      nome: ficha.nome,
+      categoria: ficha.categoria,
+      doses: ficha.doses,
+      ...ficha.dados,
+    }));
+
+    setFichas(fichasFormatadas);
+  }
+
+  async function carregarStocks() {
+    const { data, error } = await supabase
+      .from("stocks")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      alert(error.message);
+      console.error(error);
+      return;
+    }
+
+    const stocksFormatados = (data || []).map((item) => ({
+      id: item.id,
+      produto: item.produto,
+      categoria: item.categoria,
+      quantidade: Number(item.quantidade || 0),
+      unidade: item.unidade,
+      validade: item.validade,
+      fornecedor: item.fornecedor,
+      stockMinimo: Number(item.stock_minimo || 0),
+    }));
+
+    setStocks(stocksFormatados);
+  }
+
+  async function carregarEmenta() {
+    const { data, error } = await supabase
+      .from("ementas")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      alert(error.message);
+      console.error(error);
+      return;
+    }
+
+    if (data?.dados) {
+      setEmenta(data.dados);
+    }
+  }
 
   const diasSemana = [
     "Segunda-feira",
@@ -34,7 +106,54 @@ export default function Ementa() {
     "Reforço da noite",
   ];
 
-  function atualizarEmenta(dia, refeicao, receitaId) {
+  async function guardarEmentaSupabase(novaEmenta) {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData?.user) {
+      alert("Precisas de iniciar sessão para guardar a ementa.");
+      console.error(userError);
+      return;
+    }
+
+    const { data: existente, error: procurarError } = await supabase
+      .from("ementas")
+      .select("id")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (procurarError) {
+      alert(procurarError.message);
+      console.error(procurarError);
+      return;
+    }
+
+    if (existente?.id) {
+      const { error } = await supabase
+        .from("ementas")
+        .update({ dados: novaEmenta })
+        .eq("id", existente.id);
+
+      if (error) {
+        alert(error.message);
+        console.error(error);
+      }
+    } else {
+      const { error } = await supabase.from("ementas").insert([
+        {
+          user_id: userData.user.id,
+          dados: novaEmenta,
+        },
+      ]);
+
+      if (error) {
+        alert(error.message);
+        console.error(error);
+      }
+    }
+  }
+
+  async function atualizarEmenta(dia, refeicao, receitaId) {
     const novaEmenta = {
       ...ementa,
       [dia]: {
@@ -44,7 +163,7 @@ export default function Ementa() {
     };
 
     setEmenta(novaEmenta);
-    localStorage.setItem("ipssEmenta", JSON.stringify(novaEmenta));
+    await guardarEmentaSupabase(novaEmenta);
   }
 
   function obterFicha(id) {
@@ -126,7 +245,7 @@ export default function Ementa() {
     return pontos;
   }
 
-  function gerarEmentaAutomatica() {
+  async function gerarEmentaAutomatica() {
     if (fichas.length === 0) {
       alert("Ainda não existem fichas técnicas registadas.");
       return;
@@ -155,16 +274,16 @@ export default function Ementa() {
     });
 
     setEmenta(novaEmenta);
-    localStorage.setItem("ipssEmenta", JSON.stringify(novaEmenta));
+    await guardarEmentaSupabase(novaEmenta);
   }
 
-  function limparEmenta() {
+  async function limparEmenta() {
     if (!window.confirm("Tem a certeza que pretende limpar toda a ementa?")) {
       return;
     }
 
     setEmenta({});
-    localStorage.removeItem("ipssEmenta");
+    await guardarEmentaSupabase({});
   }
 
   function normalizarTexto(texto) {

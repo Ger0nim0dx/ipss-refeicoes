@@ -1,42 +1,108 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { supabase } from "../supabaseClient";
 
 export default function Dietas() {
-  const dietasGuardadas =
-    JSON.parse(localStorage.getItem("ipssDietas")) || [];
-
-  const dadosInstituicao =
-    JSON.parse(localStorage.getItem("ipssRefeicoes")) || {};
-
   const [utente, setUtente] = useState("");
   const [valencia, setValencia] = useState("Lar");
   const [dieta, setDieta] = useState("Normal");
   const [alergias, setAlergias] = useState("");
   const [observacoes, setObservacoes] = useState("");
 
-  const [listaDietas, setListaDietas] = useState(dietasGuardadas);
+  const [listaDietas, setListaDietas] = useState([]);
 
-  function adicionarDieta() {
-    if (!utente) return;
+  const dadosInstituicao =
+    JSON.parse(localStorage.getItem("ipssRefeicoes")) || {};
 
-    const novaDieta = {
-      id: Date.now(),
-      utente,
-      valencia,
-      dieta,
-      alergias,
-      observacoes,
-    };
+  useEffect(() => {
+    carregarDietas();
+  }, []);
 
-    const novaLista = [novaDieta, ...listaDietas];
+  async function carregarDietas() {
+    const { data, error } = await supabase
+      .from("dietas")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-    setListaDietas(novaLista);
-    localStorage.setItem("ipssDietas", JSON.stringify(novaLista));
+    if (error) {
+      alert(error.message);
+      console.error(error);
+      return;
+    }
+
+    const dietasFormatadas = (data || []).map((item) => ({
+      id: item.id,
+      utente: item.nome_utente,
+      valencia: item.tipo_dieta,
+      dieta: item.restricoes,
+      alergias: item.observacoes,
+      observacoes: item.dados?.observacoes || "",
+    }));
+
+    setListaDietas(dietasFormatadas);
+  }
+
+  async function adicionarDieta() {
+    if (!utente) {
+      alert("Indica o nome do utente.");
+      return;
+    }
+
+    const { data: userData, error: userError } =
+      await supabase.auth.getUser();
+
+    if (userError || !userData?.user) {
+      alert("Precisas de iniciar sessão.");
+      console.error(userError);
+      return;
+    }
+
+    const { error } = await supabase.from("dietas").insert([
+      {
+        user_id: userData.user.id,
+        nome_utente: utente,
+        tipo_dieta: valencia,
+        restricoes: dieta,
+        observacoes: alergias,
+        dados: {
+          observacoes,
+        },
+      },
+    ]);
+
+    if (error) {
+      alert(error.message);
+      console.error(error);
+      return;
+    }
 
     setUtente("");
     setAlergias("");
     setObservacoes("");
+
+    await carregarDietas();
+  }
+
+  async function eliminarDieta(id) {
+    const confirmar = window.confirm(
+      "Tem a certeza que pretende eliminar esta dieta?"
+    );
+
+    if (!confirmar) return;
+
+    const { error } = await supabase
+      .from("dietas")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      alert(error.message);
+      console.error(error);
+      return;
+    }
+
+    await carregarDietas();
   }
 
   function exportarPDF() {
@@ -86,6 +152,7 @@ export default function Dietas() {
         <h3>Adicionar utente</h3>
 
         <label>Nome do utente</label>
+
         <input
           type="text"
           value={utente}
@@ -93,6 +160,7 @@ export default function Dietas() {
         />
 
         <label>Valência</label>
+
         <select
           value={valencia}
           onChange={(e) => setValencia(e.target.value)}
@@ -104,6 +172,7 @@ export default function Dietas() {
         </select>
 
         <label>Tipo de dieta</label>
+
         <select value={dieta} onChange={(e) => setDieta(e.target.value)}>
           <option>Normal</option>
           <option>Sem sal</option>
@@ -114,6 +183,7 @@ export default function Dietas() {
         </select>
 
         <label>Alergias / intolerâncias</label>
+
         <input
           type="text"
           value={alergias}
@@ -121,6 +191,7 @@ export default function Dietas() {
         />
 
         <label>Observações</label>
+
         <textarea
           value={observacoes}
           onChange={(e) => setObservacoes(e.target.value)}
@@ -151,6 +222,13 @@ export default function Dietas() {
             <p>
               <strong>Observações:</strong> {item.observacoes || "-"}
             </p>
+
+            <button
+              className="botao-secundario"
+              onClick={() => eliminarDieta(item.id)}
+            >
+              Eliminar
+            </button>
           </div>
         ))}
       </div>

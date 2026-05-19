@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   LayoutDashboard,
@@ -23,6 +23,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import { supabase } from "./supabaseClient";
+
 import Dashboard from "./components/Dashboard";
 import Relatorios from "./components/Relatorios";
 import Historico from "./components/Historico";
@@ -43,9 +45,55 @@ import "./App.css";
 
 export default function App() {
   const [pagina, setPagina] = useState("dashboard");
-  const [autenticado, setAutenticado] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarFechada, setSidebarFechada] = useState(false);
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [session, setSession] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function login() {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      alert(error.message);
+    }
+  }
+
+  async function registar() {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) {
+      alert(error.message);
+    } else {
+      alert("Conta criada com sucesso.");
+    }
+  }
+
+  async function logout() {
+    await supabase.auth.signOut();
+  }
 
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -67,38 +115,50 @@ export default function App() {
     { id: "sobre", label: "Sobre o Projeto", icon: Info },
   ];
 
-  if (!autenticado) {
+  if (!session) {
     return (
       <>
         <div className={darkMode ? "login-page dark" : "login-page"}>
           <div className="login-card">
-            <div
-              className="login-logo"
-              aria-label="Logótipo da aplicação"
-            >
+            <div className="login-logo">
               <UtensilsCrossed size={42} />
             </div>
 
             <h1>Gestão de Refeições</h1>
 
             <p>
-              Plataforma digital para apoio à gestão de refeições,
-              custos, ementas, dietas, fichas técnicas, stocks,
-              valor nutricional, HACCP e relatórios em contexto IPSS.
+              Plataforma digital para apoio à gestão de refeições, custos,
+              ementas, dietas, fichas técnicas, stocks, valor nutricional,
+              HACCP e relatórios.
             </p>
 
-            <button
-              className="botao-principal"
-              onClick={() => setAutenticado(true)}
-              aria-label="Entrar na aplicação"
-            >
-              Entrar na aplicação
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input-login"
+            />
+
+            <input
+              type="password"
+              placeholder="Palavra-passe"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="input-login"
+            />
+
+            <button className="botao-principal" onClick={login}>
+              Entrar
+            </button>
+
+            <button className="botao-secundario" onClick={registar}>
+              Criar conta
             </button>
 
             <button
               className="botao-secundario"
               onClick={() => setDarkMode(!darkMode)}
-              aria-label="Alternar modo escuro"
             >
               {darkMode ? (
                 <>
@@ -125,16 +185,9 @@ export default function App() {
   return (
     <>
       <div className={darkMode ? "app-container dark" : "app-container"}>
-        <aside
-          className={sidebarFechada ? "sidebar fechada" : "sidebar"}
-        >
+        <aside className={sidebarFechada ? "sidebar fechada" : "sidebar"}>
           <div className="logo-area">
-            <div
-              className="logo-mini"
-              aria-label="Logótipo da aplicação"
-            >
-              IP
-            </div>
+            <div className="logo-mini">IP</div>
 
             {!sidebarFechada && (
               <div>
@@ -144,7 +197,7 @@ export default function App() {
             )}
           </div>
 
-          <nav aria-label="Menu principal">
+          <nav>
             {menuItems.map((item) => {
               const Icone = item.icon;
 
@@ -153,8 +206,6 @@ export default function App() {
                   key={item.id}
                   className={pagina === item.id ? "ativo" : ""}
                   onClick={() => setPagina(item.id)}
-                  title={sidebarFechada ? item.label : ""}
-                  aria-label={item.label}
                 >
                   <Icone size={19} />
 
@@ -163,23 +214,15 @@ export default function App() {
               );
             })}
 
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              aria-label="Alternar modo escuro"
-            >
+            <button onClick={() => setDarkMode(!darkMode)}>
               {darkMode ? <Sun size={19} /> : <Moon size={19} />}
 
               {!sidebarFechada && (
-                <span>
-                  {darkMode ? "Modo claro" : "Modo escuro"}
-                </span>
+                <span>{darkMode ? "Modo claro" : "Modo escuro"}</span>
               )}
             </button>
 
-            <button
-              onClick={() => setAutenticado(false)}
-              aria-label="Sair da aplicação"
-            >
+            <button onClick={logout}>
               <LogOut size={19} />
 
               {!sidebarFechada && <span>Sair</span>}
@@ -191,10 +234,7 @@ export default function App() {
           <header className="topbar">
             <button
               className="botao-menu"
-              onClick={() =>
-                setSidebarFechada(!sidebarFechada)
-              }
-              aria-label="Abrir ou fechar menu lateral"
+              onClick={() => setSidebarFechada(!sidebarFechada)}
             >
               <Menu size={22} />
             </button>
@@ -205,15 +245,11 @@ export default function App() {
               <input
                 type="text"
                 placeholder="Pesquisar na aplicação..."
-                aria-label="Pesquisar na aplicação"
               />
             </div>
 
             <div className="topbar-actions">
-              <button
-                className="topbar-icon"
-                aria-label="Notificações"
-              >
+              <button className="topbar-icon">
                 <Bell size={20} />
 
                 <span className="notification-dot"></span>
@@ -223,7 +259,7 @@ export default function App() {
                 <UserCircle size={26} />
 
                 <div>
-                  <strong>Frederico Pinto</strong>
+                  <strong>{session.user?.email}</strong>
 
                   <span>Técnico responsável</span>
                 </div>
@@ -232,31 +268,17 @@ export default function App() {
           </header>
 
           {pagina === "dashboard" && <Dashboard />}
-
           {pagina === "dados-ipss" && <Definicoes />}
-
           {pagina === "capitacoes" && <Capitacoes />}
-
           {pagina === "ementa" && <Ementa />}
-
           {pagina === "custos" && <Custos />}
-
           {pagina === "dietas" && <Dietas />}
-
           {pagina === "fichas" && <FichasTecnicas />}
-
-          {pagina === "valor-nutricional" && (
-            <ValorNutricional />
-          )}
-
+          {pagina === "valor-nutricional" && <ValorNutricional />}
           {pagina === "stocks" && <Stocks />}
-
           {pagina === "haccp" && <HACCP />}
-
           {pagina === "relatorios" && <Relatorios />}
-
           {pagina === "historico" && <Historico />}
-
           {pagina === "sobre" && <SobreProjeto />}
         </main>
       </div>

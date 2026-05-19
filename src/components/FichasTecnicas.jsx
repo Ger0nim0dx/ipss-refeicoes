@@ -3,6 +3,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { alimentos } from "../data/alimentos";
 import { supabase } from "../supabaseClient";
+
 export default function FichasTecnicas() {
   const [listaFichas, setListaFichas] = useState([]);
 
@@ -167,8 +168,17 @@ export default function FichasTecnicas() {
       nutrientesPorDose,
     };
 
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData?.user) {
+      alert("Precisas de iniciar sessão para guardar fichas técnicas.");
+      console.error(userError);
+      return;
+    }
+
     const { error } = await supabase.from("fichas_tecnicas").insert([
       {
+        user_id: userData.user.id,
         nome,
         categoria,
         doses: Number(doses),
@@ -242,17 +252,18 @@ export default function FichasTecnicas() {
     autoTable(doc, {
       startY: 74,
       head: [["Categoria", "Ingrediente", "Qtd. (g)", "Preço/kg", "Custo"]],
-      body: ficha.ingredientes?.map((item) => {
-        const custo = (Number(item.quantidade) / 1000) * Number(item.precoKg);
+      body:
+        ficha.ingredientes?.map((item) => {
+          const custo = (Number(item.quantidade) / 1000) * Number(item.precoKg);
 
-        return [
-          item.categoriaAlimentar || item.categoria || "-",
-          item.nome || "-",
-          item.quantidade || "0",
-          `${Number(item.precoKg || 0).toFixed(2)} €`,
-          `${custo.toFixed(2)} €`,
-        ];
-      }) || [],
+          return [
+            item.categoriaAlimentar || item.categoria || "-",
+            item.nome || "-",
+            item.quantidade || "0",
+            `${Number(item.precoKg || 0).toFixed(2)} €`,
+            `${custo.toFixed(2)} €`,
+          ];
+        }) || [],
     });
 
     autoTable(doc, {

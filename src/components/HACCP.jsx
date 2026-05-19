@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { supabase } from "../supabaseClient";
 
 import {
   ResponsiveContainer,
@@ -16,17 +17,9 @@ import {
 } from "recharts";
 
 export default function HACCP() {
-  const [temperaturas, setTemperaturas] = useState(
-    JSON.parse(localStorage.getItem("ipssHaccpTemperaturas")) || []
-  );
-
-  const [checklists, setChecklists] = useState(
-    JSON.parse(localStorage.getItem("ipssHaccpChecklists")) || []
-  );
-
-  const [naoConformidades, setNaoConformidades] = useState(
-    JSON.parse(localStorage.getItem("ipssHaccpNaoConformidades")) || []
-  );
+  const [temperaturas, setTemperaturas] = useState([]);
+  const [checklists, setChecklists] = useState([]);
+  const [naoConformidades, setNaoConformidades] = useState([]);
 
   const [temperatura, setTemperatura] = useState({
     data: "",
@@ -51,6 +44,78 @@ export default function HACCP() {
     medidaCorretiva: "",
     responsavel: "",
   });
+
+  useEffect(() => {
+    carregarRegistos();
+  }, []);
+
+  async function carregarRegistos() {
+    const { data, error } = await supabase
+      .from("haccp")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      alert(error.message);
+      console.error(error);
+      return;
+    }
+
+    const listaTemperaturas = [];
+    const listaChecklists = [];
+    const listaNaoConformidades = [];
+
+    (data || []).forEach((item) => {
+      if (item.tipo_registo === "temperatura") {
+        listaTemperaturas.push({
+          id: item.id,
+          data: item.data_registo || "",
+          equipamento: item.area || "",
+          tipo: item.descricao || "Frigorífico",
+          valor: item.temperatura ?? "",
+          responsavel: item.responsavel || "",
+        });
+      }
+
+      if (item.tipo_registo === "checklist") {
+        listaChecklists.push({
+          id: item.id,
+          data: item.data_registo || "",
+          area: item.area || "",
+          tarefa: item.descricao || "",
+          estado: item.estado || "Conforme",
+          responsavel: item.responsavel || "",
+        });
+      }
+
+      if (item.tipo_registo === "nao_conformidade") {
+        listaNaoConformidades.push({
+          id: item.id,
+          data: item.data_registo || "",
+          descricao: item.descricao || "",
+          gravidade: item.estado || "Baixa",
+          medidaCorretiva: item.acao_corretiva || "",
+          responsavel: item.responsavel || "",
+        });
+      }
+    });
+
+    setTemperaturas(listaTemperaturas);
+    setChecklists(listaChecklists);
+    setNaoConformidades(listaNaoConformidades);
+  }
+
+  async function obterUtilizadorAtual() {
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error || !data?.user) {
+      alert("Precisas de iniciar sessão para gerir registos HACCP.");
+      console.error(error);
+      return null;
+    }
+
+    return data.user;
+  }
 
   function estadoTemperatura(item) {
     const valor = Number(item.valor);
@@ -95,11 +160,32 @@ export default function HACCP() {
     },
   ];
 
-  function guardarTemperatura() {
-    const novaLista = [...temperaturas, temperatura];
+  async function guardarTemperatura() {
+    const utilizador = await obterUtilizadorAtual();
+    if (!utilizador) return;
 
-    setTemperaturas(novaLista);
-    localStorage.setItem("ipssHaccpTemperaturas", JSON.stringify(novaLista));
+    const { error } = await supabase.from("haccp").insert([
+      {
+        user_id: utilizador.id,
+        tipo_registo: "temperatura",
+        data_registo: temperatura.data || null,
+        area: temperatura.equipamento,
+        descricao: temperatura.tipo,
+        temperatura: Number(temperatura.valor),
+        estado: estadoTemperatura(temperatura),
+        responsavel: temperatura.responsavel,
+        dados: {
+          equipamento: temperatura.equipamento,
+          tipo: temperatura.tipo,
+        },
+      },
+    ]);
+
+    if (error) {
+      alert(error.message);
+      console.error(error);
+      return;
+    }
 
     setTemperatura({
       data: "",
@@ -108,13 +194,34 @@ export default function HACCP() {
       valor: "",
       responsavel: "",
     });
+
+    await carregarRegistos();
   }
 
-  function guardarChecklist() {
-    const novaLista = [...checklists, checklist];
+  async function guardarChecklist() {
+    const utilizador = await obterUtilizadorAtual();
+    if (!utilizador) return;
 
-    setChecklists(novaLista);
-    localStorage.setItem("ipssHaccpChecklists", JSON.stringify(novaLista));
+    const { error } = await supabase.from("haccp").insert([
+      {
+        user_id: utilizador.id,
+        tipo_registo: "checklist",
+        data_registo: checklist.data || null,
+        area: checklist.area,
+        descricao: checklist.tarefa,
+        estado: checklist.estado,
+        responsavel: checklist.responsavel,
+        dados: {
+          tarefa: checklist.tarefa,
+        },
+      },
+    ]);
+
+    if (error) {
+      alert(error.message);
+      console.error(error);
+      return;
+    }
 
     setChecklist({
       data: "",
@@ -123,13 +230,34 @@ export default function HACCP() {
       estado: "Conforme",
       responsavel: "",
     });
+
+    await carregarRegistos();
   }
 
-  function guardarNaoConformidade() {
-    const novaLista = [...naoConformidades, naoConformidade];
+  async function guardarNaoConformidade() {
+    const utilizador = await obterUtilizadorAtual();
+    if (!utilizador) return;
 
-    setNaoConformidades(novaLista);
-    localStorage.setItem("ipssHaccpNaoConformidades", JSON.stringify(novaLista));
+    const { error } = await supabase.from("haccp").insert([
+      {
+        user_id: utilizador.id,
+        tipo_registo: "nao_conformidade",
+        data_registo: naoConformidade.data || null,
+        descricao: naoConformidade.descricao,
+        estado: naoConformidade.gravidade,
+        acao_corretiva: naoConformidade.medidaCorretiva,
+        responsavel: naoConformidade.responsavel,
+        dados: {
+          gravidade: naoConformidade.gravidade,
+        },
+      },
+    ]);
+
+    if (error) {
+      alert(error.message);
+      console.error(error);
+      return;
+    }
 
     setNaoConformidade({
       data: "",
@@ -138,6 +266,26 @@ export default function HACCP() {
       medidaCorretiva: "",
       responsavel: "",
     });
+
+    await carregarRegistos();
+  }
+
+  async function eliminarRegisto(id) {
+    const confirmar = window.confirm(
+      "Tem a certeza que pretende eliminar este registo?"
+    );
+
+    if (!confirmar) return;
+
+    const { error } = await supabase.from("haccp").delete().eq("id", id);
+
+    if (error) {
+      alert(error.message);
+      console.error(error);
+      return;
+    }
+
+    await carregarRegistos();
   }
 
   function exportarRelatorioHACCP() {
@@ -573,6 +721,7 @@ export default function HACCP() {
                 <th>Temperatura</th>
                 <th>Estado</th>
                 <th>Responsável</th>
+                <th>Ações</th>
               </tr>
             </thead>
 
@@ -598,6 +747,14 @@ export default function HACCP() {
                       )}
                     </td>
                     <td>{item.responsavel}</td>
+                    <td>
+                      <button
+                        className="botao-secundario"
+                        onClick={() => eliminarRegisto(item.id)}
+                      >
+                        Eliminar
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -620,6 +777,7 @@ export default function HACCP() {
                 <th>Tarefa</th>
                 <th>Estado</th>
                 <th>Responsável</th>
+                <th>Ações</th>
               </tr>
             </thead>
 
@@ -631,6 +789,14 @@ export default function HACCP() {
                   <td>{item.tarefa}</td>
                   <td>{item.estado}</td>
                   <td>{item.responsavel}</td>
+                  <td>
+                    <button
+                      className="botao-secundario"
+                      onClick={() => eliminarRegisto(item.id)}
+                    >
+                      Eliminar
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -652,6 +818,7 @@ export default function HACCP() {
                 <th>Descrição</th>
                 <th>Medida corretiva</th>
                 <th>Responsável</th>
+                <th>Ações</th>
               </tr>
             </thead>
 
@@ -663,6 +830,14 @@ export default function HACCP() {
                   <td>{item.descricao}</td>
                   <td>{item.medidaCorretiva}</td>
                   <td>{item.responsavel}</td>
+                  <td>
+                    <button
+                      className="botao-secundario"
+                      onClick={() => eliminarRegisto(item.id)}
+                    >
+                      Eliminar
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

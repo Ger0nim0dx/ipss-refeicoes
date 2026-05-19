@@ -27,8 +27,6 @@ export default function Stocks() {
   }, []);
 
   async function carregarStocks() {
-    console.log("URL:", import.meta.env.VITE_SUPABASE_URL);
-console.log("KEY:", import.meta.env.VITE_SUPABASE_ANON_KEY);
     const { data, error } = await supabase
       .from("stocks")
       .select("*")
@@ -93,14 +91,31 @@ console.log("KEY:", import.meta.env.VITE_SUPABASE_ANON_KEY);
     );
   }
 
+  async function obterUtilizadorAtual() {
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error || !data?.user) {
+      alert("Precisas de iniciar sessão para gerir stocks.");
+      console.error(error);
+      return null;
+    }
+
+    return data.user;
+  }
+
   async function adicionarProduto() {
     if (!produto || !quantidade) {
       alert("Indica o produto e a quantidade.");
       return;
     }
 
+    const utilizador = await obterUtilizadorAtual();
+
+    if (!utilizador) return;
+
     const { error } = await supabase.from("stocks").insert([
       {
+        user_id: utilizador.id,
         produto,
         categoria,
         quantidade: Number(quantidade),

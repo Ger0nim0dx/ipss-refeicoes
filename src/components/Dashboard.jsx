@@ -23,29 +23,109 @@ import {
   CartesianGrid,
 } from "recharts";
 
+import { supabase } from "../supabaseClient";
+
 function Dashboard() {
   const [dadosIPSS, setDadosIPSS] = useState({});
   const [stocks, setStocks] = useState([]);
   const [movimentos, setMovimentos] = useState([]);
   const [fichas, setFichas] = useState([]);
+  const [ementas, setEmentas] = useState([]);
+  const [dietas, setDietas] = useState([]);
+  const [haccp, setHaccp] = useState([]);
 
   useEffect(() => {
+    carregarDashboard();
+  }, []);
+
+  async function carregarDashboard() {
+    const { data: userData, error: userError } =
+      await supabase.auth.getUser();
+
+    if (userError || !userData?.user) {
+      console.error(userError);
+      return;
+    }
+
+    const user = userData.user;
+
     setDadosIPSS(
       JSON.parse(localStorage.getItem("dadosIPSS")) || {}
     );
 
-    setStocks(
-      JSON.parse(localStorage.getItem("ipssStocks")) || []
-    );
+    const { data: stocksData, error: stocksError } =
+      await supabase
+        .from("stocks")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+    if (stocksError) {
+      console.error(stocksError);
+    }
+
+    const { data: fichasData, error: fichasError } =
+      await supabase
+        .from("fichas_tecnicas")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+    if (fichasError) {
+      console.error(fichasError);
+    }
+
+    const { data: ementasData, error: ementasError } =
+      await supabase
+        .from("ementas")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+    if (ementasError) {
+      console.error(ementasError);
+    }
+
+    const { data: dietasData, error: dietasError } =
+      await supabase
+        .from("dietas")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+    if (dietasError) {
+      console.error(dietasError);
+    }
+
+    const { data: haccpData, error: haccpError } =
+      await supabase
+        .from("haccp")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+    if (haccpError) {
+      console.error(haccpError);
+    }
+
+    const fichasFormatadas = (fichasData || []).map((ficha) => ({
+      id: ficha.id,
+      nome: ficha.nome,
+      categoria: ficha.categoria,
+      doses: ficha.doses,
+      ...ficha.dados,
+    }));
+
+    setStocks(stocksData || []);
+    setFichas(fichasFormatadas);
+    setEmentas(ementasData || []);
+    setDietas(dietasData || []);
+    setHaccp(haccpData || []);
 
     setMovimentos(
       JSON.parse(localStorage.getItem("ipssMovimentosStock")) || []
     );
-
-    setFichas(
-      JSON.parse(localStorage.getItem("ipssFichasTecnicas")) || []
-    );
-  }, []);
+  }
 
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
@@ -66,7 +146,7 @@ function Dashboard() {
   const produtosStockBaixo = stocks.filter(
     (item) =>
       Number(item.quantidade) <=
-      Number(item.stockMinimo || 0)
+      Number(item.stock_minimo ?? item.stockMinimo ?? 0)
   );
 
   const produtosExpirados = stocks.filter((item) => {
@@ -108,10 +188,26 @@ function Dashboard() {
     produtosStockBaixo.length +
     produtosExpirados.length;
 
+  const naoConformidadesHaccp = haccp.filter(
+    (item) => item.tipo_registo === "nao_conformidade"
+  );
+
+  const temperaturasCriticasHaccp = haccp.filter(
+    (item) =>
+      item.tipo_registo === "temperatura" &&
+      item.estado === "Crítico"
+  );
+
+  const alertasHaccp =
+    naoConformidadesHaccp.length + temperaturasCriticasHaccp.length;
+
+  const totalEmentas = ementas.length;
+  const totalDietas = dietas.length;
+
   const dadosGrafico = stocks
     .slice(0, 8)
     .map((item) => ({
-      nome: item.nome || item.produto,
+      nome: item.produto || item.nome,
       quantidade: Number(item.quantidade) || 0,
     }));
 
@@ -183,6 +279,36 @@ function Dashboard() {
           <p>{stocks.length}</p>
 
           <span>Produtos em stock</span>
+        </div>
+
+        <div className="dashboard-card">
+          <ClipboardList size={32} />
+
+          <h3>Ementas</h3>
+
+          <p>{totalEmentas}</p>
+
+          <span>Planeamentos guardados</span>
+        </div>
+
+        <div className="dashboard-card">
+          <CheckCircle2 size={32} />
+
+          <h3>Dietas</h3>
+
+          <p>{totalDietas}</p>
+
+          <span>Dietas especiais</span>
+        </div>
+
+        <div className="dashboard-card">
+          <ShieldAlert size={32} />
+
+          <h3>HACCP</h3>
+
+          <p>{alertasHaccp}</p>
+
+          <span>Alertas registados</span>
         </div>
 
         <div className="dashboard-card">
@@ -289,6 +415,42 @@ function Dashboard() {
       </div>
 
       <div className="dashboard-section">
+        <h2>Resumo Cloud / Supabase</h2>
+
+        <div className="grafico-movimentos">
+          <div className="movimento-card">
+            <strong>Stocks online</strong>
+
+            <span>{stocks.length}</span>
+          </div>
+
+          <div className="movimento-card">
+            <strong>Fichas técnicas online</strong>
+
+            <span>{fichas.length}</span>
+          </div>
+
+          <div className="movimento-card">
+            <strong>Ementas online</strong>
+
+            <span>{ementas.length}</span>
+          </div>
+
+          <div className="movimento-card">
+            <strong>Dietas online</strong>
+
+            <span>{dietas.length}</span>
+          </div>
+
+          <div className="movimento-card">
+            <strong>Registos HACCP online</strong>
+
+            <span>{haccp.length}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="dashboard-section">
         <h2>Gráfico de Quantidades em Stock</h2>
 
         {stocks.length === 0 ? (
@@ -360,7 +522,8 @@ function Dashboard() {
 
         {produtosStockBaixo.length === 0 &&
         produtosAExpirar.length === 0 &&
-        produtosExpirados.length === 0 ? (
+        produtosExpirados.length === 0 &&
+        alertasHaccp === 0 ? (
           <p className="success-message">
             <CheckCircle2 size={18} /> Não existem
             alertas críticos.
@@ -415,6 +578,17 @@ function Dashboard() {
                   produtosExpirados.length
                 }{" "}
                 produtos expirados.
+              </p>
+            )}
+
+            {alertasHaccp > 0 && (
+              <p
+                style={{
+                  color: "#dc2626",
+                  fontWeight: "bold",
+                }}
+              >
+                ⚠ Existem {alertasHaccp} alertas HACCP registados.
               </p>
             )}
           </>

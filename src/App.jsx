@@ -38,6 +38,7 @@ import FichasTecnicas from "./components/FichasTecnicas";
 import Stocks from "./components/Stocks";
 import ValorNutricional from "./components/ValorNutricional";
 import HACCP from "./components/HACCP";
+import Utentes from "./components/Utentes";
 
 import AccessibilityPanel from "./AccessibilityPanel";
 
@@ -176,6 +177,7 @@ export default function App() {
     { id: "capitacoes", label: "Capitações", icon: ClipboardList },
     { id: "ementa", label: "Ementa", icon: UtensilsCrossed },
     { id: "custos", label: "Custos", icon: Euro },
+    { id: "utentes", label: "Utentes", icon: UserCircle },
     { id: "dietas", label: "Dietas", icon: Apple },
     { id: "fichas", label: "Fichas Técnicas", icon: FileText },
     {
@@ -332,12 +334,13 @@ export default function App() {
                     ? `${totalAlertas} alerta(s) ativo(s)`
                     : "Sem alertas ativos"
                 }
-                aria-label="Alertas da aplicação"
               >
                 <Bell size={20} />
 
                 {totalAlertas > 0 ? (
-                  <span className="notification-badge">{totalAlertas}</span>
+                  <span className="notification-badge">
+                    {totalAlertas}
+                  </span>
                 ) : (
                   <span className="notification-dot"></span>
                 )}
@@ -360,6 +363,7 @@ export default function App() {
           {pagina === "capitacoes" && <Capitacoes />}
           {pagina === "ementa" && <Ementa />}
           {pagina === "custos" && <Custos />}
+          {pagina === "utentes" && <Utentes />}
           {pagina === "dietas" && <Dietas />}
           {pagina === "fichas" && <FichasTecnicas />}
           {pagina === "valor-nutricional" && <ValorNutricional />}

@@ -8,6 +8,8 @@ export default function Ementa() {
   const [stocks, setStocks] = useState([]);
 
   const [ementa, setEmenta] = useState({});
+  const [modoIA, setModoIA] = useState("equilibrada");
+  const [relatorioIA, setRelatorioIA] = useState("");
 
   useEffect(() => {
     carregarDados();
@@ -245,6 +247,261 @@ export default function Ementa() {
     return pontos;
   }
 
+
+  function obterGrupoReceita(ficha) {
+    const texto = textoNormalizado(
+      `${ficha.nome} ${ficha.categoria} ${ficha.tipo} ${ficha.alergenios}`
+    );
+
+    if (texto.includes("sopa")) return "Sopa";
+    if (texto.includes("peixe")) return "Peixe";
+    if (texto.includes("carne") || texto.includes("frango") || texto.includes("vaca")) return "Carne";
+    if (texto.includes("vegetar") || texto.includes("leguminosa") || texto.includes("feijao") || texto.includes("feijão") || texto.includes("grão")) return "Vegetariana/Leguminosas";
+    if (texto.includes("sobremesa") || texto.includes("doce")) return "Sobremesa";
+    if (texto.includes("fruta")) return "Fruta";
+    if (texto.includes("leite") || texto.includes("iogurte")) return "Laticínios";
+    if (texto.includes("pao") || texto.includes("pão")) return "Padaria";
+
+    return ficha.categoria || "Outro";
+  }
+
+  function calcularDisponibilidadeStock(ficha) {
+    const ingredientes = ficha.ingredientes || [];
+
+    if (ingredientes.length === 0) {
+      return {
+        percentagem: 0,
+        emFalta: [],
+        aExpirar: [],
+      };
+    }
+
+    let ingredientesDisponiveis = 0;
+    const emFalta = [];
+    const aExpirar = [];
+
+    ingredientes.forEach((ingrediente) => {
+      const produtoStock = stocks.find(
+        (item) =>
+          normalizarTexto(item.produto) === normalizarTexto(ingrediente.nome)
+      );
+
+      if (!produtoStock) {
+        emFalta.push(ingrediente.nome);
+        return;
+      }
+
+      const stockDisponivel = converterParaGramas(
+        produtoStock.quantidade,
+        produtoStock.unidade
+      );
+
+      const necessario = Number(ingrediente.quantidade || 0);
+
+      if (stockDisponivel >= necessario) {
+        ingredientesDisponiveis += 1;
+      } else {
+        emFalta.push(ingrediente.nome);
+      }
+
+      if (produtoStock.validade) {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+
+        const validade = new Date(produtoStock.validade);
+        validade.setHours(0, 0, 0, 0);
+
+        const dias = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
+
+        if (dias >= 0 && dias <= 7) {
+          aExpirar.push(produtoStock.produto);
+        }
+      }
+    });
+
+    return {
+      percentagem: ingredientesDisponiveis / ingredientes.length,
+      emFalta,
+      aExpirar,
+    };
+  }
+
+  function pontuarReceitaIA(
+    ficha,
+    refeicao,
+    usadasSemana,
+    usadasDia,
+    gruposDia,
+    gruposSemana
+  ) {
+    let pontos = 100;
+
+    const kcal = obterKcal(ficha);
+    const custo = obterCusto(ficha);
+    const grupo = obterGrupoReceita(ficha);
+    const disponibilidade = calcularDisponibilidadeStock(ficha);
+
+    if (receitaAdequada(ficha, refeicao)) pontos += 35;
+    if (usadasDia.includes(ficha.id)) pontos -= 100;
+
+    const vezesUsada = usadasSemana.filter((id) => id === ficha.id).length;
+    pontos -= vezesUsada * 35;
+
+    const vezesGrupoSemana = gruposSemana.filter((item) => item === grupo).length;
+    pontos -= vezesGrupoSemana * 8;
+
+    if (gruposDia.includes(grupo)) pontos -= 20;
+
+    if (refeicao === "Almoço" || refeicao === "Jantar") {
+      if (kcal >= 350 && kcal <= 850) pontos += 25;
+      if (grupo === "Sopa") pontos += 10;
+      if (grupo === "Peixe" && vezesGrupoSemana < 3) pontos += 18;
+      if (grupo === "Vegetariana/Leguminosas" && vezesGrupoSemana < 2) pontos += 15;
+    } else {
+      if (kcal > 0 && kcal <= 350) pontos += 25;
+      if (grupo === "Fruta") pontos += 15;
+      if (grupo === "Laticínios") pontos += 12;
+      if (grupo === "Padaria") pontos += 8;
+    }
+
+    if (modoIA === "economica") {
+      if (custo > 0 && custo <= 2.0) pontos += 35;
+      if (custo > 4.5) pontos -= 30;
+    }
+
+    if (modoIA === "nutricional") {
+      if (kcal >= 250 && kcal <= 750) pontos += 25;
+      if (
+        grupo === "Peixe" ||
+        grupo === "Vegetariana/Leguminosas" ||
+        grupo === "Fruta"
+      ) {
+        pontos += 20;
+      }
+    }
+
+    if (modoIA === "anti-desperdicio") {
+      pontos += disponibilidade.percentagem * 35;
+
+      if (disponibilidade.aExpirar.length > 0) {
+        pontos += 45;
+      }
+
+      if (disponibilidade.emFalta.length > 0) {
+        pontos -= disponibilidade.emFalta.length * 25;
+      }
+    } else {
+      pontos += disponibilidade.percentagem * 20;
+
+      if (disponibilidade.emFalta.length > 0) {
+        pontos -= disponibilidade.emFalta.length * 15;
+      }
+    }
+
+    if (custo > 0 && custo <= 4.5) pontos += 10;
+
+    pontos += Math.random() * 8;
+
+    return pontos;
+  }
+
+  async function gerarEmentaIA() {
+    if (fichas.length === 0) {
+      alert("Ainda não existem fichas técnicas registadas.");
+      return;
+    }
+
+    const novaEmenta = {};
+    const usadasSemana = [];
+    const gruposSemana = [];
+    const explicacoes = [];
+
+    diasSemana.forEach((dia) => {
+      novaEmenta[dia] = {};
+      const usadasDia = [];
+      const gruposDia = [];
+
+      refeicoes.forEach((refeicao) => {
+        const receitasOrdenadas = [...fichas].sort(
+          (a, b) =>
+            pontuarReceitaIA(
+              b,
+              refeicao,
+              usadasSemana,
+              usadasDia,
+              gruposDia,
+              gruposSemana
+            ) -
+            pontuarReceitaIA(
+              a,
+              refeicao,
+              usadasSemana,
+              usadasDia,
+              gruposDia,
+              gruposSemana
+            )
+        );
+
+        const escolhida = receitasOrdenadas[0];
+        const grupo = obterGrupoReceita(escolhida);
+        const disponibilidade = calcularDisponibilidadeStock(escolhida);
+
+        novaEmenta[dia][refeicao] = escolhida.id;
+        usadasDia.push(escolhida.id);
+        usadasSemana.push(escolhida.id);
+        gruposDia.push(grupo);
+        gruposSemana.push(grupo);
+
+        explicacoes.push({
+          dia,
+          refeicao,
+          receita: escolhida.nome,
+          grupo,
+          custo: Number(escolhida.custoTotal || 0),
+          kcal: Number(escolhida.nutrientesTotais?.kcal || 0),
+          stock: Math.round(disponibilidade.percentagem * 100),
+          emFalta: disponibilidade.emFalta,
+          aExpirar: disponibilidade.aExpirar,
+        });
+      });
+    });
+
+    setEmenta(novaEmenta);
+
+    const custoPrevisto = explicacoes.reduce(
+      (total, item) => total + Number(item.custo || 0),
+      0
+    );
+
+    const mediaStock =
+      explicacoes.length > 0
+        ? explicacoes.reduce((total, item) => total + item.stock, 0) /
+          explicacoes.length
+        : 0;
+
+    const receitasComFalta = explicacoes.filter(
+      (item) => item.emFalta.length > 0
+    ).length;
+
+    const produtosAproveitados = [
+      ...new Set(explicacoes.flatMap((item) => item.aExpirar)),
+    ];
+
+    setRelatorioIA(
+      `Ementa gerada em modo "${modoIA}". Custo semanal estimado: ${custoPrevisto.toFixed(
+        2
+      )} €. Disponibilidade média de stock: ${mediaStock.toFixed(
+        0
+      )}%. Receitas com algum ingrediente em falta: ${receitasComFalta}. Produtos com validade próxima aproveitados: ${
+        produtosAproveitados.length > 0
+          ? produtosAproveitados.join(", ")
+          : "nenhum"
+      }.`
+    );
+
+    await guardarEmentaSupabase(novaEmenta);
+  }
+
   async function gerarEmentaAutomatica() {
     if (fichas.length === 0) {
       alert("Ainda não existem fichas técnicas registadas.");
@@ -421,18 +678,46 @@ export default function Ementa() {
         semanal de compras.
       </p>
 
-      <div className="botoes-formulario">
-        <button className="botao-principal" onClick={gerarEmentaAutomatica}>
-          Gerar ementa inteligente
-        </button>
+      <div className="dashboard-section">
+        <h2>IA de geração de ementas</h2>
 
-        <button className="botao-secundario" onClick={exportarEmentaPDF}>
-          Exportar ementa PDF
-        </button>
+        <p>
+          A IA analisa fichas técnicas, custos, valor energético, repetição
+          semanal, adequação à refeição, stock disponível e produtos com validade
+          próxima.
+        </p>
 
-        <button className="botao-secundario" onClick={limparEmenta}>
-          Limpar ementa
-        </button>
+        <label>Modo de geração</label>
+        <select value={modoIA} onChange={(e) => setModoIA(e.target.value)}>
+          <option value="equilibrada">Equilibrada</option>
+          <option value="economica">Económica</option>
+          <option value="nutricional">Nutricional</option>
+          <option value="anti-desperdicio">Anti-desperdício</option>
+        </select>
+
+        <div className="botoes-formulario">
+          <button className="botao-principal" onClick={gerarEmentaIA}>
+            Gerar melhor ementa possível com IA
+          </button>
+
+          <button className="botao-secundario" onClick={gerarEmentaAutomatica}>
+            Gerar ementa simples
+          </button>
+
+          <button className="botao-secundario" onClick={exportarEmentaPDF}>
+            Exportar ementa PDF
+          </button>
+
+          <button className="botao-secundario" onClick={limparEmenta}>
+            Limpar ementa
+          </button>
+        </div>
+
+        {relatorioIA && (
+          <div className="success-message">
+            <strong>Relatório da IA:</strong> {relatorioIA}
+          </div>
+        )}
       </div>
 
       <div className="dashboard-cards">
@@ -464,6 +749,12 @@ export default function Ementa() {
           <h3>Compras</h3>
           <p>{listaComprasSemanal.length}</p>
           <span>Produtos em falta</span>
+        </div>
+
+        <div className="dashboard-card">
+          <h3>Modo IA</h3>
+          <p>{modoIA}</p>
+          <span>Critério de geração</span>
         </div>
       </div>
 

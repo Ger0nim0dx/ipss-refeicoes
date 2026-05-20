@@ -52,6 +52,7 @@ export default function App() {
   const [password, setPassword] = useState("");
 
   const [session, setSession] = useState(null);
+  const [totalAlertas, setTotalAlertas] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -66,6 +67,80 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      carregarAlertas();
+    }
+  }, [session]);
+
+  async function carregarAlertas() {
+    const userId = session?.user?.id;
+
+    if (!userId) return;
+
+    const { data: stocksData, error: stocksError } = await supabase
+      .from("stocks")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (stocksError) {
+      console.error(stocksError);
+    }
+
+    const { data: haccpData, error: haccpError } = await supabase
+      .from("haccp")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (haccpError) {
+      console.error(haccpError);
+    }
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const stocks = stocksData || [];
+    const haccp = haccpData || [];
+
+    const stockBaixo = stocks.filter(
+      (item) =>
+        Number(item.quantidade || 0) <=
+        Number(item.stock_minimo || 0)
+    ).length;
+
+    const produtosExpirados = stocks.filter((item) => {
+      if (!item.validade) return false;
+
+      const validade = new Date(item.validade);
+      validade.setHours(0, 0, 0, 0);
+
+      return validade < hoje;
+    }).length;
+
+    const produtosAExpirar = stocks.filter((item) => {
+      if (!item.validade) return false;
+
+      const validade = new Date(item.validade);
+      validade.setHours(0, 0, 0, 0);
+
+      const diferenca = validade - hoje;
+      const dias = Math.ceil(diferenca / (1000 * 60 * 60 * 24));
+
+      return dias >= 0 && dias <= 7;
+    }).length;
+
+    const alertasHaccp = haccp.filter(
+      (item) =>
+        item.tipo_registo === "nao_conformidade" ||
+        item.estado === "Crítico" ||
+        item.estado === "Não conforme"
+    ).length;
+
+    setTotalAlertas(
+      stockBaixo + produtosExpirados + produtosAExpirar + alertasHaccp
+    );
+  }
 
   async function login() {
     const { error } = await supabase.auth.signInWithPassword({
@@ -249,10 +324,23 @@ export default function App() {
             </div>
 
             <div className="topbar-actions">
-              <button className="topbar-icon">
+              <button
+                className="topbar-icon"
+                onClick={carregarAlertas}
+                title={
+                  totalAlertas > 0
+                    ? `${totalAlertas} alerta(s) ativo(s)`
+                    : "Sem alertas ativos"
+                }
+                aria-label="Alertas da aplicação"
+              >
                 <Bell size={20} />
 
-                <span className="notification-dot"></span>
+                {totalAlertas > 0 ? (
+                  <span className="notification-badge">{totalAlertas}</span>
+                ) : (
+                  <span className="notification-dot"></span>
+                )}
               </button>
 
               <div className="user-box">

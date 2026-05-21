@@ -2,9 +2,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 
 export default function Stocks() {
-  const fichasGuardadas =
-    JSON.parse(localStorage.getItem("ipssFichasTecnicas")) || [];
-
   const movimentosGuardados =
     JSON.parse(localStorage.getItem("ipssMovimentosStock")) || [];
 
@@ -12,11 +9,13 @@ export default function Stocks() {
   const [categoria, setCategoria] = useState("Mercearia");
   const [quantidade, setQuantidade] = useState("");
   const [unidade, setUnidade] = useState("kg");
+  const [precoKg, setPrecoKg] = useState("");
   const [validade, setValidade] = useState("");
   const [fornecedor, setFornecedor] = useState("");
   const [stockMinimo, setStockMinimo] = useState("");
 
   const [listaStocks, setListaStocks] = useState([]);
+  const [fichasTecnicas, setFichasTecnicas] = useState([]);
   const [movimentos, setMovimentos] = useState(movimentosGuardados);
 
   const [fichaSelecionadaId, setFichaSelecionadaId] = useState("");
@@ -24,6 +23,7 @@ export default function Stocks() {
 
   useEffect(() => {
     carregarStocks();
+    carregarFichasTecnicas();
   }, []);
 
   async function carregarStocks() {
@@ -38,12 +38,13 @@ export default function Stocks() {
       return;
     }
 
-    const stocksFormatados = data.map((item) => ({
+    const stocksFormatados = (data || []).map((item) => ({
       id: item.id,
       produto: item.produto,
       categoria: item.categoria,
       quantidade: Number(item.quantidade || 0),
       unidade: item.unidade,
+      precoKg: Number(item.preco_kg || item.precoKg || item.preco || 0),
       validade: item.validade,
       fornecedor: item.fornecedor,
       stockMinimo: Number(item.stock_minimo || 0),
@@ -52,7 +53,29 @@ export default function Stocks() {
     setListaStocks(stocksFormatados);
   }
 
-  const fichaSelecionada = fichasGuardadas.find(
+  async function carregarFichasTecnicas() {
+    const { data, error } = await supabase
+      .from("fichas_tecnicas")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Erro ao carregar fichas técnicas:", error);
+      return;
+    }
+
+    const fichasFormatadas = (data || []).map((ficha) => ({
+      id: ficha.id,
+      nome: ficha.nome,
+      categoria: ficha.categoria,
+      doses: ficha.doses,
+      ...ficha.dados,
+    }));
+
+    setFichasTecnicas(fichasFormatadas);
+  }
+
+  const fichaSelecionada = fichasTecnicas.find(
     (ficha) => String(ficha.id) === String(fichaSelecionadaId)
   );
 
@@ -110,7 +133,6 @@ export default function Stocks() {
     }
 
     const utilizador = await obterUtilizadorAtual();
-
     if (!utilizador) return;
 
     const { error } = await supabase.from("stocks").insert([
@@ -120,6 +142,7 @@ export default function Stocks() {
         categoria,
         quantidade: Number(quantidade),
         unidade,
+        preco_kg: Number(precoKg) || 0,
         validade: validade || null,
         fornecedor,
         stock_minimo: Number(stockMinimo) || 0,
@@ -144,7 +167,10 @@ export default function Stocks() {
     guardarMovimentos([novoMovimento, ...movimentos]);
 
     setProduto("");
+    setCategoria("Mercearia");
     setQuantidade("");
+    setUnidade("kg");
+    setPrecoKg("");
     setValidade("");
     setFornecedor("");
     setStockMinimo("");
@@ -286,10 +312,16 @@ export default function Stocks() {
       const quantidadeNecessaria =
         Number(ingrediente.quantidade || 0) * fatorProducao;
 
-      const produtoStock = listaStocks.find(
-        (item) =>
-          normalizarTexto(item.produto) === normalizarTexto(ingrediente.nome)
-      );
+      const produtoStock = listaStocks.find((item) => {
+        const nomeStock = normalizarTexto(item.produto);
+        const nomeIngrediente = normalizarTexto(ingrediente.nome);
+
+        return (
+          nomeStock === nomeIngrediente ||
+          nomeStock.includes(nomeIngrediente) ||
+          nomeIngrediente.includes(nomeStock)
+        );
+      });
 
       const stockDisponivel = produtoStock
         ? converterParaGramas(produtoStock.quantidade, produtoStock.unidade)
@@ -379,8 +411,8 @@ export default function Stocks() {
       <h2>Gestão de Stocks</h2>
 
       <p className="subtitulo">
-        Controlo de produtos, entradas, saídas, validade, stock mínimo, produção
-        e lista automática de compras.
+        Controlo de produtos, entradas, saídas, validade, stock mínimo, preços,
+        produção e lista automática de compras.
       </p>
 
       <div className="dashboard-cards">
@@ -476,6 +508,15 @@ export default function Stocks() {
           <option>unidades</option>
         </select>
 
+        <label>Preço/kg ou preço/unidade (€)</label>
+        <input
+          type="number"
+          step="0.01"
+          value={precoKg}
+          onChange={(e) => setPrecoKg(e.target.value)}
+          placeholder="Ex.: 3.50"
+        />
+
         <label>Data de validade</label>
         <input
           type="date"
@@ -512,7 +553,7 @@ export default function Stocks() {
         >
           <option value="">Selecionar ficha técnica</option>
 
-          {fichasGuardadas.map((ficha) => (
+          {fichasTecnicas.map((ficha) => (
             <option key={ficha.id} value={ficha.id}>
               {ficha.nome}
             </option>
@@ -639,6 +680,10 @@ export default function Stocks() {
               <p>
                 <strong>Quantidade atual:</strong> {item.quantidade}{" "}
                 {item.unidade}
+              </p>
+
+              <p>
+                <strong>Preço:</strong> {Number(item.precoKg || 0).toFixed(2)} €
               </p>
 
               <p>

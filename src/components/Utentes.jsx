@@ -7,6 +7,9 @@ export default function Utentes() {
   const [utentes, setUtentes] = useState([]);
   const [dietas, setDietas] = useState([]);
 
+  const [modoEdicao, setModoEdicao] = useState(false);
+  const [utenteEditarId, setUtenteEditarId] = useState(null);
+
   const [nome, setNome] = useState("");
   const [quarto, setQuarto] = useState("");
   const [valencia, setValencia] = useState("Lar");
@@ -32,8 +35,7 @@ export default function Utentes() {
 
     const { data: dietasData, error: dietasError } = await supabase
       .from("dietas")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("*");
 
     if (dietasError) {
       console.error(dietasError);
@@ -43,13 +45,31 @@ export default function Utentes() {
     setDietas(dietasData || []);
   }
 
+  function limparFormulario() {
+    setNome("");
+    setQuarto("");
+    setValencia("Lar");
+    setDieta("Normal");
+    setAlergias("");
+    setObservacoes("");
+
+    setModoEdicao(false);
+    setUtenteEditarId(null);
+  }
+
   async function guardarUtente() {
     if (!nome) {
       alert("Indica o nome do utente.");
       return;
     }
 
-    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (modoEdicao) {
+      await atualizarUtente();
+      return;
+    }
+
+    const { data: userData, error: userError } =
+      await supabase.auth.getUser();
 
     if (userError || !userData?.user) {
       alert("Precisas de iniciar sessão.");
@@ -67,9 +87,6 @@ export default function Utentes() {
         alergias,
         observacoes,
         ativo: true,
-        dados: {
-          origem: "registo_manual",
-        },
       },
     ]);
 
@@ -79,14 +96,51 @@ export default function Utentes() {
       return;
     }
 
-    setNome("");
-    setQuarto("");
-    setValencia("Lar");
-    setDieta("Normal");
-    setAlergias("");
-    setObservacoes("");
+    limparFormulario();
 
     await carregarDados();
+  }
+
+  async function atualizarUtente() {
+    const { error } = await supabase
+      .from("utentes")
+      .update({
+        nome,
+        quarto,
+        valencia,
+        dieta,
+        alergias,
+        observacoes,
+      })
+      .eq("id", utenteEditarId);
+
+    if (error) {
+      alert(error.message);
+      console.error(error);
+      return;
+    }
+
+    limparFormulario();
+
+    await carregarDados();
+  }
+
+  function editarUtente(utente) {
+    setModoEdicao(true);
+
+    setUtenteEditarId(utente.id);
+
+    setNome(utente.nome || "");
+    setQuarto(utente.quarto || "");
+    setValencia(utente.valencia || "Lar");
+    setDieta(utente.dieta || "Normal");
+    setAlergias(utente.alergias || "");
+    setObservacoes(utente.observacoes || "");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   }
 
   async function eliminarUtente(id) {
@@ -96,7 +150,10 @@ export default function Utentes() {
 
     if (!confirmar) return;
 
-    const { error } = await supabase.from("utentes").delete().eq("id", id);
+    const { error } = await supabase
+      .from("utentes")
+      .delete()
+      .eq("id", id);
 
     if (error) {
       alert(error.message);
@@ -149,6 +206,7 @@ export default function Utentes() {
   }
 
   const utentesAtivos = utentes.filter((item) => item.ativo);
+
   const utentesComAlergias = utentes.filter(
     (item) => item.alergias && item.alergias.trim() !== ""
   );
@@ -160,8 +218,7 @@ export default function Utentes() {
           <h2>Gestão de Utentes</h2>
 
           <p className="subtitulo">
-            Registo de utentes, valências, dietas, alergias e observações
-            alimentares.
+            Registo de utentes, dietas, alergias e observações alimentares.
           </p>
         </div>
 
@@ -174,49 +231,51 @@ export default function Utentes() {
         <div className="dashboard-card">
           <h3>Total de utentes</h3>
           <p>{utentes.length}</p>
-          <span>Registos criados</span>
         </div>
 
         <div className="dashboard-card">
           <h3>Ativos</h3>
           <p>{utentesAtivos.length}</p>
-          <span>Utentes em acompanhamento</span>
         </div>
 
         <div className="dashboard-card">
           <h3>Com alergias</h3>
           <p>{utentesComAlergias.length}</p>
-          <span>Requerem atenção</span>
         </div>
 
         <div className="dashboard-card">
           <h3>Dietas registadas</h3>
           <p>{dietas.length}</p>
-          <span>Ligadas ao módulo Dietas</span>
         </div>
       </div>
 
       <div className="painel">
-        <h3>Novo utente</h3>
+        <h3>
+          {modoEdicao ? "Editar utente" : "Novo utente"}
+        </h3>
 
         <label>Nome do utente</label>
+
         <input
           type="text"
           value={nome}
           onChange={(e) => setNome(e.target.value)}
-          placeholder="Ex.: Maria Silva"
         />
 
         <label>Quarto / Sala</label>
+
         <input
           type="text"
           value={quarto}
           onChange={(e) => setQuarto(e.target.value)}
-          placeholder="Ex.: Quarto 12"
         />
 
         <label>Valência</label>
-        <select value={valencia} onChange={(e) => setValencia(e.target.value)}>
+
+        <select
+          value={valencia}
+          onChange={(e) => setValencia(e.target.value)}
+        >
           <option>Lar</option>
           <option>Creche</option>
           <option>Apoio Domiciliário</option>
@@ -225,7 +284,11 @@ export default function Utentes() {
         </select>
 
         <label>Dieta</label>
-        <select value={dieta} onChange={(e) => setDieta(e.target.value)}>
+
+        <select
+          value={dieta}
+          onChange={(e) => setDieta(e.target.value)}
+        >
           <option>Normal</option>
           <option>Sem sal</option>
           <option>Diabética</option>
@@ -237,23 +300,45 @@ export default function Utentes() {
         </select>
 
         <label>Alergias / intolerâncias</label>
+
         <input
           type="text"
           value={alergias}
           onChange={(e) => setAlergias(e.target.value)}
-          placeholder="Ex.: leite, glúten, frutos secos"
         />
 
         <label>Observações</label>
+
         <textarea
           value={observacoes}
           onChange={(e) => setObservacoes(e.target.value)}
-          placeholder="Observações alimentares relevantes..."
         />
 
-        <button className="botao-principal" onClick={guardarUtente}>
-          Guardar utente
-        </button>
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            marginTop: "15px",
+          }}
+        >
+          <button
+            className="botao-principal"
+            onClick={guardarUtente}
+          >
+            {modoEdicao
+              ? "Guardar alterações"
+              : "Guardar utente"}
+          </button>
+
+          {modoEdicao && (
+            <button
+              className="botao-secundario"
+              onClick={limparFormulario}
+            >
+              Cancelar
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="historico-grid">
@@ -265,51 +350,84 @@ export default function Utentes() {
               <h3>{item.nome}</h3>
 
               <p>
-                <strong>Quarto/Sala:</strong> {item.quarto || "-"}
+                <strong>Quarto/Sala:</strong>{" "}
+                {item.quarto || "-"}
               </p>
 
               <p>
-                <strong>Valência:</strong> {item.valencia || "-"}
+                <strong>Valência:</strong>{" "}
+                {item.valencia || "-"}
               </p>
 
               <p>
-                <strong>Dieta:</strong> {item.dieta || "-"}
+                <strong>Dieta:</strong>{" "}
+                {item.dieta || "-"}
               </p>
 
               <p>
-                <strong>Alergias:</strong> {item.alergias || "Nenhuma"}
+                <strong>Alergias:</strong>{" "}
+                {item.alergias || "Nenhuma"}
               </p>
 
               <p>
-                <strong>Observações:</strong> {item.observacoes || "-"}
+                <strong>Observações:</strong>{" "}
+                {item.observacoes || "-"}
               </p>
 
               <p>
                 <strong>Estado:</strong>{" "}
                 {item.ativo ? (
-                  <span style={{ color: "#16a34a", fontWeight: "bold" }}>
+                  <span
+                    style={{
+                      color: "#16a34a",
+                      fontWeight: "bold",
+                    }}
+                  >
                     Ativo
                   </span>
                 ) : (
-                  <span style={{ color: "#dc2626", fontWeight: "bold" }}>
+                  <span
+                    style={{
+                      color: "#dc2626",
+                      fontWeight: "bold",
+                    }}
+                  >
                     Inativo
                   </span>
                 )}
               </p>
 
-              <button
-                className="botao-principal"
-                onClick={() => alternarAtivo(item)}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  flexWrap: "wrap",
+                  marginTop: "10px",
+                }}
               >
-                {item.ativo ? "Marcar como inativo" : "Reativar"}
-              </button>
+                <button
+                  className="botao-principal"
+                  onClick={() => editarUtente(item)}
+                >
+                  Editar
+                </button>
 
-              <button
-                className="botao-secundario"
-                onClick={() => eliminarUtente(item.id)}
-              >
-                Eliminar
-              </button>
+                <button
+                  className="botao-principal"
+                  onClick={() => alternarAtivo(item)}
+                >
+                  {item.ativo
+                    ? "Marcar inativo"
+                    : "Reativar"}
+                </button>
+
+                <button
+                  className="botao-secundario"
+                  onClick={() => eliminarUtente(item.id)}
+                >
+                  Eliminar
+                </button>
+              </div>
             </div>
           ))
         )}

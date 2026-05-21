@@ -4,10 +4,13 @@ import autoTable from "jspdf-autotable";
 import { supabase } from "../supabaseClient";
 
 export default function Dietas() {
-  const [utente, setUtente] = useState("");
-  const [valencia, setValencia] = useState("Lar");
-  const [dieta, setDieta] = useState("Normal");
+  const [utentes, setUtentes] = useState([]);
+  const [utenteSelecionado, setUtenteSelecionado] = useState("");
+
+  const [valencia, setValencia] = useState("");
+  const [dieta, setDieta] = useState("");
   const [alergias, setAlergias] = useState("");
+  const [quarto, setQuarto] = useState("");
   const [observacoes, setObservacoes] = useState("");
 
   const [listaDietas, setListaDietas] = useState([]);
@@ -17,12 +20,37 @@ export default function Dietas() {
 
   useEffect(() => {
     carregarDietas();
+    carregarUtentes();
   }, []);
+
+  async function carregarUtentes() {
+    const { data, error } = await supabase
+      .from("utentes")
+      .select("*")
+      .order("nome", { ascending: true });
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setUtentes(data || []);
+  }
 
   async function carregarDietas() {
     const { data, error } = await supabase
       .from("dietas")
-      .select("*")
+      .select(`
+        *,
+        utentes (
+          nome,
+          valencia,
+          dieta,
+          alergias,
+          intolerancias,
+          quarto
+        )
+      `)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -33,19 +61,38 @@ export default function Dietas() {
 
     const dietasFormatadas = (data || []).map((item) => ({
       id: item.id,
-      utente: item.nome_utente,
-      valencia: item.tipo_dieta,
-      dieta: item.restricoes,
-      alergias: item.observacoes,
-      observacoes: item.dados?.observacoes || "",
+      utente: item.utentes?.nome || "-",
+      valencia: item.utentes?.valencia || "-",
+      dieta: item.utentes?.dieta || "-",
+      alergias:
+        item.utentes?.alergias ||
+        item.utentes?.intolerancias ||
+        "Nenhuma",
+      quarto: item.utentes?.quarto || "-",
+      observacoes: item.observacoes || "",
     }));
 
     setListaDietas(dietasFormatadas);
   }
 
+  function selecionarUtente(id) {
+    setUtenteSelecionado(id);
+
+    const utente = utentes.find((u) => u.id === id);
+
+    if (!utente) return;
+
+    setValencia(utente.valencia || "");
+    setDieta(utente.dieta || "");
+    setAlergias(
+      utente.alergias || utente.intolerancias || ""
+    );
+    setQuarto(utente.quarto || "");
+  }
+
   async function adicionarDieta() {
-    if (!utente) {
-      alert("Indica o nome do utente.");
+    if (!utenteSelecionado) {
+      alert("Seleciona um utente.");
       return;
     }
 
@@ -61,13 +108,10 @@ export default function Dietas() {
     const { error } = await supabase.from("dietas").insert([
       {
         user_id: userData.user.id,
-        nome_utente: utente,
-        tipo_dieta: valencia,
-        restricoes: dieta,
-        observacoes: alergias,
-        dados: {
-          observacoes,
-        },
+        utente_id: utenteSelecionado,
+        data: new Date().toISOString().split("T")[0],
+        refeicao: "Geral",
+        observacoes,
       },
     ]);
 
@@ -77,8 +121,11 @@ export default function Dietas() {
       return;
     }
 
-    setUtente("");
+    setUtenteSelecionado("");
+    setValencia("");
+    setDieta("");
     setAlergias("");
+    setQuarto("");
     setObservacoes("");
 
     await carregarDietas();
@@ -117,23 +164,30 @@ export default function Dietas() {
     doc.setFontSize(11);
     doc.text(`Instituição: ${instituicao}`, 14, 30);
     doc.text(`Data: ${new Date().toLocaleDateString("pt-PT")}`, 14, 37);
-    doc.text("Responsável: Frederico Pinto", 14, 44);
 
     const tabela = listaDietas.map((item) => [
       item.utente,
+      item.quarto,
       item.valencia,
       item.dieta,
-      item.alergias || "Nenhuma",
+      item.alergias,
       item.observacoes || "-",
     ]);
 
     autoTable(doc, {
-      head: [["Utente", "Valência", "Dieta", "Alergias", "Observações"]],
+      head: [
+        [
+          "Utente",
+          "Quarto",
+          "Valência",
+          "Dieta",
+          "Alergias",
+          "Observações",
+        ],
+      ],
       body: tabela,
-      startY: 55,
+      startY: 50,
     });
-
-    doc.text("Assinatura do responsável: __________________________", 14, 280);
 
     doc.save("relatorio-dietas-ipss.pdf");
   }
@@ -149,46 +203,38 @@ export default function Dietas() {
       </div>
 
       <div className="painel">
-        <h3>Adicionar utente</h3>
+        <h3>Adicionar Dieta</h3>
 
-        <label>Nome do utente</label>
+        <label>Utente</label>
 
-        <input
-          type="text"
-          value={utente}
-          onChange={(e) => setUtente(e.target.value)}
-        />
+        <select
+          value={utenteSelecionado}
+          onChange={(e) => selecionarUtente(e.target.value)}
+        >
+          <option value="">Selecionar utente</option>
+
+          {utentes.map((utente) => (
+            <option key={utente.id} value={utente.id}>
+              {utente.nome}
+            </option>
+          ))}
+        </select>
 
         <label>Valência</label>
 
-        <select
-          value={valencia}
-          onChange={(e) => setValencia(e.target.value)}
-        >
-          <option>Lar</option>
-          <option>Creche</option>
-          <option>Apoio Domiciliário</option>
-          <option>Trabalhador</option>
-        </select>
+        <input type="text" value={valencia} readOnly />
+
+        <label>Quarto</label>
+
+        <input type="text" value={quarto} readOnly />
 
         <label>Tipo de dieta</label>
 
-        <select value={dieta} onChange={(e) => setDieta(e.target.value)}>
-          <option>Normal</option>
-          <option>Sem sal</option>
-          <option>Diabética</option>
-          <option>Triturada</option>
-          <option>Vegetariana</option>
-          <option>Hipocalórica</option>
-        </select>
+        <input type="text" value={dieta} readOnly />
 
         <label>Alergias / intolerâncias</label>
 
-        <input
-          type="text"
-          value={alergias}
-          onChange={(e) => setAlergias(e.target.value)}
-        />
+        <input type="text" value={alergias} readOnly />
 
         <label>Observações</label>
 
@@ -208,6 +254,10 @@ export default function Dietas() {
             <h3>{item.utente}</h3>
 
             <p>
+              <strong>Quarto:</strong> {item.quarto}
+            </p>
+
+            <p>
               <strong>Valência:</strong> {item.valencia}
             </p>
 
@@ -216,7 +266,7 @@ export default function Dietas() {
             </p>
 
             <p>
-              <strong>Alergias:</strong> {item.alergias || "Nenhuma"}
+              <strong>Alergias:</strong> {item.alergias}
             </p>
 
             <p>

@@ -6,6 +6,7 @@ import { supabase } from "../supabaseClient";
 
 export default function FichasTecnicas() {
   const [listaFichas, setListaFichas] = useState([]);
+  const [stocks, setStocks] = useState([]);
   const [pedidoIA, setPedidoIA] = useState("");
 
   const categoriasAlimentos = [
@@ -19,9 +20,7 @@ export default function FichasTecnicas() {
   const [alergenios, setAlergenios] = useState("");
   const [haccp, setHaccp] = useState("");
 
-  const [ingredientes, setIngredientes] = useState([
-    criarIngredienteVazio(),
-  ]);
+  const [ingredientes, setIngredientes] = useState([criarIngredienteVazio()]);
 
   function criarIngredienteVazio() {
     return {
@@ -40,7 +39,27 @@ export default function FichasTecnicas() {
 
   useEffect(() => {
     carregarFichas();
+    carregarStocks();
   }, []);
+
+  async function carregarStocks() {
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+
+    if (!userId) return;
+
+    const { data, error } = await supabase
+      .from("stocks")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (error) {
+      console.error("Erro ao carregar stocks:", error);
+      return;
+    }
+
+    setStocks(data || []);
+  }
 
   async function carregarFichas() {
     const { data, error } = await supabase
@@ -54,7 +73,7 @@ export default function FichasTecnicas() {
       return;
     }
 
-    const fichasFormatadas = data.map((ficha) => ({
+    const fichasFormatadas = (data || []).map((ficha) => ({
       id: ficha.id,
       nome: ficha.nome,
       categoria: ficha.categoria,
@@ -65,15 +84,45 @@ export default function FichasTecnicas() {
     setListaFichas(fichasFormatadas);
   }
 
+  function procurarPrecoStock(nomeAlimento) {
+    const nomePesquisa = nomeAlimento.toLowerCase();
+
+    const itemStock = stocks.find((item) => {
+      const nomeStock =
+        item.produto ||
+        item.nome ||
+        item.designacao ||
+        item.alimento ||
+        item.ingrediente ||
+        "";
+
+      return nomeStock.toLowerCase().includes(nomePesquisa);
+    });
+
+    if (!itemStock) return 0;
+
+    return Number(
+      itemStock.preco_kg ||
+        itemStock.precoKg ||
+        itemStock.preco_unitario ||
+        itemStock.preco ||
+        itemStock.valor_unitario ||
+        0
+    );
+  }
+
   function procurarAlimento(nomeAlimento) {
     const encontrado = alimentos.find((alimento) =>
       alimento.nome.toLowerCase().includes(nomeAlimento.toLowerCase())
     );
 
+    const precoStock = procurarPrecoStock(nomeAlimento);
+
     if (!encontrado) {
       return {
         ...criarIngredienteVazio(),
         nome: nomeAlimento,
+        precoKg: precoStock,
       };
     }
 
@@ -81,7 +130,7 @@ export default function FichasTecnicas() {
       ...criarIngredienteVazio(),
       ...encontrado,
       categoriaAlimentar: encontrado.categoria,
-      precoKg: 0,
+      precoKg: precoStock,
     };
   }
 
@@ -95,6 +144,7 @@ export default function FichasTecnicas() {
 
     let dosesEstimadas = 10;
     const numeroEncontrado = texto.match(/\d+/);
+
     if (numeroEncontrado) {
       dosesEstimadas = Number(numeroEncontrado[0]);
     }
@@ -121,7 +171,8 @@ export default function FichasTecnicas() {
         categoria: "Sopa",
         preparacao:
           "Lavar, descascar e cortar os legumes. Colocar os ingredientes em água a ferver, cozinhar até ficarem macios e triturar até obter textura homogénea. Retificar a consistência e servir à temperatura adequada.",
-        alergenios: "Sem alergénios principais identificados, salvo contaminação cruzada.",
+        alergenios:
+          "Sem alergénios principais identificados, salvo contaminação cruzada.",
         haccp:
           "Higienizar legumes. Controlar tempo e temperatura de confeção. Manter a sopa em temperatura segura até ao serviço.",
         ingredientes: [
@@ -206,13 +257,12 @@ export default function FichasTecnicas() {
     const novosIngredientes = fichaGerada.ingredientes.map((item) => ({
       ...procurarAlimento(item.nome),
       quantidade: item.quantidade,
-      precoKg: 0,
     }));
 
     setIngredientes(novosIngredientes);
   }
 
-  const atualizarIngrediente = (index, campo, valor) => {
+  function atualizarIngrediente(index, campo, valor) {
     const novaLista = [...ingredientes];
     novaLista[index][campo] = valor;
 
@@ -237,34 +287,38 @@ export default function FichasTecnicas() {
           ...alimentoEncontrado,
           categoriaAlimentar: alimentoEncontrado.categoria,
           quantidade: novaLista[index].quantidade,
-          precoKg: novaLista[index].precoKg,
+          precoKg:
+            novaLista[index].precoKg ||
+            procurarPrecoStock(alimentoEncontrado.nome),
         };
       }
     }
 
     setIngredientes(novaLista);
-  };
+  }
 
-  const adicionarIngrediente = () => {
+  function adicionarIngrediente() {
     setIngredientes([...ingredientes, criarIngredienteVazio()]);
-  };
+  }
 
-  const removerIngrediente = (index) => {
+  function removerIngrediente(index) {
     setIngredientes(ingredientes.filter((_, i) => i !== index));
-  };
+  }
 
-  const calcularCustoTotal = () =>
-    ingredientes.reduce((total, item) => {
+  function calcularCustoTotal() {
+    return ingredientes.reduce((total, item) => {
       const quantidadeKg = Number(item.quantidade) / 1000;
-      return total + quantidadeKg * Number(item.precoKg);
+      return total + quantidadeKg * Number(item.precoKg || 0);
     }, 0);
+  }
 
-  const calcularTotalNutricional = (campo) =>
-    ingredientes.reduce(
+  function calcularTotalNutricional(campo) {
+    return ingredientes.reduce(
       (total, item) =>
-        total + (Number(item.quantidade) / 100) * Number(item[campo]),
+        total + (Number(item.quantidade) / 100) * Number(item[campo] || 0),
       0
     );
+  }
 
   const numeroDoses = Number(doses) > 0 ? Number(doses) : 1;
   const custoTotal = calcularCustoTotal();
@@ -371,8 +425,16 @@ export default function FichasTecnicas() {
     doc.text(`Receita: ${ficha.nome}`, 14, 32);
     doc.text(`Categoria: ${ficha.categoria}`, 14, 40);
     doc.text(`Doses: ${ficha.doses || "-"}`, 14, 48);
-    doc.text(`Custo total: ${Number(ficha.custoTotal || 0).toFixed(2)} €`, 14, 56);
-    doc.text(`Custo por dose: ${Number(ficha.custoPorDose || 0).toFixed(2)} €`, 14, 64);
+    doc.text(
+      `Custo total: ${Number(ficha.custoTotal || 0).toFixed(2)} €`,
+      14,
+      56
+    );
+    doc.text(
+      `Custo por dose: ${Number(ficha.custoPorDose || 0).toFixed(2)} €`,
+      14,
+      64
+    );
 
     autoTable(doc, {
       startY: 74,
@@ -450,10 +512,9 @@ export default function FichasTecnicas() {
       <div className="historico-topo">
         <div>
           <h2>Fichas Técnicas</h2>
-
           <p className="subtitulo">
-            Registo estruturado de receitas, ingredientes por categoria alimentar,
-            custos, HACCP e valor nutricional.
+            Registo estruturado de receitas, ingredientes por categoria
+            alimentar, custos, HACCP e valor nutricional.
           </p>
         </div>
 
@@ -466,8 +527,9 @@ export default function FichasTecnicas() {
         <h3>Gerar com auxílio da IA</h3>
 
         <p className="subtitulo">
-          Escreve uma indicação simples. Ex.: “Arroz de frango para 80 utentes”
-          ou “Sopa de legumes para 60 doses”.
+          Escreve uma indicação simples. Ex.: “Arroz de frango para 80 utentes”.
+          A app sugere ingredientes, quantidades e tenta ir buscar preços ao
+          stock.
         </p>
 
         <textarea
@@ -540,10 +602,15 @@ export default function FichasTecnicas() {
                     <select
                       value={item.categoriaAlimentar}
                       onChange={(e) =>
-                        atualizarIngrediente(index, "categoriaAlimentar", e.target.value)
+                        atualizarIngrediente(
+                          index,
+                          "categoriaAlimentar",
+                          e.target.value
+                        )
                       }
                     >
                       <option value="">Tipo</option>
+
                       {categoriasAlimentos.map((categoria) => (
                         <option key={categoria} value={categoria}>
                           {categoria}
@@ -561,6 +628,7 @@ export default function FichasTecnicas() {
                       disabled={!item.categoriaAlimentar}
                     >
                       <option value="">Alimento</option>
+
                       {alimentosFiltrados.map((alimento) => (
                         <option key={alimento.nome} value={alimento.nome}>
                           {alimento.nome}
@@ -679,20 +747,44 @@ export default function FichasTecnicas() {
           <div className="historico-card" key={item.id}>
             <h3>{item.nome}</h3>
 
-            <p><strong>Categoria:</strong> {item.categoria}</p>
-            <p><strong>Doses:</strong> {item.doses || "-"}</p>
-            <p><strong>Custo total:</strong> {Number(item.custoTotal || 0).toFixed(2)} €</p>
-            <p><strong>Custo por dose:</strong> {Number(item.custoPorDose || 0).toFixed(2)} €</p>
+            <p>
+              <strong>Categoria:</strong> {item.categoria}
+            </p>
+
+            <p>
+              <strong>Doses:</strong> {item.doses || "-"}
+            </p>
+
+            <p>
+              <strong>Custo total:</strong>{" "}
+              {Number(item.custoTotal || 0).toFixed(2)} €
+            </p>
+
+            <p>
+              <strong>Custo por dose:</strong>{" "}
+              {Number(item.custoPorDose || 0).toFixed(2)} €
+            </p>
 
             <p>
               <strong>Valor nutricional por dose:</strong>{" "}
               {item.nutrientesPorDose
-                ? `${item.nutrientesPorDose.kcal.toFixed(0)} kcal | ${item.nutrientesPorDose.proteina.toFixed(1)} g proteína | ${item.nutrientesPorDose.sal.toFixed(2)} g sal`
+                ? `${item.nutrientesPorDose.kcal.toFixed(
+                    0
+                  )} kcal | ${item.nutrientesPorDose.proteina.toFixed(
+                    1
+                  )} g proteína | ${item.nutrientesPorDose.sal.toFixed(
+                    2
+                  )} g sal`
                 : "-"}
             </p>
 
-            <p><strong>Alergénios:</strong> {item.alergenios || "Nenhum"}</p>
-            <p><strong>HACCP:</strong> {item.haccp || "-"}</p>
+            <p>
+              <strong>Alergénios:</strong> {item.alergenios || "Nenhum"}
+            </p>
+
+            <p>
+              <strong>HACCP:</strong> {item.haccp || "-"}
+            </p>
 
             <button
               className="botao-principal"

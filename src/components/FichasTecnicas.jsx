@@ -572,7 +572,7 @@ export default function FichasTecnicas() {
 
         <h3>Ingredientes</h3>
 
-        <table className="dashboard-table">
+        <table className="dashboard-table fichas-table">
           <thead>
             <tr>
               <th>Tipo</th>

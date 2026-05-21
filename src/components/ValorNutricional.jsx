@@ -1,15 +1,35 @@
 import { useEffect, useState } from "react";
+import { supabase } from "../supabaseClient";
 
 export default function ValorNutricional() {
   const [fichas, setFichas] = useState([]);
   const [fichaSelecionadaId, setFichaSelecionadaId] = useState("");
 
   useEffect(() => {
-    const fichasGuardadas =
-      JSON.parse(localStorage.getItem("ipssFichasTecnicas")) || [];
-
-    setFichas(fichasGuardadas);
+    carregarFichas();
   }, []);
+
+  async function carregarFichas() {
+    const { data, error } = await supabase
+      .from("fichas_tecnicas")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Erro ao carregar fichas:", error);
+      return;
+    }
+
+    const fichasFormatadas = (data || []).map((ficha) => ({
+      id: ficha.id,
+      nome: ficha.nome,
+      categoria: ficha.categoria,
+      doses: ficha.doses,
+      ...ficha.dados,
+    }));
+
+    setFichas(fichasFormatadas);
+  }
 
   const fichaSelecionada = fichas.find(
     (ficha) => String(ficha.id) === String(fichaSelecionadaId)

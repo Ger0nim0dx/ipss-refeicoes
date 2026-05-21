@@ -6,6 +6,7 @@ import { supabase } from "../supabaseClient";
 
 export default function FichasTecnicas() {
   const [listaFichas, setListaFichas] = useState([]);
+  const [pedidoIA, setPedidoIA] = useState("");
 
   const categoriasAlimentos = [
     ...new Set(alimentos.map((alimento) => alimento.categoria)),
@@ -19,7 +20,11 @@ export default function FichasTecnicas() {
   const [haccp, setHaccp] = useState("");
 
   const [ingredientes, setIngredientes] = useState([
-    {
+    criarIngredienteVazio(),
+  ]);
+
+  function criarIngredienteVazio() {
+    return {
       categoriaAlimentar: "",
       nome: "",
       quantidade: 0,
@@ -30,8 +35,8 @@ export default function FichasTecnicas() {
       gordura: 0,
       fibra: 0,
       sal: 0,
-    },
-  ]);
+    };
+  }
 
   useEffect(() => {
     carregarFichas();
@@ -58,6 +63,153 @@ export default function FichasTecnicas() {
     }));
 
     setListaFichas(fichasFormatadas);
+  }
+
+  function procurarAlimento(nomeAlimento) {
+    const encontrado = alimentos.find((alimento) =>
+      alimento.nome.toLowerCase().includes(nomeAlimento.toLowerCase())
+    );
+
+    if (!encontrado) {
+      return {
+        ...criarIngredienteVazio(),
+        nome: nomeAlimento,
+      };
+    }
+
+    return {
+      ...criarIngredienteVazio(),
+      ...encontrado,
+      categoriaAlimentar: encontrado.categoria,
+      precoKg: 0,
+    };
+  }
+
+  function gerarComIA() {
+    if (!pedidoIA.trim()) {
+      alert("Escreve primeiro o que pretendes gerar.");
+      return;
+    }
+
+    const texto = pedidoIA.toLowerCase();
+
+    let dosesEstimadas = 10;
+    const numeroEncontrado = texto.match(/\d+/);
+    if (numeroEncontrado) {
+      dosesEstimadas = Number(numeroEncontrado[0]);
+    }
+
+    let fichaGerada = {
+      nome: "Ficha técnica gerada",
+      categoria: "Prato principal",
+      preparacao:
+        "Preparar os ingredientes, confecionar de acordo com as boas práticas de higiene e segurança alimentar, controlar temperaturas e empratar/servir de forma adequada.",
+      alergenios:
+        "Validar alergénios de acordo com os ingredientes utilizados.",
+      haccp:
+        "Garantir higienização das mãos, superfícies e utensílios. Controlar temperaturas de confeção, conservação e distribuição. Validar alergénios antes do serviço.",
+      ingredientes: [
+        { nome: "ingrediente principal", quantidade: 150 * dosesEstimadas },
+        { nome: "acompanhamento", quantidade: 120 * dosesEstimadas },
+        { nome: "legumes", quantidade: 80 * dosesEstimadas },
+      ],
+    };
+
+    if (texto.includes("sopa")) {
+      fichaGerada = {
+        nome: "Sopa de legumes",
+        categoria: "Sopa",
+        preparacao:
+          "Lavar, descascar e cortar os legumes. Colocar os ingredientes em água a ferver, cozinhar até ficarem macios e triturar até obter textura homogénea. Retificar a consistência e servir à temperatura adequada.",
+        alergenios: "Sem alergénios principais identificados, salvo contaminação cruzada.",
+        haccp:
+          "Higienizar legumes. Controlar tempo e temperatura de confeção. Manter a sopa em temperatura segura até ao serviço.",
+        ingredientes: [
+          { nome: "batata", quantidade: 80 * dosesEstimadas },
+          { nome: "cenoura", quantidade: 50 * dosesEstimadas },
+          { nome: "cebola", quantidade: 20 * dosesEstimadas },
+          { nome: "courgette", quantidade: 50 * dosesEstimadas },
+          { nome: "azeite", quantidade: 5 * dosesEstimadas },
+        ],
+      };
+    }
+
+    if (texto.includes("arroz") && texto.includes("frango")) {
+      fichaGerada = {
+        nome: "Arroz de frango",
+        categoria: "Prato principal",
+        preparacao:
+          "Preparar o refogado com cebola e azeite. Adicionar o frango e deixar cozinhar. Juntar arroz e água/caldo em quantidade adequada. Cozinhar até o arroz ficar no ponto e o frango completamente confecionado.",
+        alergenios:
+          "Pode conter vestígios de glúten dependendo do caldo utilizado. Validar ingredientes industriais.",
+        haccp:
+          "Garantir confeção completa do frango. Controlar temperatura no centro térmico. Evitar contaminação cruzada entre carne crua e alimentos confecionados.",
+        ingredientes: [
+          { nome: "arroz", quantidade: 70 * dosesEstimadas },
+          { nome: "frango", quantidade: 120 * dosesEstimadas },
+          { nome: "cebola", quantidade: 20 * dosesEstimadas },
+          { nome: "cenoura", quantidade: 30 * dosesEstimadas },
+          { nome: "azeite", quantidade: 5 * dosesEstimadas },
+        ],
+      };
+    }
+
+    if (texto.includes("massa") && texto.includes("atum")) {
+      fichaGerada = {
+        nome: "Massa com atum",
+        categoria: "Prato principal",
+        preparacao:
+          "Cozer a massa em água. Preparar molho simples com cebola, tomate e azeite. Adicionar o atum escorrido e envolver com a massa.",
+        alergenios: "Glúten e peixe.",
+        haccp:
+          "Controlar tempo de exposição do atum após abertura. Garantir conservação adequada e serviço em temperatura segura.",
+        ingredientes: [
+          { nome: "massa", quantidade: 80 * dosesEstimadas },
+          { nome: "atum", quantidade: 70 * dosesEstimadas },
+          { nome: "tomate", quantidade: 40 * dosesEstimadas },
+          { nome: "cebola", quantidade: 20 * dosesEstimadas },
+          { nome: "azeite", quantidade: 5 * dosesEstimadas },
+        ],
+      };
+    }
+
+    if (texto.includes("jardineira")) {
+      fichaGerada = {
+        nome: "Jardineira",
+        categoria: "Prato principal",
+        preparacao:
+          "Preparar os legumes e a carne. Refogar a cebola, adicionar a carne e deixar cozinhar. Juntar legumes e batata, cobrindo com água/caldo. Cozinhar até todos os ingredientes ficarem macios.",
+        alergenios:
+          "Validar ingredientes adicionados, especialmente caldos industriais.",
+        haccp:
+          "Controlar confeção da carne e temperatura de manutenção. Garantir correta higienização dos legumes.",
+        ingredientes: [
+          { nome: "carne", quantidade: 120 * dosesEstimadas },
+          { nome: "batata", quantidade: 100 * dosesEstimadas },
+          { nome: "cenoura", quantidade: 40 * dosesEstimadas },
+          { nome: "ervilhas", quantidade: 40 * dosesEstimadas },
+          { nome: "cebola", quantidade: 20 * dosesEstimadas },
+        ],
+      };
+    }
+
+    setNome(fichaGerada.nome);
+    setCategoria(fichaGerada.categoria);
+    setDoses(dosesEstimadas);
+    setPreparacao(
+      fichaGerada.preparacao +
+        "\n\nNota: proposta gerada automaticamente. Deve ser validada pelo responsável técnico antes da utilização."
+    );
+    setAlergenios(fichaGerada.alergenios);
+    setHaccp(fichaGerada.haccp);
+
+    const novosIngredientes = fichaGerada.ingredientes.map((item) => ({
+      ...procurarAlimento(item.nome),
+      quantidade: item.quantidade,
+      precoKg: 0,
+    }));
+
+    setIngredientes(novosIngredientes);
   }
 
   const atualizarIngrediente = (index, campo, valor) => {
@@ -94,21 +246,7 @@ export default function FichasTecnicas() {
   };
 
   const adicionarIngrediente = () => {
-    setIngredientes([
-      ...ingredientes,
-      {
-        categoriaAlimentar: "",
-        nome: "",
-        quantidade: 0,
-        precoKg: 0,
-        kcal: 0,
-        proteina: 0,
-        hidratos: 0,
-        gordura: 0,
-        fibra: 0,
-        sal: 0,
-      },
-    ]);
+    setIngredientes([...ingredientes, criarIngredienteVazio()]);
   };
 
   const removerIngrediente = (index) => {
@@ -129,7 +267,6 @@ export default function FichasTecnicas() {
     );
 
   const numeroDoses = Number(doses) > 0 ? Number(doses) : 1;
-
   const custoTotal = calcularCustoTotal();
   const custoPorDose = custoTotal / numeroDoses;
 
@@ -194,26 +331,14 @@ export default function FichasTecnicas() {
 
     await carregarFichas();
 
+    setPedidoIA("");
     setNome("");
     setCategoria("Sopa");
     setDoses(10);
     setPreparacao("");
     setAlergenios("");
     setHaccp("");
-    setIngredientes([
-      {
-        categoriaAlimentar: "",
-        nome: "",
-        quantidade: 0,
-        precoKg: 0,
-        kcal: 0,
-        proteina: 0,
-        hidratos: 0,
-        gordura: 0,
-        fibra: 0,
-        sal: 0,
-      },
-    ]);
+    setIngredientes([criarIngredienteVazio()]);
 
     alert("Ficha técnica guardada no Supabase.");
   }
@@ -338,6 +463,25 @@ export default function FichasTecnicas() {
       </div>
 
       <div className="painel">
+        <h3>Gerar com auxílio da IA</h3>
+
+        <p className="subtitulo">
+          Escreve uma indicação simples. Ex.: “Arroz de frango para 80 utentes”
+          ou “Sopa de legumes para 60 doses”.
+        </p>
+
+        <textarea
+          value={pedidoIA}
+          onChange={(e) => setPedidoIA(e.target.value)}
+          placeholder="Ex.: Arroz de frango para 80 utentes"
+        />
+
+        <button className="botao-principal" onClick={gerarComIA}>
+          Gerar proposta de ficha técnica
+        </button>
+      </div>
+
+      <div className="painel">
         <h3>Nova ficha técnica</h3>
 
         <label>Nome da receita</label>
@@ -396,15 +540,10 @@ export default function FichasTecnicas() {
                     <select
                       value={item.categoriaAlimentar}
                       onChange={(e) =>
-                        atualizarIngrediente(
-                          index,
-                          "categoriaAlimentar",
-                          e.target.value
-                        )
+                        atualizarIngrediente(index, "categoriaAlimentar", e.target.value)
                       }
                     >
                       <option value="">Tipo</option>
-
                       {categoriasAlimentos.map((categoria) => (
                         <option key={categoria} value={categoria}>
                           {categoria}
@@ -422,7 +561,6 @@ export default function FichasTecnicas() {
                       disabled={!item.categoriaAlimentar}
                     >
                       <option value="">Alimento</option>
-
                       {alimentosFiltrados.map((alimento) => (
                         <option key={alimento.nome} value={alimento.nome}>
                           {alimento.nome}
@@ -439,17 +577,6 @@ export default function FichasTecnicas() {
                       onChange={(e) =>
                         atualizarIngrediente(index, "quantidade", e.target.value)
                       }
-                      style={{
-                        width: "90px",
-                        minWidth: "90px",
-                        padding: "10px",
-                        fontSize: "16px",
-                        textAlign: "center",
-                        borderRadius: "12px",
-                        border: "2px solid #0b6b2d",
-                        backgroundColor: "#fff",
-                        color: "#000",
-                      }}
                     />
                   </td>
 
@@ -462,16 +589,6 @@ export default function FichasTecnicas() {
                       onChange={(e) =>
                         atualizarIngrediente(index, "precoKg", e.target.value)
                       }
-                      style={{
-                        width: "100px",
-                        minWidth: "100px",
-                        padding: "10px",
-                        fontSize: "16px",
-                        borderRadius: "12px",
-                        border: "2px solid #0b6b2d",
-                        backgroundColor: "#fff",
-                        color: "#000",
-                      }}
                     />
                   </td>
 
@@ -562,23 +679,10 @@ export default function FichasTecnicas() {
           <div className="historico-card" key={item.id}>
             <h3>{item.nome}</h3>
 
-            <p>
-              <strong>Categoria:</strong> {item.categoria}
-            </p>
-
-            <p>
-              <strong>Doses:</strong> {item.doses || "-"}
-            </p>
-
-            <p>
-              <strong>Custo total:</strong>{" "}
-              {Number(item.custoTotal || 0).toFixed(2)} €
-            </p>
-
-            <p>
-              <strong>Custo por dose:</strong>{" "}
-              {Number(item.custoPorDose || 0).toFixed(2)} €
-            </p>
+            <p><strong>Categoria:</strong> {item.categoria}</p>
+            <p><strong>Doses:</strong> {item.doses || "-"}</p>
+            <p><strong>Custo total:</strong> {Number(item.custoTotal || 0).toFixed(2)} €</p>
+            <p><strong>Custo por dose:</strong> {Number(item.custoPorDose || 0).toFixed(2)} €</p>
 
             <p>
               <strong>Valor nutricional por dose:</strong>{" "}
@@ -587,13 +691,8 @@ export default function FichasTecnicas() {
                 : "-"}
             </p>
 
-            <p>
-              <strong>Alergénios:</strong> {item.alergenios || "Nenhum"}
-            </p>
-
-            <p>
-              <strong>HACCP:</strong> {item.haccp || "-"}
-            </p>
+            <p><strong>Alergénios:</strong> {item.alergenios || "Nenhum"}</p>
+            <p><strong>HACCP:</strong> {item.haccp || "-"}</p>
 
             <button
               className="botao-principal"

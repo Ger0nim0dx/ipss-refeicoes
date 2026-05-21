@@ -47,7 +47,6 @@ export default function Dietas() {
           valencia,
           dieta,
           alergias,
-          intolerancias,
           quarto
         )
       `)
@@ -64,10 +63,7 @@ export default function Dietas() {
       utente: item.utentes?.nome || "-",
       valencia: item.utentes?.valencia || "-",
       dieta: item.utentes?.dieta || "-",
-      alergias:
-        item.utentes?.alergias ||
-        item.utentes?.intolerancias ||
-        "Nenhuma",
+      alergias: item.utentes?.alergias || "Nenhuma",
       quarto: item.utentes?.quarto || "-",
       observacoes: item.observacoes || "",
     }));
@@ -78,15 +74,13 @@ export default function Dietas() {
   function selecionarUtente(id) {
     setUtenteSelecionado(id);
 
-    const utente = utentes.find((u) => u.id === id);
+    const utente = utentes.find((u) => String(u.id) === String(id));
 
     if (!utente) return;
 
     setValencia(utente.valencia || "");
     setDieta(utente.dieta || "");
-    setAlergias(
-      utente.alergias || utente.intolerancias || ""
-    );
+    setAlergias(utente.alergias || "");
     setQuarto(utente.quarto || "");
   }
 
@@ -108,7 +102,7 @@ export default function Dietas() {
     const { error } = await supabase.from("dietas").insert([
       {
         user_id: userData.user.id,
-        utente_id: utenteSelecionado,
+        utente_id: Number(utenteSelecionado),
         data: new Date().toISOString().split("T")[0],
         refeicao: "Geral",
         observacoes,
@@ -138,10 +132,7 @@ export default function Dietas() {
 
     if (!confirmar) return;
 
-    const { error } = await supabase
-      .from("dietas")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("dietas").delete().eq("id", id);
 
     if (error) {
       alert(error.message);
@@ -175,16 +166,7 @@ export default function Dietas() {
     ]);
 
     autoTable(doc, {
-      head: [
-        [
-          "Utente",
-          "Quarto",
-          "Valência",
-          "Dieta",
-          "Alergias",
-          "Observações",
-        ],
-      ],
+      head: [["Utente", "Quarto", "Valência", "Dieta", "Alergias", "Observações"]],
       body: tabela,
       startY: 50,
     });
@@ -206,13 +188,11 @@ export default function Dietas() {
         <h3>Adicionar Dieta</h3>
 
         <label>Utente</label>
-
         <select
           value={utenteSelecionado}
           onChange={(e) => selecionarUtente(e.target.value)}
         >
           <option value="">Selecionar utente</option>
-
           {utentes.map((utente) => (
             <option key={utente.id} value={utente.id}>
               {utente.nome}
@@ -221,23 +201,18 @@ export default function Dietas() {
         </select>
 
         <label>Valência</label>
-
         <input type="text" value={valencia} readOnly />
 
         <label>Quarto</label>
-
         <input type="text" value={quarto} readOnly />
 
         <label>Tipo de dieta</label>
-
         <input type="text" value={dieta} readOnly />
 
         <label>Alergias / intolerâncias</label>
-
         <input type="text" value={alergias} readOnly />
 
         <label>Observações</label>
-
         <textarea
           value={observacoes}
           onChange={(e) => setObservacoes(e.target.value)}
@@ -253,25 +228,11 @@ export default function Dietas() {
           <div className="historico-card" key={item.id}>
             <h3>{item.utente}</h3>
 
-            <p>
-              <strong>Quarto:</strong> {item.quarto}
-            </p>
-
-            <p>
-              <strong>Valência:</strong> {item.valencia}
-            </p>
-
-            <p>
-              <strong>Dieta:</strong> {item.dieta}
-            </p>
-
-            <p>
-              <strong>Alergias:</strong> {item.alergias}
-            </p>
-
-            <p>
-              <strong>Observações:</strong> {item.observacoes || "-"}
-            </p>
+            <p><strong>Quarto:</strong> {item.quarto}</p>
+            <p><strong>Valência:</strong> {item.valencia}</p>
+            <p><strong>Dieta:</strong> {item.dieta}</p>
+            <p><strong>Alergias:</strong> {item.alergias}</p>
+            <p><strong>Observações:</strong> {item.observacoes || "-"}</p>
 
             <button
               className="botao-secundario"

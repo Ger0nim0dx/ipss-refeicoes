@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   ShoppingCart,
   TrendingUp,
-  TrendingDown,
   Euro,
   ClipboardList,
   Clock3,
@@ -14,6 +13,7 @@ import {
   Factory,
   BrainCircuit,
   Lightbulb,
+  Users,
 } from "lucide-react";
 
 import {
@@ -54,55 +54,47 @@ function Dashboard() {
 
     const user = userData.user;
 
-    setDadosIPSS(JSON.parse(localStorage.getItem("dadosIPSS")) || {});
+    const { data: dadosData } = await supabase
+      .from("dados_ipss")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-    const { data: stocksData, error: stocksError } = await supabase
+    const { data: stocksData } = await supabase
       .from("stocks")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (stocksError) console.error(stocksError);
-
-    const { data: fichasData, error: fichasError } = await supabase
+    const { data: fichasData } = await supabase
       .from("fichas_tecnicas")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (fichasError) console.error(fichasError);
-
-    const { data: ementasData, error: ementasError } = await supabase
+    const { data: ementasData } = await supabase
       .from("ementas")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (ementasError) console.error(ementasError);
-
-    const { data: dietasData, error: dietasError } = await supabase
+    const { data: dietasData } = await supabase
       .from("dietas")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (dietasError) console.error(dietasError);
-
-    const { data: haccpData, error: haccpError } = await supabase
+    const { data: haccpData } = await supabase
       .from("haccp")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (haccpError) console.error(haccpError);
-
-    const { data: movimentosData, error: movimentosError } = await supabase
+    const { data: movimentosData } = await supabase
       .from("movimentos_stock")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
-
-    if (movimentosError) console.error(movimentosError);
 
     const fichasFormatadas = (fichasData || []).map((ficha) => ({
       id: ficha.id,
@@ -112,6 +104,7 @@ function Dashboard() {
       ...ficha.dados,
     }));
 
+    setDadosIPSS(dadosData || {});
     setStocks(stocksData || []);
     setFichas(fichasFormatadas);
     setEmentas(ementasData || []);
@@ -164,22 +157,225 @@ function Dashboard() {
   function encontrarProdutoStock(nomeIngrediente) {
     return stocks.find((item) => {
       const nomeStock = normalizarTexto(item.produto || item.nome);
-      const nomeIng = normalizarTexto(nomeIngrediente);
+      const nomeIngrediente = normalizarTexto(nomeIngrediente);
 
       return (
-        nomeStock === nomeIng ||
-        nomeStock.includes(nomeIng) ||
-        nomeIng.includes(nomeStock)
+        nomeStock === nomeIngrediente ||
+        nomeStock.includes(nomeIngrediente) ||
+        nomeIngrediente.includes(nomeStock)
       );
     });
   }
 
+  function diasAteValidade(data) {
+    if (!data) return null;
+
+    const validade = new Date(data);
+    validade.setHours(0, 0, 0, 0);
+
+    return Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
+  }
+
   function toggleDia(dia) {
-    if (diasSelecionados.includes(dia)) {
-      setDiasSelecionados(diasSelecionados.filter((item) => item !== dia));
-    } else {
-      setDiasSelecionados([...diasSelecionados, dia]);
+    setDiasSelecionados((atuais) =>
+      atuais.includes(dia)
+        ? atuais.filter((item) => item !== dia)
+        : [...atuais, dia]
+    );
+  }
+
+  const produtosStockBaixo = stocks.filter(
+    (item) =>
+      Number(item.quantidade || 0) <=
+      Number(item.stock_minimo ?? item.stockMinimo ?? 0)
+  );
+
+  const produtosExpirados = stocks.filter((item) => {
+    const dias = diasAteValidade(item.validade);
+    return dias !== null && dias < 0;
+  });
+
+  const produtosAExpirar = stocks.filter((item) => {
+    const dias = diasAteValidade(item.validade);
+    return dias !== null && dias >= 0 && dias <= 7;
+  });
+
+  const alertasHaccp = haccp.filter(
+    (item) =>
+      item.tipo_registo === "nao_conformidade" ||
+      item.estado === "Crítico" ||
+      item.estado === "Não conforme"
+  ).length;
+
+  const totalEntradas = movimentos.filter((m) =>
+    String(m.tipo || "").toLowerCase().includes("entrada")
+  ).length;
+
+  const totalSaidas = movimentos.filter((m) =>
+    String(m.tipo || "").toLowerCase().includes("produção") ||
+    String(m.tipo || "").toLowerCase().includes("saída")
+  ).length;
+
+  const custoTotalReceitas = fichas.reduce(
+    (total, ficha) => total + Number(ficha.custoTotal || 0),
+    0
+  );
+
+  const custoMedioReceita =
+    fichas.length > 0 ? custoTotalReceitas / fichas.length : 0;
+
+  const numeroUtentes = Number(dadosIPSS.numeroutentes || 0);
+  const numeroRefeicoesDia = Number(dadosIPSS.numerorefeicoesdia || 0);
+
+  const custoPorUtente =
+    numeroUtentes > 0 ? custoTotalReceitas / numeroUtentes : 0;
+
+  const custoPorRefeicao =
+    numeroRefeicoesDia > 0 ? custoTotalReceitas / numeroRefeicoesDia : 0;
+
+  const comprasPendentes = produtosStockBaixo.length + produtosExpirados.length;
+
+  const eficienciaOperacional =
+    stocks.length > 0
+      ? Math.round(((stocks.length - produtosStockBaixo.length) / stocks.length) * 100)
+      : 100;
+
+  const ementaAtual = ementas[0]?.dados || {};
+  const receitasPlaneadas = [];
+
+  Object.values(ementaAtual).forEach((refeicoesDia) => {
+    Object.values(refeicoesDia || {}).forEach((receitaId) => {
+      const ficha = fichas.find((item) => String(item.id) === String(receitaId));
+      if (ficha) receitasPlaneadas.push(ficha);
+    });
+  });
+
+  const ingredientesPrevistos = {};
+
+  receitasPlaneadas.forEach((ficha) => {
+    ficha.ingredientes?.forEach((ingrediente) => {
+      const chave = normalizarTexto(ingrediente.nome);
+
+      if (!ingredientesPrevistos[chave]) {
+        ingredientesPrevistos[chave] = {
+          nome: ingrediente.nome,
+          quantidade: 0,
+        };
+      }
+
+      ingredientesPrevistos[chave].quantidade += Number(
+        ingrediente.quantidade || 0
+      );
+    });
+  });
+
+  const previsaoStock = Object.values(ingredientesPrevistos).map(
+    (ingrediente) => {
+      const produtoStock = encontrarProdutoStock(ingrediente.nome);
+
+      const stockAtual = produtoStock
+        ? converterParaGramas(produtoStock.quantidade, produtoStock.unidade)
+        : 0;
+
+      const stockMinimo = produtoStock
+        ? converterParaGramas(
+            produtoStock.stock_minimo || produtoStock.stockMinimo || 0,
+            produtoStock.unidade
+          )
+        : 0;
+
+      const stockDepois = stockAtual - ingrediente.quantidade;
+
+      return {
+        nome: ingrediente.nome,
+        necessario: ingrediente.quantidade,
+        stockDepois,
+        stockMinimo,
+        produtoStock,
+        emFalta: !produtoStock || stockDepois < 0,
+        ficaraCritico: produtoStock && stockDepois <= stockMinimo,
+      };
     }
+  );
+
+  const produtosPrevisaoCritica = previsaoStock.filter(
+    (item) => item.emFalta || item.ficaraCritico
+  );
+
+  const produtosAExpirarNaEmenta = produtosAExpirar.filter((produto) =>
+    Object.values(ingredientesPrevistos).some((ingrediente) => {
+      const nomeProduto = normalizarTexto(produto.produto || produto.nome);
+      const nomeIngrediente = normalizarTexto(ingrediente.nome);
+
+      return (
+        nomeProduto === nomeIngrediente ||
+        nomeProduto.includes(nomeIngrediente) ||
+        nomeIngrediente.includes(nomeProduto)
+      );
+    })
+  );
+
+  const produtosAExpirarForaEmenta = produtosAExpirar.filter(
+    (produto) => !produtosAExpirarNaEmenta.some((item) => item.id === produto.id)
+  );
+
+  const topProdutosCriticos = [...produtosStockBaixo]
+    .sort((a, b) => Number(a.quantidade || 0) - Number(b.quantidade || 0))
+    .slice(0, 5);
+
+  const dadosGrafico = stocks.slice(0, 8).map((item) => ({
+    nome: item.produto || item.nome,
+    quantidade: Number(item.quantidade || 0),
+  }));
+
+  const recomendacoesIA = [];
+
+  if (produtosExpirados.length > 0) {
+    recomendacoesIA.push({
+      tipo: "crítico",
+      titulo: "Validar produtos expirados",
+      texto: `Existem ${produtosExpirados.length} produto(s) com validade ultrapassada. Devem ser verificados antes de qualquer utilização.`,
+    });
+  }
+
+  if (produtosStockBaixo.length > 0) {
+    recomendacoesIA.push({
+      tipo: "stock",
+      titulo: "Reforçar compras",
+      texto: `Existem ${produtosStockBaixo.length} produto(s) com stock baixo. Sugere-se atualização da lista de compras.`,
+    });
+  }
+
+  if (produtosAExpirarForaEmenta.length > 0) {
+    recomendacoesIA.push({
+      tipo: "desperdício",
+      titulo: "Reduzir desperdício alimentar",
+      texto: `Há ${produtosAExpirarForaEmenta.length} produto(s) a expirar que não parecem estar previstos na ementa. Sugere-se ajustar receitas para os aproveitar.`,
+    });
+  }
+
+  if (produtosPrevisaoCritica.length > 0) {
+    recomendacoesIA.push({
+      tipo: "previsão",
+      titulo: "Stock poderá ficar crítico",
+      texto: `Após a ementa planeada, ${produtosPrevisaoCritica.length} ingrediente(s) poderão ficar abaixo do mínimo ou em falta.`,
+    });
+  }
+
+  if (alertasHaccp > 0) {
+    recomendacoesIA.push({
+      tipo: "haccp",
+      titulo: "Atenção aos registos HACCP",
+      texto: `Existem ${alertasHaccp} alerta(s) HACCP. Recomenda-se validar não conformidades antes de novas produções.`,
+    });
+  }
+
+  if (recomendacoesIA.length === 0 && stocks.length > 0 && fichas.length > 0) {
+    recomendacoesIA.push({
+      tipo: "estável",
+      titulo: "Operação equilibrada",
+      texto: "Não foram identificados riscos críticos. A operação parece estável neste momento.",
+    });
   }
 
   async function executarProducaoSelecionada() {
@@ -197,12 +393,10 @@ function Dashboard() {
 
     if (userError || !userData?.user) {
       alert("Precisas de iniciar sessão para executar produção.");
-      console.error(userError);
       return;
     }
 
     const user = userData.user;
-    const ementaAtual = ementas[0]?.dados || {};
     const ingredientesTotais = {};
 
     diasSelecionados.forEach((dia) => {
@@ -211,9 +405,7 @@ function Dashboard() {
       if (!refeicoesDia) return;
 
       Object.values(refeicoesDia).forEach((receitaId) => {
-        const ficha = fichas.find(
-          (item) => String(item.id) === String(receitaId)
-        );
+        const ficha = fichas.find((item) => String(item.id) === String(receitaId));
 
         if (!ficha) return;
 
@@ -296,7 +488,6 @@ function Dashboard() {
 
       if (updateError) {
         alert(updateError.message);
-        console.error(updateError);
         return;
       }
 
@@ -317,7 +508,6 @@ function Dashboard() {
 
       if (movimentosError) {
         alert(movimentosError.message);
-        console.error(movimentosError);
         return;
       }
     }
@@ -331,7 +521,6 @@ function Dashboard() {
 
     if (producaoError) {
       alert(producaoError.message);
-      console.error(producaoError);
       return;
     }
 
@@ -342,216 +531,9 @@ function Dashboard() {
     );
 
     setDiasSelecionados([]);
-
     await carregarDashboard();
 
     alert("Produção executada com sucesso.");
-  }
-
-  function diasAteValidade(data) {
-    if (!data) return null;
-
-    const validade = new Date(data);
-    validade.setHours(0, 0, 0, 0);
-
-    const diferenca = validade - hoje;
-
-    return Math.ceil(diferenca / (1000 * 60 * 60 * 24));
-  }
-
-  const produtosStockBaixo = stocks.filter(
-    (item) =>
-      Number(item.quantidade) <= Number(item.stock_minimo ?? item.stockMinimo ?? 0)
-  );
-
-  const produtosExpirados = stocks.filter((item) => {
-    const dias = diasAteValidade(item.validade);
-    return dias !== null && dias < 0;
-  });
-
-  const produtosAExpirar = stocks.filter((item) => {
-    const dias = diasAteValidade(item.validade);
-    return dias !== null && dias >= 0 && dias <= 7;
-  });
-
-  const totalEntradas = movimentos.filter((m) =>
-    String(m.tipo || "").toLowerCase().includes("entrada")
-  ).length;
-
-  const totalSaidas = movimentos.filter((m) =>
-    String(m.tipo || "").toLowerCase().includes("saída")
-  ).length;
-
-  const custoTotalReceitas = fichas.reduce(
-    (total, ficha) => total + Number(ficha.custoTotal || 0),
-    0
-  );
-
-  const custoMedioReceita =
-    fichas.length > 0 ? custoTotalReceitas / fichas.length : 0;
-
-  const comprasPendentes = produtosStockBaixo.length + produtosExpirados.length;
-
-  const naoConformidadesHaccp = haccp.filter(
-    (item) => item.tipo_registo === "nao_conformidade"
-  );
-
-  const temperaturasCriticasHaccp = haccp.filter(
-    (item) => item.tipo_registo === "temperatura" && item.estado === "Crítico"
-  );
-
-  const alertasHaccp =
-    naoConformidadesHaccp.length + temperaturasCriticasHaccp.length;
-
-  const totalEmentas = ementas.length;
-  const totalDietas = dietas.length;
-
-  const dadosGrafico = stocks.slice(0, 8).map((item) => ({
-    nome: item.produto || item.nome,
-    quantidade: Number(item.quantidade) || 0,
-  }));
-
-  const ementaAtual = ementas[0]?.dados || {};
-  const receitasPlaneadas = [];
-
-  Object.values(ementaAtual).forEach((refeicoesDia) => {
-    Object.values(refeicoesDia || {}).forEach((receitaId) => {
-      const ficha = fichas.find((item) => String(item.id) === String(receitaId));
-      if (ficha) receitasPlaneadas.push(ficha);
-    });
-  });
-
-  const ingredientesPrevistos = {};
-
-  receitasPlaneadas.forEach((ficha) => {
-    ficha.ingredientes?.forEach((ingrediente) => {
-      const chave = normalizarTexto(ingrediente.nome);
-
-      if (!ingredientesPrevistos[chave]) {
-        ingredientesPrevistos[chave] = {
-          nome: ingrediente.nome,
-          quantidade: 0,
-        };
-      }
-
-      ingredientesPrevistos[chave].quantidade += Number(
-        ingrediente.quantidade || 0
-      );
-    });
-  });
-
-  const previsaoStock = Object.values(ingredientesPrevistos).map(
-    (ingrediente) => {
-      const produtoStock = encontrarProdutoStock(ingrediente.nome);
-
-      const stockAtual = produtoStock
-        ? converterParaGramas(produtoStock.quantidade, produtoStock.unidade)
-        : 0;
-
-      const stockMinimo = produtoStock
-        ? converterParaGramas(
-            produtoStock.stock_minimo || produtoStock.stockMinimo || 0,
-            produtoStock.unidade
-          )
-        : 0;
-
-      const stockDepois = stockAtual - ingrediente.quantidade;
-
-      return {
-        nome: ingrediente.nome,
-        necessario: ingrediente.quantidade,
-        stockAtual,
-        stockDepois,
-        stockMinimo,
-        produtoStock,
-        ficaraCritico: produtoStock && stockDepois <= stockMinimo,
-        emFalta: !produtoStock || stockDepois < 0,
-      };
-    }
-  );
-
-  const produtosPrevisaoCritica = previsaoStock.filter(
-    (item) => item.ficaraCritico || item.emFalta
-  );
-
-  const produtosAExpirarNaEmenta = produtosAExpirar.filter((produto) =>
-    Object.values(ingredientesPrevistos).some((ingrediente) => {
-      const nomeProduto = normalizarTexto(produto.produto || produto.nome);
-      const nomeIngrediente = normalizarTexto(ingrediente.nome);
-
-      return (
-        nomeProduto === nomeIngrediente ||
-        nomeProduto.includes(nomeIngrediente) ||
-        nomeIngrediente.includes(nomeProduto)
-      );
-    })
-  );
-
-  const produtosAExpirarForaEmenta = produtosAExpirar.filter(
-    (produto) =>
-      !produtosAExpirarNaEmenta.some((item) => item.id === produto.id)
-  );
-
-  const recomendacoesIA = [];
-
-  if (produtosExpirados.length > 0) {
-    recomendacoesIA.push({
-      tipo: "crítico",
-      titulo: "Validar produtos expirados",
-      texto: `Existem ${produtosExpirados.length} produto(s) com validade ultrapassada. Devem ser verificados antes de qualquer utilização.`,
-    });
-  }
-
-  if (produtosStockBaixo.length > 0) {
-    recomendacoesIA.push({
-      tipo: "stock",
-      titulo: "Reforçar compras",
-      texto: `Existem ${produtosStockBaixo.length} produto(s) com stock baixo. Sugere-se atualização da lista de compras.`,
-    });
-  }
-
-  if (produtosAExpirarForaEmenta.length > 0) {
-    recomendacoesIA.push({
-      tipo: "desperdício",
-      titulo: "Reduzir desperdício alimentar",
-      texto: `Há ${produtosAExpirarForaEmenta.length} produto(s) a expirar que não parecem estar previstos na ementa. Sugere-se ajustar receitas para os aproveitar.`,
-    });
-  }
-
-  if (produtosAExpirarNaEmenta.length > 0) {
-    recomendacoesIA.push({
-      tipo: "boa prática",
-      titulo: "Boa gestão de validade",
-      texto: `${produtosAExpirarNaEmenta.length} produto(s) a expirar já estão contemplados na ementa. Isto ajuda a reduzir desperdício.`,
-    });
-  }
-
-  if (produtosPrevisaoCritica.length > 0) {
-    recomendacoesIA.push({
-      tipo: "previsão",
-      titulo: "Stock poderá ficar crítico",
-      texto: `Após a ementa planeada, ${produtosPrevisaoCritica.length} ingrediente(s) poderão ficar abaixo do mínimo ou em falta.`,
-    });
-  }
-
-  if (alertasHaccp > 0) {
-    recomendacoesIA.push({
-      tipo: "haccp",
-      titulo: "Atenção aos registos HACCP",
-      texto: `Existem ${alertasHaccp} alerta(s) HACCP. Recomenda-se validar não conformidades antes de novas produções.`,
-    });
-  }
-
-  if (
-    recomendacoesIA.length === 0 &&
-    stocks.length > 0 &&
-    fichas.length > 0
-  ) {
-    recomendacoesIA.push({
-      tipo: "estável",
-      titulo: "Operação equilibrada",
-      texto: "Não foram identificados riscos críticos. A operação parece estável neste momento.",
-    });
   }
 
   return (
@@ -559,7 +541,6 @@ function Dashboard() {
       <div className="topo-dashboard">
         <div>
           <h1>Dashboard Geral</h1>
-
           <p className="dashboard-subtitle">
             Gestão alimentar inteligente da IPSS.
           </p>
@@ -574,7 +555,7 @@ function Dashboard() {
         <div className="summary-grid">
           <div className="summary-box">
             <strong>Instituição</strong>
-            <p>{dadosIPSS.nomeInstituicao || "Não preenchido"}</p>
+            <p>{dadosIPSS.nomeinstituicao || "Não preenchido"}</p>
           </div>
 
           <div className="summary-box">
@@ -584,9 +565,94 @@ function Dashboard() {
 
           <div className="summary-box">
             <strong>Responsável</strong>
-            <p>{dadosIPSS.responsavelCozinha || "Não preenchido"}</p>
+            <p>{dadosIPSS.responsavelcozinha || "Não preenchido"}</p>
           </div>
         </div>
+      </div>
+
+      <div className="dashboard-section">
+        <h2>
+          <Euro size={22} /> Dashboard Executivo
+        </h2>
+
+        <p className="dashboard-subtitle">
+          Indicadores estratégicos e financeiros da operação alimentar.
+        </p>
+
+        <div className="dashboard-cards">
+          <div className="dashboard-card destaque">
+            <Euro size={30} />
+            <h3>Custo por utente</h3>
+            <p>{custoPorUtente.toFixed(2)} €</p>
+            <span>Com base nos dados atuais</span>
+          </div>
+
+          <div className="dashboard-card">
+            <ClipboardList size={30} />
+            <h3>Custo por refeição</h3>
+            <p>{custoPorRefeicao.toFixed(2)} €</p>
+            <span>Média operacional</span>
+          </div>
+
+          <div className="dashboard-card">
+            <Users size={30} />
+            <h3>Utentes</h3>
+            <p>{numeroUtentes}</p>
+            <span>Registados na IPSS</span>
+          </div>
+
+          <div className="dashboard-card">
+            <Factory size={30} />
+            <h3>Refeições/dia</h3>
+            <p>{numeroRefeicoesDia}</p>
+            <span>Capacidade operacional</span>
+          </div>
+
+          <div className="dashboard-card">
+            <CheckCircle2 size={30} />
+            <h3>Eficiência</h3>
+            <p>{eficienciaOperacional}%</p>
+            <span>Produtos acima do mínimo</span>
+          </div>
+
+          <div className="dashboard-card">
+            <ShoppingCart size={30} />
+            <h3>Compras</h3>
+            <p>{comprasPendentes}</p>
+            <span>Pendentes/críticas</span>
+          </div>
+        </div>
+
+        <h3 style={{ marginTop: "25px" }}>Produtos mais críticos</h3>
+
+        {topProdutosCriticos.length === 0 ? (
+          <p>Não existem produtos críticos neste momento.</p>
+        ) : (
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Quantidade</th>
+                <th>Stock mínimo</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {topProdutosCriticos.map((produto, index) => (
+                <tr key={index}>
+                  <td>{produto.produto || produto.nome}</td>
+                  <td>
+                    {produto.quantidade} {produto.unidade}
+                  </td>
+                  <td>
+                    {produto.stock_minimo || produto.stockMinimo || 0}{" "}
+                    {produto.unidade}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="dashboard-section">
@@ -595,29 +661,22 @@ function Dashboard() {
         </h2>
 
         <p className="dashboard-subtitle">
-          Recomendações automáticas com base em stock, validade, ementa, HACCP e
-          produção.
+          Recomendações automáticas com base em stock, validade, ementa e HACCP.
         </p>
 
-        {recomendacoesIA.length === 0 ? (
-          <p>Ainda não existem dados suficientes para gerar recomendações.</p>
-        ) : (
-          <div className="historico-grid">
-            {recomendacoesIA.map((rec, index) => (
-              <div className="historico-card" key={index}>
-                <h3>
-                  <Lightbulb size={20} /> {rec.titulo}
-                </h3>
-
-                <p>
-                  <strong>Tipo:</strong> {rec.tipo}
-                </p>
-
-                <p>{rec.texto}</p>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="historico-grid">
+          {recomendacoesIA.map((rec, index) => (
+            <div className="historico-card" key={index}>
+              <h3>
+                <Lightbulb size={20} /> {rec.titulo}
+              </h3>
+              <p>
+                <strong>Tipo:</strong> {rec.tipo}
+              </p>
+              <p>{rec.texto}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="dashboard-section">
@@ -626,18 +685,10 @@ function Dashboard() {
         </h2>
 
         <p className="dashboard-subtitle">
-          Executa a produção real a partir da ementa semanal, descontando
-          automaticamente os ingredientes do stock.
+          Executa a produção real a partir da ementa semanal.
         </p>
 
-        <div
-          style={{
-            display: "flex",
-            gap: "10px",
-            flexWrap: "wrap",
-            marginBottom: "18px",
-          }}
-        >
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
           {diasSemana.map((dia) => (
             <button
               key={dia}
@@ -653,7 +704,11 @@ function Dashboard() {
           ))}
         </div>
 
-        <button className="botao-principal" onClick={executarProducaoSelecionada}>
+        <button
+          className="botao-principal"
+          onClick={executarProducaoSelecionada}
+          style={{ marginTop: "15px" }}
+        >
           Executar produção dos dias selecionados
         </button>
 
@@ -676,20 +731,20 @@ function Dashboard() {
           <Package size={32} />
           <h3>Produtos</h3>
           <p>{stocks.length}</p>
-          <span>Produtos em stock</span>
+          <span>Em stock</span>
         </div>
 
         <div className="dashboard-card">
           <ClipboardList size={32} />
           <h3>Ementas</h3>
-          <p>{totalEmentas}</p>
-          <span>Planeamentos guardados</span>
+          <p>{ementas.length}</p>
+          <span>Planeamentos</span>
         </div>
 
         <div className="dashboard-card">
           <CheckCircle2 size={32} />
           <h3>Dietas</h3>
-          <p>{totalDietas}</p>
+          <p>{dietas.length}</p>
           <span>Dietas especiais</span>
         </div>
 
@@ -697,7 +752,7 @@ function Dashboard() {
           <ShieldAlert size={32} />
           <h3>HACCP</h3>
           <p>{alertasHaccp}</p>
-          <span>Alertas registados</span>
+          <span>Alertas</span>
         </div>
 
         <div className="dashboard-card">
@@ -705,13 +760,6 @@ function Dashboard() {
           <h3>Stock baixo</h3>
           <p>{produtosStockBaixo.length}</p>
           <span>Produtos críticos</span>
-        </div>
-
-        <div className="dashboard-card">
-          <ShieldAlert size={32} />
-          <h3>Expirados</h3>
-          <p>{produtosExpirados.length}</p>
-          <span>Produtos vencidos</span>
         </div>
 
         <div className="dashboard-card">
@@ -725,14 +773,14 @@ function Dashboard() {
           <TrendingUp size={32} />
           <h3>Entradas</h3>
           <p>{totalEntradas}</p>
-          <span>Movimentos entrada</span>
+          <span>Movimentos</span>
         </div>
 
         <div className="dashboard-card">
-          <TrendingDown size={32} />
+          <Package size={32} />
           <h3>Saídas</h3>
           <p>{totalSaidas}</p>
-          <span>Movimentos saída</span>
+          <span>Movimentos</span>
         </div>
 
         <div className="dashboard-card">
@@ -741,75 +789,6 @@ function Dashboard() {
           <p>{custoMedioReceita.toFixed(2)} €</p>
           <span>Por receita</span>
         </div>
-
-        <div className="dashboard-card destaque">
-          <ShoppingCart size={32} />
-          <h3>Compras</h3>
-          <p>{comprasPendentes}</p>
-          <span>Pendentes</span>
-        </div>
-      </div>
-
-      <div className="dashboard-section">
-        <h2>Indicadores Operacionais</h2>
-
-        <div className="grafico-movimentos">
-          <div className="movimento-card">
-            <strong>Receitas registadas</strong>
-            <span>{fichas.length}</span>
-          </div>
-
-          <div className="movimento-card">
-            <strong>Produtos em stock</strong>
-            <span>{stocks.length}</span>
-          </div>
-
-          <div className="movimento-card">
-            <strong>Movimentos</strong>
-            <span>{movimentos.length}</span>
-          </div>
-
-          <div className="movimento-card">
-            <strong>Compras pendentes</strong>
-            <span>{comprasPendentes}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="dashboard-section">
-        <h2>Resumo Cloud / Supabase</h2>
-
-        <div className="grafico-movimentos">
-          <div className="movimento-card">
-            <strong>Stocks online</strong>
-            <span>{stocks.length}</span>
-          </div>
-
-          <div className="movimento-card">
-            <strong>Fichas técnicas online</strong>
-            <span>{fichas.length}</span>
-          </div>
-
-          <div className="movimento-card">
-            <strong>Ementas online</strong>
-            <span>{ementas.length}</span>
-          </div>
-
-          <div className="movimento-card">
-            <strong>Dietas online</strong>
-            <span>{dietas.length}</span>
-          </div>
-
-          <div className="movimento-card">
-            <strong>Registos HACCP online</strong>
-            <span>{haccp.length}</span>
-          </div>
-
-          <div className="movimento-card">
-            <strong>Movimentos stock online</strong>
-            <span>{movimentos.length}</span>
-          </div>
-        </div>
       </div>
 
       <div className="dashboard-section">
@@ -817,8 +796,7 @@ function Dashboard() {
 
         {produtosPrevisaoCritica.length === 0 ? (
           <p className="success-message">
-            <CheckCircle2 size={18} /> Não foram previstos ingredientes críticos
-            após a ementa atual.
+            <CheckCircle2 size={18} /> Não foram previstos ingredientes críticos.
           </p>
         ) : (
           <table className="dashboard-table">
@@ -876,121 +854,6 @@ function Dashboard() {
       </div>
 
       <div className="dashboard-section">
-        <h2>Resumo Financeiro</h2>
-
-        <div className="dashboard-cards">
-          <div className="dashboard-card">
-            <Euro size={32} />
-            <h3>Custo total receitas</h3>
-            <p>{custoTotalReceitas.toFixed(2)} €</p>
-            <span>Soma das fichas técnicas</span>
-          </div>
-
-          <div className="dashboard-card">
-            <TrendingUp size={32} />
-            <h3>Custo médio</h3>
-            <p>{custoMedioReceita.toFixed(2)} €</p>
-            <span>Por receita</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="dashboard-section">
-        <h2>Alertas críticos</h2>
-
-        {produtosStockBaixo.length === 0 &&
-        produtosAExpirar.length === 0 &&
-        produtosExpirados.length === 0 &&
-        alertasHaccp === 0 ? (
-          <p className="success-message">
-            <CheckCircle2 size={18} /> Não existem alertas críticos.
-          </p>
-        ) : (
-          <>
-            {produtosStockBaixo.length > 0 && (
-              <p
-                style={{
-                  color: "#dc2626",
-                  fontWeight: "bold",
-                  marginBottom: "10px",
-                }}
-              >
-                ⚠ Existem {produtosStockBaixo.length} produtos com stock baixo.
-              </p>
-            )}
-
-            {produtosAExpirar.length > 0 && (
-              <p
-                style={{
-                  color: "#ca8a04",
-                  fontWeight: "bold",
-                  marginBottom: "10px",
-                }}
-              >
-                ⚠ Existem {produtosAExpirar.length} produtos a expirar nos
-                próximos 7 dias.
-              </p>
-            )}
-
-            {produtosExpirados.length > 0 && (
-              <p
-                style={{
-                  color: "#991b1b",
-                  fontWeight: "bold",
-                }}
-              >
-                ❌ Existem {produtosExpirados.length} produtos expirados.
-              </p>
-            )}
-
-            {alertasHaccp > 0 && (
-              <p
-                style={{
-                  color: "#dc2626",
-                  fontWeight: "bold",
-                }}
-              >
-                ⚠ Existem {alertasHaccp} alertas HACCP registados.
-              </p>
-            )}
-          </>
-        )}
-      </div>
-
-      <div className="dashboard-section">
-        <h2>Receitas mais recentes</h2>
-
-        {fichas.length === 0 ? (
-          <p>Ainda não existem fichas técnicas registadas.</p>
-        ) : (
-          <table className="dashboard-table">
-            <thead>
-              <tr>
-                <th>Receita</th>
-                <th>Categoria</th>
-                <th>Doses</th>
-                <th>Custo total</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {fichas
-                .slice(-5)
-                .reverse()
-                .map((ficha, index) => (
-                  <tr key={index}>
-                    <td>{ficha.nome}</td>
-                    <td>{ficha.categoria}</td>
-                    <td>{ficha.doses}</td>
-                    <td>{Number(ficha.custoTotal || 0).toFixed(2)} €</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      <div className="dashboard-section">
         <h2>Últimos movimentos de stock</h2>
 
         {movimentos.length === 0 ? (
@@ -1011,8 +874,10 @@ function Dashboard() {
                 <tr key={movimento.id || index}>
                   <td>
                     {movimento.created_at
-                      ? new Date(movimento.created_at).toLocaleDateString("pt-PT")
-                      : movimento.data || "Sem data"}
+                      ? new Date(movimento.created_at).toLocaleDateString(
+                          "pt-PT"
+                        )
+                      : "Sem data"}
                   </td>
                   <td>{movimento.tipo || "Movimento"}</td>
                   <td>{movimento.produto}</td>

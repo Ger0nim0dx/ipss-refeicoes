@@ -95,6 +95,14 @@ function Dashboard() {
 
     if (haccpError) console.error(haccpError);
 
+    const { data: movimentosData, error: movimentosError } = await supabase
+      .from("movimentos_stock")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (movimentosError) console.error(movimentosError);
+
     const fichasFormatadas = (fichasData || []).map((ficha) => ({
       id: ficha.id,
       nome: ficha.nome,
@@ -108,8 +116,7 @@ function Dashboard() {
     setEmentas(ementasData || []);
     setDietas(dietasData || []);
     setHaccp(haccpData || []);
-
-    setMovimentos(JSON.parse(localStorage.getItem("ipssMovimentosStock")) || []);
+    setMovimentos(movimentosData || []);
   }
 
   const hoje = new Date();
@@ -172,6 +179,15 @@ function Dashboard() {
       return;
     }
 
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !userData?.user) {
+      alert("Precisas de iniciar sessão para executar produção.");
+      console.error(userError);
+      return;
+    }
+
+    const user = userData.user;
     const ementaAtual = ementas[0]?.dados || {};
     const ingredientesTotais = {};
 
@@ -181,7 +197,9 @@ function Dashboard() {
       if (!refeicoesDia) return;
 
       Object.values(refeicoesDia).forEach((receitaId) => {
-        const ficha = fichas.find((item) => String(item.id) === String(receitaId));
+        const ficha = fichas.find(
+          (item) => String(item.id) === String(receitaId)
+        );
 
         if (!ficha) return;
 
@@ -195,7 +213,9 @@ function Dashboard() {
             };
           }
 
-          ingredientesTotais[chave].quantidade += Number(ingrediente.quantidade || 0);
+          ingredientesTotais[chave].quantidade += Number(
+            ingrediente.quantidade || 0
+          );
         });
       });
     });
@@ -269,40 +289,55 @@ function Dashboard() {
       );
 
       const novoStock = stockAtual - ingrediente.quantidade;
-
       const novaQuantidade = converterDeGramas(novoStock, produtoStock.unidade);
 
-      const { error } = await supabase
+      const { error: updateError } = await supabase
         .from("stocks")
         .update({
           quantidade: Number(novaQuantidade.toFixed(3)),
         })
         .eq("id", produtoStock.id);
 
-      if (error) {
-        alert(error.message);
-        console.error(error);
+      if (updateError) {
+        alert(updateError.message);
+        console.error(updateError);
         return;
       }
 
       novosMovimentos.push({
-        id: Date.now() + Math.random(),
-        data: new Date().toLocaleDateString("pt-PT"),
+        user_id: user.id,
         produto: produtoStock.produto || ingrediente.nome,
         tipo: `Produção: ${diasSelecionados.join(", ")}`,
         quantidade: Number(ingrediente.quantidade.toFixed(0)),
         unidade: "g",
+        observacoes: "Produção automática a partir da ementa semanal",
       });
     }
 
-    const movimentosAtualizados = [...novosMovimentos, ...movimentos];
+    if (novosMovimentos.length > 0) {
+      const { error: movimentosError } = await supabase
+        .from("movimentos_stock")
+        .insert(novosMovimentos);
 
-    localStorage.setItem(
-      "ipssMovimentosStock",
-      JSON.stringify(movimentosAtualizados)
-    );
+      if (movimentosError) {
+        alert(movimentosError.message);
+        console.error(movimentosError);
+        return;
+      }
+    }
 
-    setMovimentos(movimentosAtualizados);
+    const { error: producaoError } = await supabase.from("producoes").insert({
+      user_id: user.id,
+      dias: diasSelecionados,
+      total_movimentos: novosMovimentos.length,
+      observacoes: "Produção executada automaticamente no dashboard",
+    });
+
+    if (producaoError) {
+      alert(producaoError.message);
+      console.error(producaoError);
+      return;
+    }
 
     setMensagemOperacional(
       `Produção executada para ${diasSelecionados.join(
@@ -599,6 +634,11 @@ function Dashboard() {
             <strong>Registos HACCP online</strong>
             <span>{haccp.length}</span>
           </div>
+
+          <div className="movimento-card">
+            <strong>Movimentos stock online</strong>
+            <span>{movimentos.length}</span>
+          </div>
         </div>
       </div>
 
@@ -755,8 +795,12 @@ function Dashboard() {
 
             <tbody>
               {movimentos.slice(0, 5).map((movimento, index) => (
-                <tr key={index}>
-                  <td>{movimento.data || "Sem data"}</td>
+                <tr key={movimento.id || index}>
+                  <td>
+                    {movimento.created_at
+                      ? new Date(movimento.created_at).toLocaleDateString("pt-PT")
+                      : movimento.data || "Sem data"}
+                  </td>
                   <td>{movimento.tipo || "Movimento"}</td>
                   <td>{movimento.produto}</td>
                   <td>

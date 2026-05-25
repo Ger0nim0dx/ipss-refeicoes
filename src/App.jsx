@@ -21,6 +21,7 @@ import {
   Search,
   UserCircle,
   ShieldCheck,
+  Factory,
 } from "lucide-react";
 
 import { supabase } from "./supabaseClient";
@@ -28,6 +29,7 @@ import { supabase } from "./supabaseClient";
 import Dashboard from "./components/Dashboard";
 import Relatorios from "./components/Relatorios";
 import Historico from "./components/Historico";
+import Producoes from "./components/Producoes";
 import Definicoes from "./components/Definicoes";
 import SobreProjeto from "./components/SobreProjeto";
 import Dietas from "./components/Dietas";
@@ -85,18 +87,14 @@ export default function App() {
       .select("*")
       .eq("user_id", userId);
 
-    if (stocksError) {
-      console.error(stocksError);
-    }
+    if (stocksError) console.error(stocksError);
 
     const { data: haccpData, error: haccpError } = await supabase
       .from("haccp")
       .select("*")
       .eq("user_id", userId);
 
-    if (haccpError) {
-      console.error(haccpError);
-    }
+    if (haccpError) console.error(haccpError);
 
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
@@ -106,8 +104,7 @@ export default function App() {
 
     const stockBaixo = stocks.filter(
       (item) =>
-        Number(item.quantidade || 0) <=
-        Number(item.stock_minimo || 0)
+        Number(item.quantidade || 0) <= Number(item.stock_minimo || 0)
     ).length;
 
     const produtosExpirados = stocks.filter((item) => {
@@ -149,9 +146,7 @@ export default function App() {
       password,
     });
 
-    if (error) {
-      alert(error.message);
-    }
+    if (error) alert(error.message);
   }
 
   async function registar() {
@@ -189,6 +184,7 @@ export default function App() {
     { id: "haccp", label: "HACCP", icon: ShieldCheck },
     { id: "relatorios", label: "Relatórios", icon: BarChart3 },
     { id: "historico", label: "Histórico", icon: History },
+    { id: "producoes", label: "Produções", icon: Factory },
     { id: "sobre", label: "Sobre o Projeto", icon: Info },
   ];
 
@@ -205,8 +201,8 @@ export default function App() {
 
             <p>
               Plataforma digital para apoio à gestão de refeições, custos,
-              ementas, dietas, fichas técnicas, stocks, valor nutricional,
-              HACCP e relatórios.
+              ementas, dietas, fichas técnicas, stocks, valor nutricional, HACCP
+              e relatórios.
             </p>
 
             <input
@@ -319,10 +315,7 @@ export default function App() {
             <div className="topbar-search">
               <Search size={18} />
 
-              <input
-                type="text"
-                placeholder="Pesquisar na aplicação..."
-              />
+              <input type="text" placeholder="Pesquisar na aplicação..." />
             </div>
 
             <div className="topbar-actions">
@@ -338,9 +331,7 @@ export default function App() {
                 <Bell size={20} />
 
                 {totalAlertas > 0 ? (
-                  <span className="notification-badge">
-                    {totalAlertas}
-                  </span>
+                  <span className="notification-badge">{totalAlertas}</span>
                 ) : (
                   <span className="notification-dot"></span>
                 )}
@@ -351,7 +342,6 @@ export default function App() {
 
                 <div>
                   <strong>{session.user?.email}</strong>
-
                   <span>Técnico responsável</span>
                 </div>
               </div>
@@ -371,6 +361,7 @@ export default function App() {
           {pagina === "haccp" && <HACCP />}
           {pagina === "relatorios" && <Relatorios />}
           {pagina === "historico" && <Historico />}
+          {pagina === "producoes" && <Producoes />}
           {pagina === "sobre" && <SobreProjeto />}
         </main>
       </div>

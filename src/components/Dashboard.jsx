@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Factory,
   BrainCircuit,
+  Lightbulb,
 } from "lucide-react";
 
 import {
@@ -160,6 +161,19 @@ function Dashboard() {
     return gramas;
   }
 
+  function encontrarProdutoStock(nomeIngrediente) {
+    return stocks.find((item) => {
+      const nomeStock = normalizarTexto(item.produto || item.nome);
+      const nomeIng = normalizarTexto(nomeIngrediente);
+
+      return (
+        nomeStock === nomeIng ||
+        nomeStock.includes(nomeIng) ||
+        nomeIng.includes(nomeStock)
+      );
+    });
+  }
+
   function toggleDia(dia) {
     if (diasSelecionados.includes(dia)) {
       setDiasSelecionados(diasSelecionados.filter((item) => item !== dia));
@@ -230,16 +244,7 @@ function Dashboard() {
     const faltas = [];
 
     ingredientes.forEach((ingrediente) => {
-      const produtoStock = stocks.find((item) => {
-        const nomeStock = normalizarTexto(item.produto || item.nome);
-        const nomeIngrediente = normalizarTexto(ingrediente.nome);
-
-        return (
-          nomeStock === nomeIngrediente ||
-          nomeStock.includes(nomeIngrediente) ||
-          nomeIngrediente.includes(nomeStock)
-        );
-      });
+      const produtoStock = encontrarProdutoStock(ingrediente.nome);
 
       if (!produtoStock) {
         faltas.push(`${ingrediente.nome} — sem produto no stock`);
@@ -270,16 +275,7 @@ function Dashboard() {
     const novosMovimentos = [];
 
     for (const ingrediente of ingredientes) {
-      const produtoStock = stocks.find((item) => {
-        const nomeStock = normalizarTexto(item.produto || item.nome);
-        const nomeIngrediente = normalizarTexto(ingrediente.nome);
-
-        return (
-          nomeStock === nomeIngrediente ||
-          nomeStock.includes(nomeIngrediente) ||
-          nomeIngrediente.includes(nomeStock)
-        );
-      });
+      const produtoStock = encontrarProdutoStock(ingrediente.nome);
 
       if (!produtoStock) continue;
 
@@ -415,6 +411,149 @@ function Dashboard() {
     quantidade: Number(item.quantidade) || 0,
   }));
 
+  const ementaAtual = ementas[0]?.dados || {};
+  const receitasPlaneadas = [];
+
+  Object.values(ementaAtual).forEach((refeicoesDia) => {
+    Object.values(refeicoesDia || {}).forEach((receitaId) => {
+      const ficha = fichas.find((item) => String(item.id) === String(receitaId));
+      if (ficha) receitasPlaneadas.push(ficha);
+    });
+  });
+
+  const ingredientesPrevistos = {};
+
+  receitasPlaneadas.forEach((ficha) => {
+    ficha.ingredientes?.forEach((ingrediente) => {
+      const chave = normalizarTexto(ingrediente.nome);
+
+      if (!ingredientesPrevistos[chave]) {
+        ingredientesPrevistos[chave] = {
+          nome: ingrediente.nome,
+          quantidade: 0,
+        };
+      }
+
+      ingredientesPrevistos[chave].quantidade += Number(
+        ingrediente.quantidade || 0
+      );
+    });
+  });
+
+  const previsaoStock = Object.values(ingredientesPrevistos).map(
+    (ingrediente) => {
+      const produtoStock = encontrarProdutoStock(ingrediente.nome);
+
+      const stockAtual = produtoStock
+        ? converterParaGramas(produtoStock.quantidade, produtoStock.unidade)
+        : 0;
+
+      const stockMinimo = produtoStock
+        ? converterParaGramas(
+            produtoStock.stock_minimo || produtoStock.stockMinimo || 0,
+            produtoStock.unidade
+          )
+        : 0;
+
+      const stockDepois = stockAtual - ingrediente.quantidade;
+
+      return {
+        nome: ingrediente.nome,
+        necessario: ingrediente.quantidade,
+        stockAtual,
+        stockDepois,
+        stockMinimo,
+        produtoStock,
+        ficaraCritico: produtoStock && stockDepois <= stockMinimo,
+        emFalta: !produtoStock || stockDepois < 0,
+      };
+    }
+  );
+
+  const produtosPrevisaoCritica = previsaoStock.filter(
+    (item) => item.ficaraCritico || item.emFalta
+  );
+
+  const produtosAExpirarNaEmenta = produtosAExpirar.filter((produto) =>
+    Object.values(ingredientesPrevistos).some((ingrediente) => {
+      const nomeProduto = normalizarTexto(produto.produto || produto.nome);
+      const nomeIngrediente = normalizarTexto(ingrediente.nome);
+
+      return (
+        nomeProduto === nomeIngrediente ||
+        nomeProduto.includes(nomeIngrediente) ||
+        nomeIngrediente.includes(nomeProduto)
+      );
+    })
+  );
+
+  const produtosAExpirarForaEmenta = produtosAExpirar.filter(
+    (produto) =>
+      !produtosAExpirarNaEmenta.some((item) => item.id === produto.id)
+  );
+
+  const recomendacoesIA = [];
+
+  if (produtosExpirados.length > 0) {
+    recomendacoesIA.push({
+      tipo: "crítico",
+      titulo: "Validar produtos expirados",
+      texto: `Existem ${produtosExpirados.length} produto(s) com validade ultrapassada. Devem ser verificados antes de qualquer utilização.`,
+    });
+  }
+
+  if (produtosStockBaixo.length > 0) {
+    recomendacoesIA.push({
+      tipo: "stock",
+      titulo: "Reforçar compras",
+      texto: `Existem ${produtosStockBaixo.length} produto(s) com stock baixo. Sugere-se atualização da lista de compras.`,
+    });
+  }
+
+  if (produtosAExpirarForaEmenta.length > 0) {
+    recomendacoesIA.push({
+      tipo: "desperdício",
+      titulo: "Reduzir desperdício alimentar",
+      texto: `Há ${produtosAExpirarForaEmenta.length} produto(s) a expirar que não parecem estar previstos na ementa. Sugere-se ajustar receitas para os aproveitar.`,
+    });
+  }
+
+  if (produtosAExpirarNaEmenta.length > 0) {
+    recomendacoesIA.push({
+      tipo: "boa prática",
+      titulo: "Boa gestão de validade",
+      texto: `${produtosAExpirarNaEmenta.length} produto(s) a expirar já estão contemplados na ementa. Isto ajuda a reduzir desperdício.`,
+    });
+  }
+
+  if (produtosPrevisaoCritica.length > 0) {
+    recomendacoesIA.push({
+      tipo: "previsão",
+      titulo: "Stock poderá ficar crítico",
+      texto: `Após a ementa planeada, ${produtosPrevisaoCritica.length} ingrediente(s) poderão ficar abaixo do mínimo ou em falta.`,
+    });
+  }
+
+  if (alertasHaccp > 0) {
+    recomendacoesIA.push({
+      tipo: "haccp",
+      titulo: "Atenção aos registos HACCP",
+      texto: `Existem ${alertasHaccp} alerta(s) HACCP. Recomenda-se validar não conformidades antes de novas produções.`,
+    });
+  }
+
+  if (
+    recomendacoesIA.length === 0 &&
+    stocks.length > 0 &&
+    fichas.length > 0
+  ) {
+    recomendacoesIA.push({
+      tipo: "estável",
+      titulo: "Operação equilibrada",
+      texto: "Não foram identificados riscos críticos. A operação parece estável neste momento.",
+    });
+  }
+
   return (
     <div className="dashboard">
       <div className="topo-dashboard">
@@ -448,6 +587,37 @@ function Dashboard() {
             <p>{dadosIPSS.responsavelCozinha || "Não preenchido"}</p>
           </div>
         </div>
+      </div>
+
+      <div className="dashboard-section">
+        <h2>
+          <BrainCircuit size={22} /> IA Operacional Inteligente
+        </h2>
+
+        <p className="dashboard-subtitle">
+          Recomendações automáticas com base em stock, validade, ementa, HACCP e
+          produção.
+        </p>
+
+        {recomendacoesIA.length === 0 ? (
+          <p>Ainda não existem dados suficientes para gerar recomendações.</p>
+        ) : (
+          <div className="historico-grid">
+            {recomendacoesIA.map((rec, index) => (
+              <div className="historico-card" key={index}>
+                <h3>
+                  <Lightbulb size={20} /> {rec.titulo}
+                </h3>
+
+                <p>
+                  <strong>Tipo:</strong> {rec.tipo}
+                </p>
+
+                <p>{rec.texto}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="dashboard-section">
@@ -640,6 +810,49 @@ function Dashboard() {
             <span>{movimentos.length}</span>
           </div>
         </div>
+      </div>
+
+      <div className="dashboard-section">
+        <h2>Previsão de Stock Após Ementa</h2>
+
+        {produtosPrevisaoCritica.length === 0 ? (
+          <p className="success-message">
+            <CheckCircle2 size={18} /> Não foram previstos ingredientes críticos
+            após a ementa atual.
+          </p>
+        ) : (
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Ingrediente</th>
+                <th>Necessário</th>
+                <th>Stock depois</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {produtosPrevisaoCritica.map((item, index) => (
+                <tr key={index}>
+                  <td>{item.nome}</td>
+                  <td>{(item.necessario / 1000).toFixed(2)} kg</td>
+                  <td>{(item.stockDepois / 1000).toFixed(2)} kg</td>
+                  <td>
+                    {item.emFalta ? (
+                      <span style={{ color: "#dc2626", fontWeight: "bold" }}>
+                        Em falta
+                      </span>
+                    ) : (
+                      <span style={{ color: "#ca8a04", fontWeight: "bold" }}>
+                        Ficará crítico
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="dashboard-section">

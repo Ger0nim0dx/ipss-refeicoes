@@ -41,6 +41,7 @@ import Stocks from "./components/Stocks";
 import ValorNutricional from "./components/ValorNutricional";
 import HACCP from "./components/HACCP";
 import Utentes from "./components/Utentes";
+import Utilizadores from "./components/Utilizadores";
 
 import AccessibilityPanel from "./AccessibilityPanel";
 
@@ -56,6 +57,9 @@ export default function App() {
 
   const [session, setSession] = useState(null);
   const [totalAlertas, setTotalAlertas] = useState(0);
+
+  const [perfil, setPerfil] = useState("admin");
+  const [nomePerfil, setNomePerfil] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -74,8 +78,52 @@ export default function App() {
   useEffect(() => {
     if (session?.user?.id) {
       carregarAlertas();
+      carregarPerfil();
     }
   }, [session]);
+
+  async function carregarPerfil() {
+    const userId = session?.user?.id;
+
+    if (!userId) return;
+
+    const { data, error } = await supabase
+      .from("perfis")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    if (!data) {
+      const novoPerfil = {
+        user_id: userId,
+        nome: session.user.email,
+        perfil: "admin",
+      };
+
+      const { data: perfilCriado, error: erroCriacao } = await supabase
+        .from("perfis")
+        .insert([novoPerfil])
+        .select()
+        .single();
+
+      if (erroCriacao) {
+        console.error(erroCriacao);
+        return;
+      }
+
+      setPerfil(perfilCriado.perfil || "admin");
+      setNomePerfil(perfilCriado.nome || session.user.email);
+      return;
+    }
+
+    setPerfil(data.perfil || "admin");
+    setNomePerfil(data.nome || session.user.email);
+  }
 
   async function carregarAlertas() {
     const userId = session?.user?.id;
@@ -167,26 +215,113 @@ export default function App() {
   }
 
   const menuItems = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "dados-ipss", label: "Dados da IPSS", icon: Building2 },
-    { id: "capitacoes", label: "Capitações", icon: ClipboardList },
-    { id: "ementa", label: "Ementa", icon: UtensilsCrossed },
-    { id: "custos", label: "Custos", icon: Euro },
-    { id: "utentes", label: "Utentes", icon: UserCircle },
-    { id: "dietas", label: "Dietas", icon: Apple },
-    { id: "fichas", label: "Fichas Técnicas", icon: FileText },
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      perfis: ["admin", "direcao", "cozinha", "nutricionista", "haccp"],
+    },
+    {
+      id: "dados-ipss",
+      label: "Dados da IPSS",
+      icon: Building2,
+      perfis: ["admin", "direcao"],
+    },
+    {
+      id: "capitacoes",
+      label: "Capitações",
+      icon: ClipboardList,
+      perfis: ["admin", "nutricionista"],
+    },
+    {
+      id: "ementa",
+      label: "Ementa",
+      icon: UtensilsCrossed,
+      perfis: ["admin", "nutricionista", "cozinha"],
+    },
+    {
+      id: "custos",
+      label: "Custos",
+      icon: Euro,
+      perfis: ["admin", "direcao"],
+    },
+    {
+      id: "utentes",
+      label: "Utentes",
+      icon: UserCircle,
+      perfis: ["admin", "direcao"],
+    },
+    {
+      id: "dietas",
+      label: "Dietas",
+      icon: Apple,
+      perfis: ["admin", "nutricionista"],
+    },
+    {
+      id: "fichas",
+      label: "Fichas Técnicas",
+      icon: FileText,
+      perfis: ["admin", "cozinha", "nutricionista"],
+    },
     {
       id: "valor-nutricional",
       label: "Valor Nutricional",
       icon: HeartPulse,
+      perfis: ["admin", "nutricionista"],
     },
-    { id: "stocks", label: "Stocks", icon: Package },
-    { id: "haccp", label: "HACCP", icon: ShieldCheck },
-    { id: "relatorios", label: "Relatórios", icon: BarChart3 },
-    { id: "historico", label: "Histórico", icon: History },
-    { id: "producoes", label: "Produções", icon: Factory },
-    { id: "sobre", label: "Sobre o Projeto", icon: Info },
+    {
+      id: "stocks",
+      label: "Stocks",
+      icon: Package,
+      perfis: ["admin", "cozinha"],
+    },
+    {
+      id: "haccp",
+      label: "HACCP",
+      icon: ShieldCheck,
+      perfis: ["admin", "haccp"],
+    },
+    {
+      id: "relatorios",
+      label: "Relatórios",
+      icon: BarChart3,
+      perfis: ["admin", "direcao"],
+    },
+    {
+      id: "historico",
+      label: "Histórico",
+      icon: History,
+      perfis: ["admin", "direcao"],
+    },
+    {
+      id: "producoes",
+      label: "Produções",
+      icon: Factory,
+      perfis: ["admin", "cozinha"],
+    },
+    {
+      id: "utilizadores",
+      label: "Utilizadores",
+      icon: UserCircle,
+      perfis: ["admin"],
+    },
+    {
+      id: "sobre",
+      label: "Sobre o Projeto",
+      icon: Info,
+      perfis: ["admin", "direcao", "cozinha", "nutricionista", "haccp"],
+    },
   ];
+
+  const menuPermitido = menuItems.filter((item) =>
+    item.perfis.includes(perfil)
+  );
+
+  useEffect(() => {
+    if (!menuPermitido.some((item) => item.id === pagina)) {
+      setPagina("dashboard");
+    }
+  }, [perfil]);
 
   if (!session) {
     return (
@@ -271,7 +406,7 @@ export default function App() {
           </div>
 
           <nav>
-            {menuItems.map((item) => {
+            {menuPermitido.map((item) => {
               const Icone = item.icon;
 
               return (
@@ -341,8 +476,8 @@ export default function App() {
                 <UserCircle size={26} />
 
                 <div>
-                  <strong>{session.user?.email}</strong>
-                  <span>Técnico responsável</span>
+                  <strong>{nomePerfil || session.user?.email}</strong>
+                  <span>{perfil}</span>
                 </div>
               </div>
             </div>
@@ -362,6 +497,7 @@ export default function App() {
           {pagina === "relatorios" && <Relatorios />}
           {pagina === "historico" && <Historico />}
           {pagina === "producoes" && <Producoes />}
+          {pagina === "utilizadores" && <Utilizadores />}
           {pagina === "sobre" && <SobreProjeto />}
         </main>
       </div>

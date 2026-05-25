@@ -58,6 +58,9 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [totalAlertas, setTotalAlertas] = useState(0);
 
+  const [notificacoes, setNotificacoes] = useState([]);
+  const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
+
   const [perfil, setPerfil] = useState("admin");
   const [nomePerfil, setNomePerfil] = useState("");
 
@@ -78,6 +81,7 @@ export default function App() {
   useEffect(() => {
     if (session?.user?.id) {
       carregarAlertas();
+      carregarNotificacoes();
       carregarPerfil();
     }
   }, [session]);
@@ -123,6 +127,26 @@ export default function App() {
 
     setPerfil(data.perfil || "admin");
     setNomePerfil(data.nome || session.user.email);
+  }
+
+  async function carregarNotificacoes() {
+    const userId = session?.user?.id;
+
+    if (!userId) return;
+
+    const { data, error } = await supabase
+      .from("notificacoes")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setNotificacoes(data || []);
   }
 
   async function carregarAlertas() {
@@ -186,6 +210,20 @@ export default function App() {
     setTotalAlertas(
       stockBaixo + produtosExpirados + produtosAExpirar + alertasHaccp
     );
+  }
+
+  async function marcarComoLida(id) {
+    const { error } = await supabase
+      .from("notificacoes")
+      .update({ lida: true })
+      .eq("id", id);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    carregarNotificacoes();
   }
 
   async function login() {
@@ -316,6 +354,8 @@ export default function App() {
   const menuPermitido = menuItems.filter((item) =>
     item.perfis.includes(perfil)
   );
+
+  const notificacoesNaoLidas = notificacoes.filter((n) => !n.lida).length;
 
   useEffect(() => {
     if (!menuPermitido.some((item) => item.id === pagina)) {
@@ -454,23 +494,67 @@ export default function App() {
             </div>
 
             <div className="topbar-actions">
-              <button
-                className="topbar-icon"
-                onClick={carregarAlertas}
-                title={
-                  totalAlertas > 0
-                    ? `${totalAlertas} alerta(s) ativo(s)`
-                    : "Sem alertas ativos"
-                }
-              >
-                <Bell size={20} />
+              <div style={{ position: "relative" }}>
+                <button
+                  className="topbar-icon"
+                  onClick={() =>
+                    setMostrarNotificacoes(!mostrarNotificacoes)
+                  }
+                  title={
+                    notificacoesNaoLidas > 0
+                      ? `${notificacoesNaoLidas} notificação(ões) não lida(s)`
+                      : "Sem notificações não lidas"
+                  }
+                >
+                  <Bell size={20} />
 
-                {totalAlertas > 0 ? (
-                  <span className="notification-badge">{totalAlertas}</span>
-                ) : (
-                  <span className="notification-dot"></span>
+                  {notificacoesNaoLidas > 0 ? (
+                    <span className="notification-badge">
+                      {notificacoesNaoLidas}
+                    </span>
+                  ) : totalAlertas > 0 ? (
+                    <span className="notification-dot"></span>
+                  ) : (
+                    <span className="notification-dot"></span>
+                  )}
+                </button>
+
+                {mostrarNotificacoes && (
+                  <div className="painel-notificacoes">
+                    <h3>Notificações</h3>
+
+                    {notificacoes.length === 0 ? (
+                      <p>Sem notificações.</p>
+                    ) : (
+                      notificacoes.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`notificacao-item ${
+                            item.lida ? "lida" : ""
+                          }`}
+                        >
+                          <strong>{item.titulo}</strong>
+
+                          <p>{item.mensagem}</p>
+
+                          <small>
+                            Prioridade: {item.prioridade || "normal"}
+                          </small>
+
+                          {!item.lida && (
+                            <button
+                              className="botao-secundario"
+                              onClick={() => marcarComoLida(item.id)}
+                            >
+                              Marcar como lida
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
                 )}
-              </button>
+              </div>
 
               <div className="user-box">
                 <UserCircle size={26} />

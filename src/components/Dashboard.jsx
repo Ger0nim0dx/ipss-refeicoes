@@ -111,6 +111,230 @@ function Dashboard() {
     setDietas(dietasData || []);
     setHaccp(haccpData || []);
     setMovimentos(movimentosData || []);
+
+    await gerarNotificacoesAutomaticas(
+      user.id,
+      stocksData || [],
+      haccpData || [],
+      fichasFormatadas,
+      ementasData || []
+    );
+  }
+
+  async function criarNotificacaoSeNaoExiste({
+    userId,
+    titulo,
+    mensagem,
+    tipo = "info",
+    prioridade = "normal",
+    origem,
+  }) {
+    const { data: existente, error: erroConsulta } = await supabase
+      .from("notificacoes")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("origem", origem)
+      .eq("lida", false)
+      .maybeSingle();
+
+    if (erroConsulta) {
+      console.error(erroConsulta);
+      return;
+    }
+
+    if (existente) return;
+
+    const { error } = await supabase.from("notificacoes").insert([
+      {
+        user_id: userId,
+        titulo,
+        mensagem,
+        tipo,
+        prioridade,
+        origem,
+        lida: false,
+      },
+    ]);
+
+    if (error) console.error(error);
+  }
+
+  async function gerarNotificacoesAutomaticas(userId, stocksAtuais, haccpAtual, fichasAtuais, ementasAtuais) {
+    const hojeLocal = new Date();
+    hojeLocal.setHours(0, 0, 0, 0);
+
+    function diasAteValidadeLocal(data) {
+      if (!data) return null;
+
+      const validade = new Date(data);
+      validade.setHours(0, 0, 0, 0);
+
+      return Math.ceil((validade - hojeLocal) / (1000 * 60 * 60 * 24));
+    }
+
+    function normalizarLocal(texto) {
+      return String(texto || "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function converterParaGramasLocal(quantidade, unidade) {
+      const valor = Number(quantidade) || 0;
+
+      if (unidade === "kg") return valor * 1000;
+      if (unidade === "g") return valor;
+      if (unidade === "L") return valor * 1000;
+      if (unidade === "ml") return valor;
+
+      return valor;
+    }
+
+    function encontrarProdutoStockLocal(nomeIngrediente) {
+      return stocksAtuais.find((item) => {
+        const nomeStock = normalizarLocal(item.produto || item.nome);
+        const nomeIngredienteNormalizado = normalizarLocal(nomeIngrediente);
+
+        return (
+          nomeStock === nomeIngredienteNormalizado ||
+          nomeStock.includes(nomeIngredienteNormalizado) ||
+          nomeIngredienteNormalizado.includes(nomeStock)
+        );
+      });
+    }
+
+    const stockBaixo = stocksAtuais.filter(
+      (item) =>
+        Number(item.quantidade || 0) <=
+        Number(item.stock_minimo ?? item.stockMinimo ?? 0)
+    );
+
+    const expirados = stocksAtuais.filter((item) => {
+      const dias = diasAteValidadeLocal(item.validade);
+      return dias !== null && dias < 0;
+    });
+
+    const aExpirar = stocksAtuais.filter((item) => {
+      const dias = diasAteValidadeLocal(item.validade);
+      return dias !== null && dias >= 0 && dias <= 7;
+    });
+
+    const alertasHaccpAtivos = haccpAtual.filter(
+      (item) =>
+        item.tipo_registo === "nao_conformidade" ||
+        item.estado === "Crítico" ||
+        item.estado === "Não conforme"
+    );
+
+    const ementaAtualLocal = ementasAtuais[0]?.dados || {};
+    const receitasPlaneadasLocal = [];
+
+    Object.values(ementaAtualLocal).forEach((refeicoesDia) => {
+      Object.values(refeicoesDia || {}).forEach((receitaId) => {
+        const ficha = fichasAtuais.find(
+          (item) => String(item.id) === String(receitaId)
+        );
+
+        if (ficha) receitasPlaneadasLocal.push(ficha);
+      });
+    });
+
+    const ingredientesPrevistosLocal = {};
+
+    receitasPlaneadasLocal.forEach((ficha) => {
+      ficha.ingredientes?.forEach((ingrediente) => {
+        const chave = normalizarLocal(ingrediente.nome);
+
+        if (!ingredientesPrevistosLocal[chave]) {
+          ingredientesPrevistosLocal[chave] = {
+            nome: ingrediente.nome,
+            quantidade: 0,
+          };
+        }
+
+        ingredientesPrevistosLocal[chave].quantidade += Number(
+          ingrediente.quantidade || 0
+        );
+      });
+    });
+
+    const previsaoCritica = Object.values(ingredientesPrevistosLocal).filter(
+      (ingrediente) => {
+        const produtoStock = encontrarProdutoStockLocal(ingrediente.nome);
+
+        if (!produtoStock) return true;
+
+        const stockAtual = converterParaGramasLocal(
+          produtoStock.quantidade,
+          produtoStock.unidade
+        );
+
+        const stockMinimo = converterParaGramasLocal(
+          produtoStock.stock_minimo || produtoStock.stockMinimo || 0,
+          produtoStock.unidade
+        );
+
+        const stockDepois = stockAtual - ingrediente.quantidade;
+
+        return stockDepois < 0 || stockDepois <= stockMinimo;
+      }
+    );
+
+    if (stockBaixo.length > 0) {
+      await criarNotificacaoSeNaoExiste({
+        userId,
+        titulo: "Stock baixo",
+        mensagem: `Existem ${stockBaixo.length} produto(s) abaixo ou no limite do stock mínimo.`,
+        tipo: "stock",
+        prioridade: "alta",
+        origem: "stock_baixo",
+      });
+    }
+
+    if (expirados.length > 0) {
+      await criarNotificacaoSeNaoExiste({
+        userId,
+        titulo: "Produtos expirados",
+        mensagem: `Existem ${expirados.length} produto(s) com validade ultrapassada. Devem ser verificados antes de utilização.`,
+        tipo: "validade",
+        prioridade: "crítica",
+        origem: "produtos_expirados",
+      });
+    }
+
+    if (aExpirar.length > 0) {
+      await criarNotificacaoSeNaoExiste({
+        userId,
+        titulo: "Produtos a expirar",
+        mensagem: `Existem ${aExpirar.length} produto(s) a expirar nos próximos 7 dias.`,
+        tipo: "validade",
+        prioridade: "alta",
+        origem: "produtos_a_expirar",
+      });
+    }
+
+    if (alertasHaccpAtivos.length > 0) {
+      await criarNotificacaoSeNaoExiste({
+        userId,
+        titulo: "Alerta HACCP",
+        mensagem: `Existem ${alertasHaccpAtivos.length} registo(s) HACCP críticos ou não conformes.`,
+        tipo: "haccp",
+        prioridade: "crítica",
+        origem: "alertas_haccp",
+      });
+    }
+
+    if (previsaoCritica.length > 0) {
+      await criarNotificacaoSeNaoExiste({
+        userId,
+        titulo: "Previsão de stock crítico",
+        mensagem: `Após a ementa planeada, ${previsaoCritica.length} ingrediente(s) poderão ficar abaixo do mínimo ou em falta.`,
+        tipo: "previsao",
+        prioridade: "alta",
+        origem: "previsao_stock_critico",
+      });
+    }
   }
 
   const hoje = new Date();

@@ -22,6 +22,7 @@ import {
   UserCircle,
   ShieldCheck,
   Factory,
+  BrainCircuit,
 } from "lucide-react";
 
 import { supabase } from "./supabaseClient";
@@ -42,22 +43,20 @@ import ValorNutricional from "./components/ValorNutricional";
 import HACCP from "./components/HACCP";
 import Utentes from "./components/Utentes";
 import Utilizadores from "./components/Utilizadores";
+import AssistenteIA from "./components/AssistenteIA";
 
 import AccessibilityPanel from "./AccessibilityPanel";
-
 import "./App.css";
 
 export default function App() {
   const [pagina, setPagina] = useState("dashboard");
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarFechada, setSidebarFechada] = useState(false);
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const [session, setSession] = useState(null);
   const [totalAlertas, setTotalAlertas] = useState(0);
-
   const [notificacoes, setNotificacoes] = useState([]);
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
 
@@ -88,7 +87,6 @@ export default function App() {
 
   async function carregarPerfil() {
     const userId = session?.user?.id;
-
     if (!userId) return;
 
     const { data, error } = await supabase
@@ -131,7 +129,6 @@ export default function App() {
 
   async function carregarNotificacoes() {
     const userId = session?.user?.id;
-
     if (!userId) return;
 
     const { data, error } = await supabase
@@ -151,22 +148,17 @@ export default function App() {
 
   async function carregarAlertas() {
     const userId = session?.user?.id;
-
     if (!userId) return;
 
-    const { data: stocksData, error: stocksError } = await supabase
+    const { data: stocksData } = await supabase
       .from("stocks")
       .select("*")
       .eq("user_id", userId);
 
-    if (stocksError) console.error(stocksError);
-
-    const { data: haccpData, error: haccpError } = await supabase
+    const { data: haccpData } = await supabase
       .from("haccp")
       .select("*")
       .eq("user_id", userId);
-
-    if (haccpError) console.error(haccpError);
 
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
@@ -175,28 +167,21 @@ export default function App() {
     const haccp = haccpData || [];
 
     const stockBaixo = stocks.filter(
-      (item) =>
-        Number(item.quantidade || 0) <= Number(item.stock_minimo || 0)
+      (item) => Number(item.quantidade || 0) <= Number(item.stock_minimo || 0)
     ).length;
 
     const produtosExpirados = stocks.filter((item) => {
       if (!item.validade) return false;
-
       const validade = new Date(item.validade);
       validade.setHours(0, 0, 0, 0);
-
       return validade < hoje;
     }).length;
 
     const produtosAExpirar = stocks.filter((item) => {
       if (!item.validade) return false;
-
       const validade = new Date(item.validade);
       validade.setHours(0, 0, 0, 0);
-
-      const diferenca = validade - hoje;
-      const dias = Math.ceil(diferenca / (1000 * 60 * 60 * 24));
-
+      const dias = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
       return dias >= 0 && dias <= 7;
     }).length;
 
@@ -258,6 +243,12 @@ export default function App() {
       label: "Dashboard",
       icon: LayoutDashboard,
       perfis: ["admin", "direcao", "cozinha", "nutricionista", "haccp"],
+    },
+    {
+      id: "assistente-ia",
+      label: "Assistente IA",
+      icon: BrainCircuit,
+      perfis: ["admin", "direcao", "cozinha", "nutricionista"],
     },
     {
       id: "dados-ipss",
@@ -351,10 +342,7 @@ export default function App() {
     },
   ];
 
-  const menuPermitido = menuItems.filter((item) =>
-    item.perfis.includes(perfil)
-  );
-
+  const menuPermitido = menuItems.filter((item) => item.perfis.includes(perfil));
   const notificacoesNaoLidas = notificacoes.filter((n) => !n.lida).length;
 
   useEffect(() => {
@@ -456,7 +444,6 @@ export default function App() {
                   onClick={() => setPagina(item.id)}
                 >
                   <Icone size={19} />
-
                   {!sidebarFechada && <span>{item.label}</span>}
                 </button>
               );
@@ -464,7 +451,6 @@ export default function App() {
 
             <button onClick={() => setDarkMode(!darkMode)}>
               {darkMode ? <Sun size={19} /> : <Moon size={19} />}
-
               {!sidebarFechada && (
                 <span>{darkMode ? "Modo claro" : "Modo escuro"}</span>
               )}
@@ -472,7 +458,6 @@ export default function App() {
 
             <button onClick={logout}>
               <LogOut size={19} />
-
               {!sidebarFechada && <span>Sair</span>}
             </button>
           </nav>
@@ -489,7 +474,6 @@ export default function App() {
 
             <div className="topbar-search">
               <Search size={18} />
-
               <input type="text" placeholder="Pesquisar na aplicação..." />
             </div>
 
@@ -497,9 +481,7 @@ export default function App() {
               <div style={{ position: "relative" }}>
                 <button
                   className="topbar-icon"
-                  onClick={() =>
-                    setMostrarNotificacoes(!mostrarNotificacoes)
-                  }
+                  onClick={() => setMostrarNotificacoes(!mostrarNotificacoes)}
                   title={
                     notificacoesNaoLidas > 0
                       ? `${notificacoesNaoLidas} notificação(ões) não lida(s)`
@@ -534,7 +516,6 @@ export default function App() {
                           }`}
                         >
                           <strong>{item.titulo}</strong>
-
                           <p>{item.mensagem}</p>
 
                           <small>
@@ -568,6 +549,7 @@ export default function App() {
           </header>
 
           {pagina === "dashboard" && <Dashboard />}
+          {pagina === "assistente-ia" && <AssistenteIA />}
           {pagina === "dados-ipss" && <Definicoes />}
           {pagina === "capitacoes" && <Capitacoes />}
           {pagina === "ementa" && <Ementa />}

@@ -44,6 +44,7 @@ import HACCP from "./components/HACCP";
 import Utentes from "./components/Utentes";
 import Utilizadores from "./components/Utilizadores";
 import AssistenteIA from "./components/AssistenteIA";
+import Analytics from "./components/Analytics";
 
 import AccessibilityPanel from "./AccessibilityPanel";
 import "./App.css";
@@ -249,6 +250,12 @@ export default function App() {
       label: "Assistente IA",
       icon: BrainCircuit,
       perfis: ["admin", "direcao", "cozinha", "nutricionista"],
+    },
+    {
+      id: "analytics",
+      label: "Analytics",
+      icon: BarChart3,
+      perfis: ["admin", "direcao", "nutricionista"],
     },
     {
       id: "dados-ipss",
@@ -550,6 +557,7 @@ export default function App() {
 
           {pagina === "dashboard" && <Dashboard />}
           {pagina === "assistente-ia" && <AssistenteIA />}
+          {pagina === "analytics" && <Analytics />}
           {pagina === "dados-ipss" && <Definicoes />}
           {pagina === "capitacoes" && <Capitacoes />}
           {pagina === "ementa" && <Ementa />}

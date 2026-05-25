@@ -98,3 +98,42 @@ export const alimentos = [
   { nome: "Caldo de legumes", categoria: "Líquidos", kcal: 15, proteina: 0.5, hidratos: 2, gordura: 0.3, fibra: 0, sal: 0.8 },
   { nome: "Caldo de carne", categoria: "Líquidos", kcal: 20, proteina: 1.5, hidratos: 1, gordura: 0.5, fibra: 0, sal: 0.8 },
 ];
+  // COZINHA TRADICIONAL PORTUGUESA
+  { nome: "Pato", categoria: "Proteína animal", kcal: 337, proteina: 19, hidratos: 0, gordura: 28, fibra: 0, sal: 0.2 },
+  { nome: "Coelho", categoria: "Proteína animal", kcal: 173, proteina: 33, hidratos: 0, gordura: 3.5, fibra: 0, sal: 0.2 },
+  { nome: "Cabrito", categoria: "Proteína animal", kcal: 143, proteina: 27, hidratos: 0, gordura: 3, fibra: 0, sal: 0.2 },
+  { nome: "Borrego", categoria: "Proteína animal", kcal: 258, proteina: 25, hidratos: 0, gordura: 17, fibra: 0, sal: 0.2 },
+  { nome: "Entrecosto", categoria: "Proteína animal", kcal: 350, proteina: 22, hidratos: 0, gordura: 29, fibra: 0, sal: 0.3 },
+  { nome: "Lombo de porco", categoria: "Proteína animal", kcal: 242, proteina: 27, hidratos: 0, gordura: 14, fibra: 0, sal: 0.2 },
+  { nome: "Febras de porco", categoria: "Proteína animal", kcal: 220, proteina: 26, hidratos: 0, gordura: 12, fibra: 0, sal: 0.2 },
+  { nome: "Bifanas", categoria: "Proteína animal", kcal: 242, proteina: 26, hidratos: 0, gordura: 14, fibra: 0, sal: 0.3 },
+  { nome: "Chispe", categoria: "Proteína animal", kcal: 290, proteina: 22, hidratos: 0, gordura: 22, fibra: 0, sal: 0.4 },
+  { nome: "Orelha de porco", categoria: "Proteína animal", kcal: 230, proteina: 24, hidratos: 0, gordura: 15, fibra: 0, sal: 0.4 },
+
+  // ENCHIDOS
+  { nome: "Alheira", categoria: "Enchidos", kcal: 280, proteina: 12, hidratos: 18, gordura: 18, fibra: 1, sal: 2.2 },
+  { nome: "Chouriço", categoria: "Enchidos", kcal: 455, proteina: 24, hidratos: 2, gordura: 38, fibra: 0, sal: 3.5 },
+  { nome: "Morcela", categoria: "Enchidos", kcal: 310, proteina: 14, hidratos: 6, gordura: 25, fibra: 0, sal: 2.5 },
+  { nome: "Farinheira", categoria: "Enchidos", kcal: 410, proteina: 10, hidratos: 28, gordura: 29, fibra: 1, sal: 3 },
+  { nome: "Presunto", categoria: "Enchidos", kcal: 270, proteina: 30, hidratos: 0, gordura: 16, fibra: 0, sal: 5 },
+  { nome: "Toucinho", categoria: "Enchidos", kcal: 797, proteina: 3, hidratos: 0, gordura: 88, fibra: 0, sal: 1.8 },
+
+  // PEIXES TRADICIONAIS
+  { nome: "Carapau", categoria: "Peixe", kcal: 124, proteina: 20, hidratos: 0, gordura: 5, fibra: 0, sal: 0.3 },
+  { nome: "Cavala", categoria: "Peixe", kcal: 205, proteina: 19, hidratos: 0, gordura: 14, fibra: 0, sal: 0.3 },
+  { nome: "Polvo", categoria: "Peixe", kcal: 82, proteina: 15, hidratos: 2.2, gordura: 1, fibra: 0, sal: 0.6 },
+  { nome: "Lulas", categoria: "Peixe", kcal: 92, proteina: 15.6, hidratos: 3.1, gordura: 1.4, fibra: 0, sal: 0.4 },
+  { nome: "Chocos", categoria: "Peixe", kcal: 79, proteina: 16, hidratos: 0.8, gordura: 0.9, fibra: 0, sal: 0.4 },
+
+  // INGREDIENTES TRADICIONAIS
+  { nome: "Couve portuguesa", categoria: "Hortícolas", kcal: 32, proteina: 2.6, hidratos: 5, gordura: 0.4, fibra: 3.1, sal: 0.1 },
+  { nome: "Couve lombarda", categoria: "Hortícolas", kcal: 27, proteina: 1.8, hidratos: 6, gordura: 0.1, fibra: 2.4, sal: 0 },
+  { nome: "Grelos", categoria: "Hortícolas", kcal: 22, proteina: 2.7, hidratos: 2.5, gordura: 0.4, fibra: 3, sal: 0.1 },
+  { nome: "Nabiças", categoria: "Hortícolas", kcal: 20, proteina: 2.2, hidratos: 2.8, gordura: 0.3, fibra: 2.5, sal: 0.1 },
+  { nome: "Feijão vermelho", categoria: "Proteína vegetal", kcal: 127, proteina: 8.7, hidratos: 22.8, gordura: 0.5, fibra: 6.4, sal: 0 },
+  { nome: "Feijão branco", categoria: "Proteína vegetal", kcal: 139, proteina: 9.7, hidratos: 25, gordura: 0.4, fibra: 6.3, sal: 0 },
+  { nome: "Feijão manteiga", categoria: "Proteína vegetal", kcal: 115, proteina: 7.8, hidratos: 20.9, gordura: 0.4, fibra: 6.2, sal: 0 },
+  { nome: "Arroz carolino", categoria: "Cereais e hidratos", kcal: 130, proteina: 2.7, hidratos: 28, gordura: 0.3, fibra: 0.4, sal: 0 },
+  { nome: "Massa cotovelos", categoria: "Cereais e hidratos", kcal: 158, proteina: 5.8, hidratos: 31, gordura: 0.9, fibra: 1.8, sal: 0 },
+  { nome: "Massa pevide", categoria: "Cereais e hidratos", kcal: 158, proteina: 5.8, hidratos: 31, gordura: 0.9, fibra: 1.8, sal: 0 },
+  { nome: "Massa esparguete", categoria: "Cereais e hidratos", kcal: 158, proteina: 5.8, hidratos: 31, gordura: 0.9, fibra: 1.8, sal: 0 },

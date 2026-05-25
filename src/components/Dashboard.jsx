@@ -11,6 +11,8 @@ import {
   Clock3,
   ShieldAlert,
   CheckCircle2,
+  Factory,
+  BrainCircuit,
 } from "lucide-react";
 
 import {
@@ -34,13 +36,15 @@ function Dashboard() {
   const [dietas, setDietas] = useState([]);
   const [haccp, setHaccp] = useState([]);
 
+  const [diasSelecionados, setDiasSelecionados] = useState([]);
+  const [mensagemOperacional, setMensagemOperacional] = useState("");
+
   useEffect(() => {
     carregarDashboard();
   }, []);
 
   async function carregarDashboard() {
-    const { data: userData, error: userError } =
-      await supabase.auth.getUser();
+    const { data: userData, error: userError } = await supabase.auth.getUser();
 
     if (userError || !userData?.user) {
       console.error(userError);
@@ -49,64 +53,47 @@ function Dashboard() {
 
     const user = userData.user;
 
-    setDadosIPSS(
-      JSON.parse(localStorage.getItem("dadosIPSS")) || {}
-    );
+    setDadosIPSS(JSON.parse(localStorage.getItem("dadosIPSS")) || {});
 
-    const { data: stocksData, error: stocksError } =
-      await supabase
-        .from("stocks")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+    const { data: stocksData, error: stocksError } = await supabase
+      .from("stocks")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
-    if (stocksError) {
-      console.error(stocksError);
-    }
+    if (stocksError) console.error(stocksError);
 
-    const { data: fichasData, error: fichasError } =
-      await supabase
-        .from("fichas_tecnicas")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+    const { data: fichasData, error: fichasError } = await supabase
+      .from("fichas_tecnicas")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
-    if (fichasError) {
-      console.error(fichasError);
-    }
+    if (fichasError) console.error(fichasError);
 
-    const { data: ementasData, error: ementasError } =
-      await supabase
-        .from("ementas")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+    const { data: ementasData, error: ementasError } = await supabase
+      .from("ementas")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
-    if (ementasError) {
-      console.error(ementasError);
-    }
+    if (ementasError) console.error(ementasError);
 
-    const { data: dietasData, error: dietasError } =
-      await supabase
-        .from("dietas")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+    const { data: dietasData, error: dietasError } = await supabase
+      .from("dietas")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
-    if (dietasError) {
-      console.error(dietasError);
-    }
+    if (dietasError) console.error(dietasError);
 
-    const { data: haccpData, error: haccpError } =
-      await supabase
-        .from("haccp")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+    const { data: haccpData, error: haccpError } = await supabase
+      .from("haccp")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
-    if (haccpError) {
-      console.error(haccpError);
-    }
+    if (haccpError) console.error(haccpError);
 
     const fichasFormatadas = (fichasData || []).map((ficha) => ({
       id: ficha.id,
@@ -122,13 +109,213 @@ function Dashboard() {
     setDietas(dietasData || []);
     setHaccp(haccpData || []);
 
-    setMovimentos(
-      JSON.parse(localStorage.getItem("ipssMovimentosStock")) || []
-    );
+    setMovimentos(JSON.parse(localStorage.getItem("ipssMovimentosStock")) || []);
   }
 
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
+
+  const diasSemana = [
+    "Segunda-feira",
+    "Terça-feira",
+    "Quarta-feira",
+    "Quinta-feira",
+    "Sexta-feira",
+    "Sábado",
+    "Domingo",
+  ];
+
+  function normalizarTexto(texto) {
+    return String(texto || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function converterParaGramas(quantidade, unidade) {
+    const valor = Number(quantidade) || 0;
+
+    if (unidade === "kg") return valor * 1000;
+    if (unidade === "g") return valor;
+    if (unidade === "L") return valor * 1000;
+    if (unidade === "ml") return valor;
+
+    return valor;
+  }
+
+  function converterDeGramas(gramas, unidade) {
+    if (unidade === "kg") return gramas / 1000;
+    if (unidade === "g") return gramas;
+    if (unidade === "L") return gramas / 1000;
+    if (unidade === "ml") return gramas;
+
+    return gramas;
+  }
+
+  function toggleDia(dia) {
+    if (diasSelecionados.includes(dia)) {
+      setDiasSelecionados(diasSelecionados.filter((item) => item !== dia));
+    } else {
+      setDiasSelecionados([...diasSelecionados, dia]);
+    }
+  }
+
+  async function executarProducaoSelecionada() {
+    if (diasSelecionados.length === 0) {
+      alert("Seleciona pelo menos um dia para produzir.");
+      return;
+    }
+
+    if (ementas.length === 0) {
+      alert("Ainda não existe nenhuma ementa guardada.");
+      return;
+    }
+
+    const ementaAtual = ementas[0]?.dados || {};
+    const ingredientesTotais = {};
+
+    diasSelecionados.forEach((dia) => {
+      const refeicoesDia = ementaAtual[dia];
+
+      if (!refeicoesDia) return;
+
+      Object.values(refeicoesDia).forEach((receitaId) => {
+        const ficha = fichas.find((item) => String(item.id) === String(receitaId));
+
+        if (!ficha) return;
+
+        ficha.ingredientes?.forEach((ingrediente) => {
+          const chave = normalizarTexto(ingrediente.nome);
+
+          if (!ingredientesTotais[chave]) {
+            ingredientesTotais[chave] = {
+              nome: ingrediente.nome,
+              quantidade: 0,
+            };
+          }
+
+          ingredientesTotais[chave].quantidade += Number(ingrediente.quantidade || 0);
+        });
+      });
+    });
+
+    const ingredientes = Object.values(ingredientesTotais);
+
+    if (ingredientes.length === 0) {
+      alert("Não existem ingredientes associados aos dias selecionados.");
+      return;
+    }
+
+    const faltas = [];
+
+    ingredientes.forEach((ingrediente) => {
+      const produtoStock = stocks.find((item) => {
+        const nomeStock = normalizarTexto(item.produto || item.nome);
+        const nomeIngrediente = normalizarTexto(ingrediente.nome);
+
+        return (
+          nomeStock === nomeIngrediente ||
+          nomeStock.includes(nomeIngrediente) ||
+          nomeIngrediente.includes(nomeStock)
+        );
+      });
+
+      if (!produtoStock) {
+        faltas.push(`${ingrediente.nome} — sem produto no stock`);
+        return;
+      }
+
+      const stockAtual = converterParaGramas(
+        produtoStock.quantidade,
+        produtoStock.unidade
+      );
+
+      if (stockAtual < ingrediente.quantidade) {
+        faltas.push(`${ingrediente.nome} — stock insuficiente`);
+      }
+    });
+
+    if (faltas.length > 0) {
+      alert(`Não é possível executar a produção:\n\n${faltas.join("\n")}`);
+      return;
+    }
+
+    const confirmar = confirm(
+      `Confirmas a produção dos seguintes dias?\n\n${diasSelecionados.join(", ")}`
+    );
+
+    if (!confirmar) return;
+
+    const novosMovimentos = [];
+
+    for (const ingrediente of ingredientes) {
+      const produtoStock = stocks.find((item) => {
+        const nomeStock = normalizarTexto(item.produto || item.nome);
+        const nomeIngrediente = normalizarTexto(ingrediente.nome);
+
+        return (
+          nomeStock === nomeIngrediente ||
+          nomeStock.includes(nomeIngrediente) ||
+          nomeIngrediente.includes(nomeStock)
+        );
+      });
+
+      if (!produtoStock) continue;
+
+      const stockAtual = converterParaGramas(
+        produtoStock.quantidade,
+        produtoStock.unidade
+      );
+
+      const novoStock = stockAtual - ingrediente.quantidade;
+
+      const novaQuantidade = converterDeGramas(novoStock, produtoStock.unidade);
+
+      const { error } = await supabase
+        .from("stocks")
+        .update({
+          quantidade: Number(novaQuantidade.toFixed(3)),
+        })
+        .eq("id", produtoStock.id);
+
+      if (error) {
+        alert(error.message);
+        console.error(error);
+        return;
+      }
+
+      novosMovimentos.push({
+        id: Date.now() + Math.random(),
+        data: new Date().toLocaleDateString("pt-PT"),
+        produto: produtoStock.produto || ingrediente.nome,
+        tipo: `Produção: ${diasSelecionados.join(", ")}`,
+        quantidade: Number(ingrediente.quantidade.toFixed(0)),
+        unidade: "g",
+      });
+    }
+
+    const movimentosAtualizados = [...novosMovimentos, ...movimentos];
+
+    localStorage.setItem(
+      "ipssMovimentosStock",
+      JSON.stringify(movimentosAtualizados)
+    );
+
+    setMovimentos(movimentosAtualizados);
+
+    setMensagemOperacional(
+      `Produção executada para ${diasSelecionados.join(
+        ", "
+      )}. Foram gerados ${novosMovimentos.length} movimentos automáticos de stock.`
+    );
+
+    setDiasSelecionados([]);
+
+    await carregarDashboard();
+
+    alert("Produção executada com sucesso.");
+  }
 
   function diasAteValidade(data) {
     if (!data) return null;
@@ -138,64 +325,48 @@ function Dashboard() {
 
     const diferenca = validade - hoje;
 
-    return Math.ceil(
-      diferenca / (1000 * 60 * 60 * 24)
-    );
+    return Math.ceil(diferenca / (1000 * 60 * 60 * 24));
   }
 
   const produtosStockBaixo = stocks.filter(
     (item) =>
-      Number(item.quantidade) <=
-      Number(item.stock_minimo ?? item.stockMinimo ?? 0)
+      Number(item.quantidade) <= Number(item.stock_minimo ?? item.stockMinimo ?? 0)
   );
 
   const produtosExpirados = stocks.filter((item) => {
     const dias = diasAteValidade(item.validade);
-
     return dias !== null && dias < 0;
   });
 
   const produtosAExpirar = stocks.filter((item) => {
     const dias = diasAteValidade(item.validade);
-
     return dias !== null && dias >= 0 && dias <= 7;
   });
 
   const totalEntradas = movimentos.filter((m) =>
-    String(m.tipo || "")
-      .toLowerCase()
-      .includes("entrada")
+    String(m.tipo || "").toLowerCase().includes("entrada")
   ).length;
 
   const totalSaidas = movimentos.filter((m) =>
-    String(m.tipo || "")
-      .toLowerCase()
-      .includes("saída")
+    String(m.tipo || "").toLowerCase().includes("saída")
   ).length;
 
   const custoTotalReceitas = fichas.reduce(
-    (total, ficha) =>
-      total + Number(ficha.custoTotal || 0),
+    (total, ficha) => total + Number(ficha.custoTotal || 0),
     0
   );
 
   const custoMedioReceita =
-    fichas.length > 0
-      ? custoTotalReceitas / fichas.length
-      : 0;
+    fichas.length > 0 ? custoTotalReceitas / fichas.length : 0;
 
-  const comprasPendentes =
-    produtosStockBaixo.length +
-    produtosExpirados.length;
+  const comprasPendentes = produtosStockBaixo.length + produtosExpirados.length;
 
   const naoConformidadesHaccp = haccp.filter(
     (item) => item.tipo_registo === "nao_conformidade"
   );
 
   const temperaturasCriticasHaccp = haccp.filter(
-    (item) =>
-      item.tipo_registo === "temperatura" &&
-      item.estado === "Crítico"
+    (item) => item.tipo_registo === "temperatura" && item.estado === "Crítico"
   );
 
   const alertasHaccp =
@@ -204,12 +375,10 @@ function Dashboard() {
   const totalEmentas = ementas.length;
   const totalDietas = dietas.length;
 
-  const dadosGrafico = stocks
-    .slice(0, 8)
-    .map((item) => ({
-      nome: item.produto || item.nome,
-      quantidade: Number(item.quantidade) || 0,
-    }));
+  const dadosGrafico = stocks.slice(0, 8).map((item) => ({
+    nome: item.produto || item.nome,
+    quantidade: Number(item.quantidade) || 0,
+  }));
 
   return (
     <div className="dashboard">
@@ -222,9 +391,7 @@ function Dashboard() {
           </p>
         </div>
 
-        <div className="data-box">
-          {new Date().toLocaleDateString("pt-PT")}
-        </div>
+        <div className="data-box">{new Date().toLocaleDateString("pt-PT")}</div>
       </div>
 
       <div className="dashboard-section">
@@ -233,153 +400,147 @@ function Dashboard() {
         <div className="summary-grid">
           <div className="summary-box">
             <strong>Instituição</strong>
-
-            <p>
-              {dadosIPSS.nomeInstituicao ||
-                "Não preenchido"}
-            </p>
+            <p>{dadosIPSS.nomeInstituicao || "Não preenchido"}</p>
           </div>
 
           <div className="summary-box">
             <strong>Localidade</strong>
-
-            <p>
-              {dadosIPSS.localidade ||
-                "Não preenchido"}
-            </p>
+            <p>{dadosIPSS.localidade || "Não preenchido"}</p>
           </div>
 
           <div className="summary-box">
             <strong>Responsável</strong>
-
-            <p>
-              {dadosIPSS.responsavelCozinha ||
-                "Não preenchido"}
-            </p>
+            <p>{dadosIPSS.responsavelCozinha || "Não preenchido"}</p>
           </div>
         </div>
+      </div>
+
+      <div className="dashboard-section">
+        <h2>
+          <Factory size={22} /> Centro Operacional
+        </h2>
+
+        <p className="dashboard-subtitle">
+          Executa a produção real a partir da ementa semanal, descontando
+          automaticamente os ingredientes do stock.
+        </p>
+
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            flexWrap: "wrap",
+            marginBottom: "18px",
+          }}
+        >
+          {diasSemana.map((dia) => (
+            <button
+              key={dia}
+              className={
+                diasSelecionados.includes(dia)
+                  ? "botao-principal"
+                  : "botao-secundario"
+              }
+              onClick={() => toggleDia(dia)}
+            >
+              {dia}
+            </button>
+          ))}
+        </div>
+
+        <button className="botao-principal" onClick={executarProducaoSelecionada}>
+          Executar produção dos dias selecionados
+        </button>
+
+        {mensagemOperacional && (
+          <p className="success-message">
+            <BrainCircuit size={18} /> {mensagemOperacional}
+          </p>
+        )}
       </div>
 
       <div className="dashboard-cards">
         <div className="dashboard-card">
           <ClipboardList size={32} />
-
           <h3>Receitas</h3>
-
           <p>{fichas.length}</p>
-
           <span>Fichas técnicas</span>
         </div>
 
         <div className="dashboard-card">
           <Package size={32} />
-
           <h3>Produtos</h3>
-
           <p>{stocks.length}</p>
-
           <span>Produtos em stock</span>
         </div>
 
         <div className="dashboard-card">
           <ClipboardList size={32} />
-
           <h3>Ementas</h3>
-
           <p>{totalEmentas}</p>
-
           <span>Planeamentos guardados</span>
         </div>
 
         <div className="dashboard-card">
           <CheckCircle2 size={32} />
-
           <h3>Dietas</h3>
-
           <p>{totalDietas}</p>
-
           <span>Dietas especiais</span>
         </div>
 
         <div className="dashboard-card">
           <ShieldAlert size={32} />
-
           <h3>HACCP</h3>
-
           <p>{alertasHaccp}</p>
-
           <span>Alertas registados</span>
         </div>
 
         <div className="dashboard-card">
           <AlertTriangle size={32} />
-
           <h3>Stock baixo</h3>
-
           <p>{produtosStockBaixo.length}</p>
-
           <span>Produtos críticos</span>
         </div>
 
         <div className="dashboard-card">
           <ShieldAlert size={32} />
-
           <h3>Expirados</h3>
-
           <p>{produtosExpirados.length}</p>
-
           <span>Produtos vencidos</span>
         </div>
 
         <div className="dashboard-card">
           <Clock3 size={32} />
-
           <h3>A expirar</h3>
-
           <p>{produtosAExpirar.length}</p>
-
           <span>Próximos 7 dias</span>
         </div>
 
         <div className="dashboard-card">
           <TrendingUp size={32} />
-
           <h3>Entradas</h3>
-
           <p>{totalEntradas}</p>
-
           <span>Movimentos entrada</span>
         </div>
 
         <div className="dashboard-card">
           <TrendingDown size={32} />
-
           <h3>Saídas</h3>
-
           <p>{totalSaidas}</p>
-
           <span>Movimentos saída</span>
         </div>
 
         <div className="dashboard-card">
           <Euro size={32} />
-
           <h3>Custo médio</h3>
-
-          <p>
-            {custoMedioReceita.toFixed(2)} €
-          </p>
-
+          <p>{custoMedioReceita.toFixed(2)} €</p>
           <span>Por receita</span>
         </div>
 
         <div className="dashboard-card destaque">
           <ShoppingCart size={32} />
-
           <h3>Compras</h3>
-
           <p>{comprasPendentes}</p>
-
           <span>Pendentes</span>
         </div>
       </div>
@@ -390,25 +551,21 @@ function Dashboard() {
         <div className="grafico-movimentos">
           <div className="movimento-card">
             <strong>Receitas registadas</strong>
-
             <span>{fichas.length}</span>
           </div>
 
           <div className="movimento-card">
             <strong>Produtos em stock</strong>
-
             <span>{stocks.length}</span>
           </div>
 
           <div className="movimento-card">
             <strong>Movimentos</strong>
-
             <span>{movimentos.length}</span>
           </div>
 
           <div className="movimento-card">
             <strong>Compras pendentes</strong>
-
             <span>{comprasPendentes}</span>
           </div>
         </div>
@@ -420,31 +577,26 @@ function Dashboard() {
         <div className="grafico-movimentos">
           <div className="movimento-card">
             <strong>Stocks online</strong>
-
             <span>{stocks.length}</span>
           </div>
 
           <div className="movimento-card">
             <strong>Fichas técnicas online</strong>
-
             <span>{fichas.length}</span>
           </div>
 
           <div className="movimento-card">
             <strong>Ementas online</strong>
-
             <span>{ementas.length}</span>
           </div>
 
           <div className="movimento-card">
             <strong>Dietas online</strong>
-
             <span>{dietas.length}</span>
           </div>
 
           <div className="movimento-card">
             <strong>Registos HACCP online</strong>
-
             <span>{haccp.length}</span>
           </div>
         </div>
@@ -454,31 +606,16 @@ function Dashboard() {
         <h2>Gráfico de Quantidades em Stock</h2>
 
         {stocks.length === 0 ? (
-          <p>
-            Ainda não existem produtos
-            registados.
-          </p>
+          <p>Ainda não existem produtos registados.</p>
         ) : (
-          <div
-            style={{
-              width: "100%",
-              height: 350,
-            }}
-          >
+          <div style={{ width: "100%", height: 350 }}>
             <ResponsiveContainer>
               <BarChart data={dadosGrafico}>
                 <CartesianGrid strokeDasharray="3 3" />
-
                 <XAxis dataKey="nome" />
-
                 <YAxis />
-
                 <Tooltip />
-
-                <Bar
-                  dataKey="quantidade"
-                  radius={[10, 10, 0, 0]}
-                />
+                <Bar dataKey="quantidade" radius={[10, 10, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -491,27 +628,15 @@ function Dashboard() {
         <div className="dashboard-cards">
           <div className="dashboard-card">
             <Euro size={32} />
-
             <h3>Custo total receitas</h3>
-
-            <p>
-              {custoTotalReceitas.toFixed(2)} €
-            </p>
-
-            <span>
-              Soma das fichas técnicas
-            </span>
+            <p>{custoTotalReceitas.toFixed(2)} €</p>
+            <span>Soma das fichas técnicas</span>
           </div>
 
           <div className="dashboard-card">
             <TrendingUp size={32} />
-
             <h3>Custo médio</h3>
-
-            <p>
-              {custoMedioReceita.toFixed(2)} €
-            </p>
-
+            <p>{custoMedioReceita.toFixed(2)} €</p>
             <span>Por receita</span>
           </div>
         </div>
@@ -525,13 +650,11 @@ function Dashboard() {
         produtosExpirados.length === 0 &&
         alertasHaccp === 0 ? (
           <p className="success-message">
-            <CheckCircle2 size={18} /> Não existem
-            alertas críticos.
+            <CheckCircle2 size={18} /> Não existem alertas críticos.
           </p>
         ) : (
           <>
-            {produtosStockBaixo.length >
-              0 && (
+            {produtosStockBaixo.length > 0 && (
               <p
                 style={{
                   color: "#dc2626",
@@ -539,16 +662,11 @@ function Dashboard() {
                   marginBottom: "10px",
                 }}
               >
-                ⚠ Existem{" "}
-                {
-                  produtosStockBaixo.length
-                }{" "}
-                produtos com stock baixo.
+                ⚠ Existem {produtosStockBaixo.length} produtos com stock baixo.
               </p>
             )}
 
-            {produtosAExpirar.length >
-              0 && (
+            {produtosAExpirar.length > 0 && (
               <p
                 style={{
                   color: "#ca8a04",
@@ -556,28 +674,19 @@ function Dashboard() {
                   marginBottom: "10px",
                 }}
               >
-                ⚠ Existem{" "}
-                {
-                  produtosAExpirar.length
-                }{" "}
-                produtos a expirar nos
+                ⚠ Existem {produtosAExpirar.length} produtos a expirar nos
                 próximos 7 dias.
               </p>
             )}
 
-            {produtosExpirados.length >
-              0 && (
+            {produtosExpirados.length > 0 && (
               <p
                 style={{
                   color: "#991b1b",
                   fontWeight: "bold",
                 }}
               >
-                ❌ Existem{" "}
-                {
-                  produtosExpirados.length
-                }{" "}
-                produtos expirados.
+                ❌ Existem {produtosExpirados.length} produtos expirados.
               </p>
             )}
 
@@ -599,10 +708,7 @@ function Dashboard() {
         <h2>Receitas mais recentes</h2>
 
         {fichas.length === 0 ? (
-          <p>
-            Ainda não existem fichas
-            técnicas registadas.
-          </p>
+          <p>Ainda não existem fichas técnicas registadas.</p>
         ) : (
           <table className="dashboard-table">
             <thead>
@@ -621,19 +727,9 @@ function Dashboard() {
                 .map((ficha, index) => (
                   <tr key={index}>
                     <td>{ficha.nome}</td>
-
-                    <td>
-                      {ficha.categoria}
-                    </td>
-
+                    <td>{ficha.categoria}</td>
                     <td>{ficha.doses}</td>
-
-                    <td>
-                      {Number(
-                        ficha.custoTotal || 0
-                      ).toFixed(2)}{" "}
-                      €
-                    </td>
+                    <td>{Number(ficha.custoTotal || 0).toFixed(2)} €</td>
                   </tr>
                 ))}
             </tbody>
@@ -642,15 +738,10 @@ function Dashboard() {
       </div>
 
       <div className="dashboard-section">
-        <h2>
-          Últimos movimentos de stock
-        </h2>
+        <h2>Últimos movimentos de stock</h2>
 
         {movimentos.length === 0 ? (
-          <p>
-            Ainda não existem movimentos
-            registados.
-          </p>
+          <p>Ainda não existem movimentos registados.</p>
         ) : (
           <table className="dashboard-table">
             <thead>
@@ -663,34 +754,16 @@ function Dashboard() {
             </thead>
 
             <tbody>
-              {movimentos
-                .slice(0, 5)
-                .map((movimento, index) => (
-                  <tr key={index}>
-                    <td>
-                      {movimento.data ||
-                        "Sem data"}
-                    </td>
-
-                    <td>
-                      {movimento.tipo ||
-                        "Movimento"}
-                    </td>
-
-                    <td>
-                      {movimento.produto}
-                    </td>
-
-                    <td>
-                      {
-                        movimento.quantidade
-                      }{" "}
-                      {
-                        movimento.unidade
-                      }
-                    </td>
-                  </tr>
-                ))}
+              {movimentos.slice(0, 5).map((movimento, index) => (
+                <tr key={index}>
+                  <td>{movimento.data || "Sem data"}</td>
+                  <td>{movimento.tipo || "Movimento"}</td>
+                  <td>{movimento.produto}</td>
+                  <td>
+                    {movimento.quantidade} {movimento.unidade}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         )}

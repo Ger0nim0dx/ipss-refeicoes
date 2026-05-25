@@ -987,3 +987,192 @@ select:focus {
 .painel {
   overflow-x: auto;
 }
+/* PWA / MOBILE PREMIUM */
+
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* SAFE AREA IOS */
+
+.app-container,
+.login-page {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* MOBILE TOUCH */
+
+button,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+/* SCROLLBAR */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(20, 92, 42, 0.35);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ANIMAÇÕES */
+
+.dashboard-card,
+.historico-card,
+.summary-box,
+.movimento-card,
+.painel,
+.dashboard-section,
+.cartao-resumo {
+  animation: fadeUp 0.35s ease;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* PAINEL NOTIFICAÇÕES */
+
+.painel-notificacoes {
+  position: absolute;
+  top: 58px;
+  right: 0;
+  width: 360px;
+  max-height: 500px;
+  overflow-y: auto;
+  background: white;
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+  border: 1px solid #e2e8f0;
+  z-index: 999;
+}
+
+.painel-notificacoes h3 {
+  margin-bottom: 14px;
+  color: #0f172a;
+}
+
+.notificacao-item {
+  padding: 14px;
+  border-radius: 16px;
+  background: #f8fafc;
+  margin-bottom: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.notificacao-item strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #0f172a;
+}
+
+.notificacao-item p {
+  color: #475569;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.notificacao-item small {
+  display: block;
+  margin-bottom: 10px;
+  color: #64748b;
+}
+
+.notificacao-item.lida {
+  opacity: 0.7;
+}
+
+/* DARK MODE NOTIFICAÇÕES */
+
+.dark .painel-notificacoes {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.dark .notificacao-item {
+  background: #334155;
+  border-color: #475569;
+}
+
+.dark .painel-notificacoes h3,
+.dark .notificacao-item strong {
+  color: white;
+}
+
+.dark .notificacao-item p,
+.dark .notificacao-item small {
+  color: #cbd5e1;
+}
+
+/* MOBILE EXTRA */
+
+@media (max-width: 768px) {
+  .painel-notificacoes {
+    width: 92vw;
+    right: -10px;
+  }
+
+  .dashboard-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .dashboard-card,
+  .summary-box,
+  .historico-card {
+    padding: 20px;
+  }
+
+  .topbar {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar {
+    padding: 12px;
+  }
+
+  .painel-notificacoes {
+    width: calc(100vw - 24px);
+    right: -6px;
+  }
+
+  .dashboard-card p,
+  .card strong {
+    font-size: 24px;
+  }
+
+  .dashboard-section,
+  .painel,
+  .formulario,
+  .cartao-resumo {
+    border-radius: 20px;
+  }
+}

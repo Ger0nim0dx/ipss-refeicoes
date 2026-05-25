@@ -13,6 +13,7 @@ function Definicoes() {
     responsavelCozinha: "",
     respostasSociais: "",
     numeroUtentes: "",
+    numeroRefeicoesDia: "",
     observacoes: "",
   });
 
@@ -24,7 +25,6 @@ function Definicoes() {
 
   async function carregarDados() {
     const { data: userData } = await supabase.auth.getUser();
-
     const userId = userData?.user?.id;
 
     if (!userId) return;
@@ -54,6 +54,7 @@ function Definicoes() {
         responsavelCozinha: data.responsavelcozinha || "",
         respostasSociais: data.respostassociais || "",
         numeroUtentes: data.numeroutentes || "",
+        numeroRefeicoesDia: data.numerorefeicoesdia || "",
         observacoes: data.observacoes || "",
       });
     }
@@ -72,7 +73,6 @@ function Definicoes() {
     e.preventDefault();
 
     const { data: userData } = await supabase.auth.getUser();
-
     const userId = userData?.user?.id;
 
     if (!userId) {
@@ -92,6 +92,7 @@ function Definicoes() {
       responsavelcozinha: dados.responsavelCozinha,
       respostassociais: dados.respostasSociais,
       numeroutentes: dados.numeroUtentes,
+      numerorefeicoesdia: dados.numeroRefeicoesDia,
       observacoes: dados.observacoes,
     };
 
@@ -157,6 +158,7 @@ function Definicoes() {
       responsavelCozinha: "",
       respostasSociais: "",
       numeroUtentes: "",
+      numeroRefeicoesDia: "",
       observacoes: "",
     });
 
@@ -244,7 +246,6 @@ function Definicoes() {
         <h2>Dados operacionais</h2>
 
         <label>Respostas sociais abrangidas</label>
-
         <textarea
           name="respostasSociais"
           value={dados.respostasSociais}
@@ -252,7 +253,6 @@ function Definicoes() {
         />
 
         <label>Número total de utentes/refeições</label>
-
         <input
           type="number"
           name="numeroUtentes"
@@ -260,8 +260,15 @@ function Definicoes() {
           onChange={handleChange}
         />
 
-        <label>Observações</label>
+        <label>Número médio de refeições por dia</label>
+        <input
+          type="number"
+          name="numeroRefeicoesDia"
+          value={dados.numeroRefeicoesDia}
+          onChange={handleChange}
+        />
 
+        <label>Observações</label>
         <textarea
           name="observacoes"
           value={dados.observacoes}
@@ -292,8 +299,7 @@ function Definicoes() {
         </p>
 
         <p>
-          <strong>Localidade:</strong>{" "}
-          {dados.localidade || "Não preenchido"}
+          <strong>Localidade:</strong> {dados.localidade || "Não preenchido"}
         </p>
 
         <p>
@@ -309,6 +315,11 @@ function Definicoes() {
         <p>
           <strong>N.º de utentes/refeições:</strong>{" "}
           {dados.numeroUtentes || "Não preenchido"}
+        </p>
+
+        <p>
+          <strong>Refeições por dia:</strong>{" "}
+          {dados.numeroRefeicoesDia || "Não preenchido"}
         </p>
       </div>
     </div>

@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   Factory,
   BrainCircuit,
+  ShoppingCart,
 } from "lucide-react";
 
 import { supabase } from "./supabaseClient";
@@ -45,6 +46,7 @@ import Utentes from "./components/Utentes";
 import Utilizadores from "./components/Utilizadores";
 import AssistenteIA from "./components/AssistenteIA";
 import Analytics from "./components/Analytics";
+import ComprasInteligentes from "./components/ComprasInteligentes";
 
 import AccessibilityPanel from "./AccessibilityPanel";
 import "./App.css";
@@ -256,6 +258,12 @@ export default function App() {
       label: "Analytics",
       icon: BarChart3,
       perfis: ["admin", "direcao", "nutricionista"],
+    },
+    {
+      id: "compras-inteligentes",
+      label: "Compras Inteligentes",
+      icon: ShoppingCart,
+      perfis: ["admin", "direcao", "cozinha", "nutricionista"],
     },
     {
       id: "dados-ipss",
@@ -558,6 +566,7 @@ export default function App() {
           {pagina === "dashboard" && <Dashboard />}
           {pagina === "assistente-ia" && <AssistenteIA />}
           {pagina === "analytics" && <Analytics />}
+          {pagina === "compras-inteligentes" && <ComprasInteligentes />}
           {pagina === "dados-ipss" && <Definicoes />}
           {pagina === "capitacoes" && <Capitacoes />}
           {pagina === "ementa" && <Ementa />}

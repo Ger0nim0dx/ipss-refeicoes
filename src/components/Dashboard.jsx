@@ -24,6 +24,10 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from "recharts";
 
 import { supabase } from "../supabaseClient";
@@ -36,6 +40,7 @@ function Dashboard() {
   const [ementas, setEmentas] = useState([]);
   const [dietas, setDietas] = useState([]);
   const [haccp, setHaccp] = useState([]);
+  const [utentes, setUtentes] = useState([]);
 
   const [diasSelecionados, setDiasSelecionados] = useState([]);
   const [mensagemOperacional, setMensagemOperacional] = useState("");
@@ -90,6 +95,16 @@ function Dashboard() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
+    const { data: utentesData, error: utentesError } = await supabase
+      .from("utentes")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (utentesError) {
+      console.warn("Não foi possível carregar utentes:", utentesError.message);
+    }
+
     const { data: movimentosData } = await supabase
       .from("movimentos_stock")
       .select("*")
@@ -110,6 +125,7 @@ function Dashboard() {
     setEmentas(ementasData || []);
     setDietas(dietasData || []);
     setHaccp(haccpData || []);
+    setUtentes(utentesData || []);
     setMovimentos(movimentosData || []);
 
     await gerarNotificacoesAutomaticas(
@@ -117,7 +133,8 @@ function Dashboard() {
       stocksData || [],
       haccpData || [],
       fichasFormatadas,
-      ementasData || []
+      ementasData || [],
+      utentesData || []
     );
   }
 
@@ -159,7 +176,14 @@ function Dashboard() {
     if (error) console.error(error);
   }
 
-  async function gerarNotificacoesAutomaticas(userId, stocksAtuais, haccpAtual, fichasAtuais, ementasAtuais) {
+  async function gerarNotificacoesAutomaticas(
+    userId,
+    stocksAtuais,
+    haccpAtual,
+    fichasAtuais,
+    ementasAtuais,
+    utentesAtuais
+  ) {
     const hojeLocal = new Date();
     hojeLocal.setHours(0, 0, 0, 0);
 
@@ -189,6 +213,43 @@ function Dashboard() {
       if (unidade === "ml") return valor;
 
       return valor;
+    }
+
+    function obterNomeUtenteLocal(utente) {
+      return (
+        utente.nome ||
+        utente.nome_completo ||
+        utente.name ||
+        utente.designacao ||
+        "Utente"
+      );
+    }
+
+    function obterDataNascimentoLocal(utente) {
+      return (
+        utente.data_nascimento ||
+        utente.dataNascimento ||
+        utente.nascimento ||
+        utente.data_nasc ||
+        utente.aniversario ||
+        null
+      );
+    }
+
+    function fazAnosAmanhaLocal(utente) {
+      const dataNascimento = obterDataNascimentoLocal(utente);
+      if (!dataNascimento) return false;
+
+      const nascimento = new Date(dataNascimento);
+      if (Number.isNaN(nascimento.getTime())) return false;
+
+      const amanha = new Date(hojeLocal);
+      amanha.setDate(amanha.getDate() + 1);
+
+      return (
+        nascimento.getDate() === amanha.getDate() &&
+        nascimento.getMonth() === amanha.getMonth()
+      );
     }
 
     function encontrarProdutoStockLocal(nomeIngrediente) {
@@ -335,6 +396,20 @@ function Dashboard() {
         origem: "previsao_stock_critico",
       });
     }
+
+    const aniversariosAmanha = (utentesAtuais || []).filter(fazAnosAmanhaLocal);
+    const anoAtual = hojeLocal.getFullYear();
+
+    for (const utente of aniversariosAmanha) {
+      await criarNotificacaoSeNaoExiste({
+        userId,
+        titulo: "Aniversário de utente amanhã",
+        mensagem: `${obterNomeUtenteLocal(utente)} faz anos amanhã. A cozinha pode preparar um bolo ou adaptar a ementa comemorativa.`,
+        tipo: "aniversario",
+        prioridade: "normal",
+        origem: `aniversario_utente_${utente.id || obterNomeUtenteLocal(utente)}_${anoAtual}`,
+      });
+    }
   }
 
   const hoje = new Date();
@@ -398,6 +473,43 @@ function Dashboard() {
     validade.setHours(0, 0, 0, 0);
 
     return Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
+  }
+
+  function obterNomeUtente(utente) {
+    return (
+      utente.nome ||
+      utente.nome_completo ||
+      utente.name ||
+      utente.designacao ||
+      "Utente"
+    );
+  }
+
+  function obterDataNascimento(utente) {
+    return (
+      utente.data_nascimento ||
+      utente.dataNascimento ||
+      utente.nascimento ||
+      utente.data_nasc ||
+      utente.aniversario ||
+      null
+    );
+  }
+
+  function fazAnosAmanha(utente) {
+    const dataNascimento = obterDataNascimento(utente);
+    if (!dataNascimento) return false;
+
+    const nascimento = new Date(dataNascimento);
+    if (Number.isNaN(nascimento.getTime())) return false;
+
+    const amanha = new Date(hoje);
+    amanha.setDate(amanha.getDate() + 1);
+
+    return (
+      nascimento.getDate() === amanha.getDate() &&
+      nascimento.getMonth() === amanha.getMonth()
+    );
   }
 
   function toggleDia(dia) {
@@ -473,6 +585,59 @@ function Dashboard() {
       if (ficha) receitasPlaneadas.push(ficha);
     });
   });
+
+  const refeicoesGuardadas =
+    JSON.parse(localStorage.getItem("ipssRefeicoes")) || {};
+
+  const refeicoesPorValencia = {
+    Lar: Number(refeicoesGuardadas.lar || 0),
+    Creche: Number(refeicoesGuardadas.creche || 0),
+    "Apoio Domiciliário": Number(refeicoesGuardadas.apoio || 0),
+    Trabalhadores: Number(refeicoesGuardadas.trabalhadores || 0),
+  };
+
+  const totalRefeicoesValencias = Object.values(refeicoesPorValencia).reduce(
+    (total, valor) => total + Number(valor || 0),
+    0
+  );
+
+  const custoSemanalPlaneado = receitasPlaneadas.reduce(
+    (total, ficha) => total + Number(ficha.custoTotal || 0),
+    0
+  );
+
+  const custoMensalPlaneado = custoSemanalPlaneado * 4.33;
+
+  const dadosFinanceirosValencias = Object.entries(refeicoesPorValencia).map(
+    ([nome, refeicoes]) => {
+      const percentagem =
+        totalRefeicoesValencias > 0
+          ? (Number(refeicoes || 0) / totalRefeicoesValencias) * 100
+          : 0;
+
+      const custoSemanal = custoSemanalPlaneado * (percentagem / 100);
+      const custoMensal = custoMensalPlaneado * (percentagem / 100);
+      const custoMedio =
+        Number(refeicoes || 0) > 0 && receitasPlaneadas.length > 0
+          ? custoSemanal / (Number(refeicoes || 0) * 7)
+          : 0;
+
+      return {
+        nome,
+        refeicoes: Number(refeicoes || 0),
+        percentagem,
+        custoSemanal,
+        custoMensal,
+        custoMedio,
+      };
+    }
+  );
+
+  const receitasMaisCaras = [...fichas]
+    .sort((a, b) => Number(b.custoPorDose || 0) - Number(a.custoPorDose || 0))
+    .slice(0, 5);
+
+  const aniversariosAmanha = utentes.filter(fazAnosAmanha);
 
   const ingredientesPrevistos = {};
 
@@ -591,6 +756,16 @@ function Dashboard() {
       tipo: "haccp",
       titulo: "Atenção aos registos HACCP",
       texto: `Existem ${alertasHaccp} alerta(s) HACCP. Recomenda-se validar não conformidades antes de novas produções.`,
+    });
+  }
+
+  if (aniversariosAmanha.length > 0) {
+    recomendacoesIA.push({
+      tipo: "aniversário",
+      titulo: "Preparar bolo de aniversário",
+      texto: `${aniversariosAmanha
+        .map(obterNomeUtente)
+        .join(", ")} faz(em) anos amanhã. Sugere-se articular com a cozinha a preparação de bolo ou alternativa adequada às dietas.`,
     });
   }
 
@@ -876,6 +1051,159 @@ function Dashboard() {
               ))}
             </tbody>
           </table>
+        )}
+      </div>
+
+      <div className="dashboard-section">
+        <h2>
+          <Euro size={22} /> Análise Financeira por Valência
+        </h2>
+
+        <p className="dashboard-subtitle">
+          Distribuição estimada dos custos reais das ementas planeadas pelas
+          respostas sociais da instituição.
+        </p>
+
+        <div className="dashboard-cards">
+          <div className="dashboard-card destaque">
+            <Euro size={30} />
+            <h3>Custo semanal planeado</h3>
+            <p>{custoSemanalPlaneado.toFixed(2)} €</p>
+            <span>Com base na ementa atual</span>
+          </div>
+
+          <div className="dashboard-card">
+            <TrendingUp size={30} />
+            <h3>Custo mensal previsto</h3>
+            <p>{custoMensalPlaneado.toFixed(2)} €</p>
+            <span>Estimativa × 4,33 semanas</span>
+          </div>
+
+          <div className="dashboard-card">
+            <Users size={30} />
+            <h3>Refeições por dia</h3>
+            <p>{totalRefeicoesValencias}</p>
+            <span>Somatório das valências</span>
+          </div>
+
+          <div className="dashboard-card">
+            <ClipboardList size={30} />
+            <h3>Receitas planeadas</h3>
+            <p>{receitasPlaneadas.length}</p>
+            <span>Na ementa semanal</span>
+          </div>
+        </div>
+
+        <div className="historico-grid">
+          <div className="historico-card">
+            <h3>Distribuição financeira</h3>
+
+            {dadosFinanceirosValencias.every((item) => item.refeicoes === 0) ? (
+              <p>
+                Ainda não existem refeições por valência registadas. Atualiza a
+                área das refeições/capitações para ativar esta análise.
+              </p>
+            ) : (
+              <div style={{ width: "100%", height: 300 }}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={dadosFinanceirosValencias}
+                      dataKey="custoSemanal"
+                      nameKey="nome"
+                      outerRadius={95}
+                      label={({ nome, percentagem }) =>
+                        `${nome} ${percentagem.toFixed(0)}%`
+                      }
+                    >
+                      {dadosFinanceirosValencias.map((_, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={["#2563eb", "#16a34a", "#f59e0b", "#9333ea"][index % 4]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value) => `${Number(value || 0).toFixed(2)} €`}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          <div className="historico-card">
+            <h3>Receitas com maior custo por dose</h3>
+
+            {receitasMaisCaras.length === 0 ? (
+              <p>Ainda não existem fichas técnicas com custos calculados.</p>
+            ) : (
+              receitasMaisCaras.map((ficha) => (
+                <p key={ficha.id}>
+                  <strong>{ficha.nome}:</strong>{" "}
+                  {Number(ficha.custoPorDose || 0).toFixed(2)} €/dose
+                </p>
+              ))
+            )}
+          </div>
+        </div>
+
+        <table className="dashboard-table">
+          <thead>
+            <tr>
+              <th>Valência</th>
+              <th>Refeições/dia</th>
+              <th>Custo semanal</th>
+              <th>Custo mensal</th>
+              <th>Custo médio/refeição</th>
+              <th>Peso</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {dadosFinanceirosValencias.map((item) => (
+              <tr key={item.nome}>
+                <td>{item.nome}</td>
+                <td>{item.refeicoes}</td>
+                <td>{item.custoSemanal.toFixed(2)} €</td>
+                <td>{item.custoMensal.toFixed(2)} €</td>
+                <td>{item.custoMedio.toFixed(2)} €</td>
+                <td>{item.percentagem.toFixed(1)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="dashboard-section">
+        <h2>
+          <Users size={22} /> Alertas de Aniversário
+        </h2>
+
+        <p className="dashboard-subtitle">
+          Aviso antecipado para a cozinha preparar bolo ou alternativa adequada
+          às dietas dos utentes.
+        </p>
+
+        {aniversariosAmanha.length === 0 ? (
+          <p>Não existem aniversários de utentes previstos para amanhã.</p>
+        ) : (
+          <div className="historico-grid">
+            {aniversariosAmanha.map((utente) => (
+              <div className="historico-card" key={utente.id || obterNomeUtente(utente)}>
+                <h3>🎂 {obterNomeUtente(utente)}</h3>
+                <p>
+                  <strong>Data de nascimento:</strong>{" "}
+                  {new Date(obterDataNascimento(utente)).toLocaleDateString("pt-PT")}
+                </p>
+                <p>
+                  Preparar bolo de aniversário ou alternativa compatível com a
+                  dieta/alergénios registados.
+                </p>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

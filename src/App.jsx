@@ -24,11 +24,13 @@ import {
   Factory,
   BrainCircuit,
   ShoppingCart,
+  LineChart,
 } from "lucide-react";
 
 import { supabase } from "./supabaseClient";
 
 import Dashboard from "./components/Dashboard";
+import Estatisticas from "./components/Estatisticas";
 import Relatorios from "./components/Relatorios";
 import Historico from "./components/Historico";
 import Producoes from "./components/Producoes";
@@ -246,6 +248,12 @@ export default function App() {
       label: "Dashboard",
       icon: LayoutDashboard,
       perfis: ["admin", "direcao", "cozinha", "nutricionista", "haccp"],
+    },
+    {
+      id: "estatisticas",
+      label: "Estatísticas",
+      icon: LineChart,
+      perfis: ["admin", "direcao", "nutricionista"],
     },
     {
       id: "assistente-ia",
@@ -564,6 +572,7 @@ export default function App() {
           </header>
 
           {pagina === "dashboard" && <Dashboard />}
+          {pagina === "estatisticas" && <Estatisticas />}
           {pagina === "assistente-ia" && <AssistenteIA />}
           {pagina === "analytics" && <Analytics />}
           {pagina === "compras-inteligentes" && <ComprasInteligentes />}

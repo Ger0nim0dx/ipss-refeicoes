@@ -11,6 +11,37 @@ export default function Ementa() {
   const [modoIA, setModoIA] = useState("equilibrada");
   const [relatorioIA, setRelatorioIA] = useState("");
 
+  const refeicoesGuardadas =
+    JSON.parse(localStorage.getItem("ipssRefeicoes")) || {};
+
+  const valencias = [
+    {
+      id: "lar",
+      nome: "Lar",
+      refeicoesDia: Number(refeicoesGuardadas.lar || 0),
+    },
+    {
+      id: "creche",
+      nome: "Creche",
+      refeicoesDia: Number(refeicoesGuardadas.creche || 0),
+    },
+    {
+      id: "apoio",
+      nome: "Apoio Domiciliário",
+      refeicoesDia: Number(refeicoesGuardadas.apoio || 0),
+    },
+    {
+      id: "trabalhadores",
+      nome: "Trabalhadores",
+      refeicoesDia: Number(refeicoesGuardadas.trabalhadores || 0),
+    },
+  ];
+
+  const totalRefeicoesDia = valencias.reduce(
+    (total, item) => total + item.refeicoesDia,
+    0
+  );
+
   useEffect(() => {
     carregarDados();
   }, []);
@@ -185,6 +216,19 @@ export default function Ementa() {
 
   function obterCusto(ficha) {
     return Number(ficha.custoTotal || 0);
+  }
+
+  function obterCustoPorDose(ficha) {
+    if (!ficha) return 0;
+
+    const custoPorDose = Number(ficha.custoPorDose || 0);
+
+    if (custoPorDose > 0) return custoPorDose;
+
+    const custoTotal = Number(ficha.custoTotal || 0);
+    const doses = Number(ficha.doses || 0);
+
+    return doses > 0 ? custoTotal / doses : 0;
   }
 
   function receitaAdequada(ficha, refeicao) {
@@ -589,6 +633,43 @@ export default function Ementa() {
     0
   );
 
+  const numeroDiasComEmenta = [
+    ...new Set(receitasPlaneadas.map((item) => item.dia)),
+  ].length;
+
+  const custoRealSemanalPorValencia = valencias.map((valencia) => {
+    const custoSemanalValencia = receitasPlaneadas.reduce((total, item) => {
+      const custoDose = obterCustoPorDose(item.ficha);
+      return total + custoDose * valencia.refeicoesDia;
+    }, 0);
+
+    const refeicoesSemanaValencia =
+      valencia.refeicoesDia * receitasPlaneadas.length;
+
+    const custoMensalEstimado = custoSemanalValencia * 4;
+    const peso =
+      custoSemanal > 0 ? (custoSemanalValencia / custoSemanal) * 100 : 0;
+
+    return {
+      ...valencia,
+      refeicoesSemana: refeicoesSemanaValencia,
+      custoSemanal: custoSemanalValencia,
+      custoMensal: custoMensalEstimado,
+      peso,
+    };
+  });
+
+  const custoRealSemanalInstituicao = custoRealSemanalPorValencia.reduce(
+    (total, item) => total + item.custoSemanal,
+    0
+  );
+
+  const custoMedioRealPorRefeicao =
+    totalRefeicoesDia > 0 && receitasPlaneadas.length > 0
+      ? custoRealSemanalInstituicao /
+        (totalRefeicoesDia * receitasPlaneadas.length)
+      : 0;
+
   const ingredientesSemana = receitasPlaneadas.reduce((acumulador, item) => {
     item.ficha.ingredientes?.forEach((ingrediente) => {
       const nomeNormalizado = normalizarTexto(ingrediente.nome);
@@ -736,7 +817,19 @@ export default function Ementa() {
         <div className="dashboard-card">
           <h3>Custo semanal</h3>
           <p>{custoSemanal.toFixed(2)} €</p>
-          <span>Total estimado</span>
+          <span>Total das receitas base</span>
+        </div>
+
+        <div className="dashboard-card destaque">
+          <h3>Custo real semanal</h3>
+          <p>{custoRealSemanalInstituicao.toFixed(2)} €</p>
+          <span>Com distribuição por valência</span>
+        </div>
+
+        <div className="dashboard-card">
+          <h3>Custo médio/refeição</h3>
+          <p>{custoMedioRealPorRefeicao.toFixed(2)} €</p>
+          <span>Estimativa real</span>
         </div>
 
         <div className="dashboard-card">
@@ -814,6 +907,83 @@ export default function Ementa() {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="dashboard-section">
+        <h2>Custos reais por valência</h2>
+
+        <p className="descricao">
+          Estimativa calculada com base no custo por dose das fichas técnicas
+          selecionadas na ementa e no número diário de refeições registado por
+          valência.
+        </p>
+
+        {receitasPlaneadas.length === 0 ? (
+          <p>Ainda não existem refeições planeadas para calcular custos.</p>
+        ) : totalRefeicoesDia === 0 ? (
+          <p>
+            Ainda não existem refeições registadas por valência. Atualiza os
+            dados de refeições para Lar, Creche, Apoio Domiciliário e
+            Trabalhadores.
+          </p>
+        ) : (
+          <>
+            <div className="dashboard-cards">
+              {custoRealSemanalPorValencia.map((item) => (
+                <div className="dashboard-card" key={item.id}>
+                  <h3>{item.nome}</h3>
+                  <p>{item.custoSemanal.toFixed(2)} €</p>
+                  <span>
+                    {item.refeicoesDia} refeições/dia ·{" "}
+                    {item.custoMensal.toFixed(2)} €/mês
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <table className="dashboard-table">
+              <thead>
+                <tr>
+                  <th>Valência</th>
+                  <th>Refeições/dia</th>
+                  <th>Refeições calculadas</th>
+                  <th>Custo semanal</th>
+                  <th>Custo mensal estimado</th>
+                  <th>Peso no custo real</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {custoRealSemanalPorValencia.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.nome}</td>
+                    <td>{item.refeicoesDia}</td>
+                    <td>{item.refeicoesSemana}</td>
+                    <td>{item.custoSemanal.toFixed(2)} €</td>
+                    <td>{item.custoMensal.toFixed(2)} €</td>
+                    <td>
+                      {custoRealSemanalInstituicao > 0
+                        ? (
+                            (item.custoSemanal /
+                              custoRealSemanalInstituicao) *
+                            100
+                          ).toFixed(1)
+                        : "0.0"}
+                      %
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="success-message">
+              <strong>Nota técnica:</strong> estes valores usam o custo por dose
+              de cada ficha técnica. O cálculo assume que cada refeição
+              selecionada é servida diariamente ao número de utentes registado em
+              cada valência.
+            </div>
+          </>
+        )}
       </div>
 
       <div className="dashboard-section">

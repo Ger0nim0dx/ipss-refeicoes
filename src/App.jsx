@@ -26,6 +26,7 @@ import {
   ShoppingCart,
   LineChart,
   CalendarDays,
+  ChefHat,
 } from "lucide-react";
 
 import { supabase } from "./supabaseClient";
@@ -34,6 +35,8 @@ import Dashboard from "./components/Dashboard";
 import Estatisticas from "./components/Estatisticas";
 import Calendario from "./components/Calendario";
 import CentroAlertas from "./components/CentroAlertas";
+import PlaneamentoProducao from "./components/PlaneamentoProducao";
+
 import Relatorios from "./components/Relatorios";
 import Historico from "./components/Historico";
 import Producoes from "./components/Producoes";
@@ -60,10 +63,12 @@ export default function App() {
   const [pagina, setPagina] = useState("dashboard");
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarFechada, setSidebarFechada] = useState(false);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const [session, setSession] = useState(null);
+
   const [totalAlertas, setTotalAlertas] = useState(0);
   const [notificacoes, setNotificacoes] = useState([]);
   const [mostrarNotificacoes, setMostrarNotificacoes] = useState(false);
@@ -175,21 +180,30 @@ export default function App() {
     const haccp = haccpData || [];
 
     const stockBaixo = stocks.filter(
-      (item) => Number(item.quantidade || 0) <= Number(item.stock_minimo || 0)
+      (item) =>
+        Number(item.quantidade || 0) <=
+        Number(item.stock_minimo || 0)
     ).length;
 
     const produtosExpirados = stocks.filter((item) => {
       if (!item.validade) return false;
+
       const validade = new Date(item.validade);
       validade.setHours(0, 0, 0, 0);
+
       return validade < hoje;
     }).length;
 
     const produtosAExpirar = stocks.filter((item) => {
       if (!item.validade) return false;
+
       const validade = new Date(item.validade);
       validade.setHours(0, 0, 0, 0);
-      const dias = Math.ceil((validade - hoje) / (1000 * 60 * 60 * 24));
+
+      const dias = Math.ceil(
+        (validade - hoje) / (1000 * 60 * 60 * 24)
+      );
+
       return dias >= 0 && dias <= 7;
     }).length;
 
@@ -201,7 +215,10 @@ export default function App() {
     ).length;
 
     setTotalAlertas(
-      stockBaixo + produtosExpirados + produtosAExpirar + alertasHaccp
+      stockBaixo +
+        produtosExpirados +
+        produtosAExpirar +
+        alertasHaccp
     );
   }
 
@@ -250,144 +267,214 @@ export default function App() {
       id: "dashboard",
       label: "Dashboard",
       icon: LayoutDashboard,
-      perfis: ["admin", "direcao", "cozinha", "nutricionista", "haccp"],
+      perfis: [
+        "admin",
+        "direcao",
+        "cozinha",
+        "nutricionista",
+        "haccp",
+      ],
     },
+
     {
       id: "estatisticas",
       label: "Estatísticas",
       icon: LineChart,
       perfis: ["admin", "direcao", "nutricionista"],
     },
+
     {
       id: "calendario",
       label: "Calendário",
       icon: CalendarDays,
-      perfis: ["admin", "direcao", "cozinha", "nutricionista", "haccp"],
+      perfis: [
+        "admin",
+        "direcao",
+        "cozinha",
+        "nutricionista",
+        "haccp",
+      ],
     },
+
     {
       id: "alertas",
       label: "Centro de Alertas",
       icon: Bell,
-      perfis: ["admin", "direcao", "cozinha", "nutricionista", "haccp"],
+      perfis: [
+        "admin",
+        "direcao",
+        "cozinha",
+        "nutricionista",
+        "haccp",
+      ],
     },
+
+    {
+      id: "planeamento",
+      label: "Planeamento",
+      icon: ChefHat,
+      perfis: [
+        "admin",
+        "direcao",
+        "cozinha",
+        "nutricionista",
+      ],
+    },
+
     {
       id: "assistente-ia",
       label: "Assistente IA",
       icon: BrainCircuit,
-      perfis: ["admin", "direcao", "cozinha", "nutricionista"],
+      perfis: [
+        "admin",
+        "direcao",
+        "cozinha",
+        "nutricionista",
+      ],
     },
+
     {
       id: "analytics",
       label: "Analytics",
       icon: BarChart3,
       perfis: ["admin", "direcao", "nutricionista"],
     },
+
     {
       id: "compras-inteligentes",
       label: "Compras Inteligentes",
       icon: ShoppingCart,
-      perfis: ["admin", "direcao", "cozinha", "nutricionista"],
+      perfis: [
+        "admin",
+        "direcao",
+        "cozinha",
+        "nutricionista",
+      ],
     },
+
     {
       id: "dados-ipss",
       label: "Dados da IPSS",
       icon: Building2,
       perfis: ["admin", "direcao"],
     },
+
     {
       id: "capitacoes",
       label: "Capitações",
       icon: ClipboardList,
       perfis: ["admin", "nutricionista"],
     },
+
     {
       id: "ementa",
       label: "Ementa",
       icon: UtensilsCrossed,
       perfis: ["admin", "nutricionista", "cozinha"],
     },
+
     {
       id: "custos",
       label: "Custos",
       icon: Euro,
       perfis: ["admin", "direcao"],
     },
+
     {
       id: "utentes",
       label: "Utentes",
       icon: UserCircle,
       perfis: ["admin", "direcao"],
     },
+
     {
       id: "dietas",
       label: "Dietas",
       icon: Apple,
       perfis: ["admin", "nutricionista"],
     },
+
     {
       id: "fichas",
       label: "Fichas Técnicas",
       icon: FileText,
-      perfis: ["admin", "cozinha", "nutricionista"],
+      perfis: [
+        "admin",
+        "cozinha",
+        "nutricionista",
+      ],
     },
+
     {
       id: "valor-nutricional",
       label: "Valor Nutricional",
       icon: HeartPulse,
       perfis: ["admin", "nutricionista"],
     },
+
     {
       id: "stocks",
       label: "Stocks",
       icon: Package,
       perfis: ["admin", "cozinha"],
     },
+
     {
       id: "haccp",
       label: "HACCP",
       icon: ShieldCheck,
       perfis: ["admin", "haccp"],
     },
+
     {
       id: "relatorios",
       label: "Relatórios",
       icon: BarChart3,
       perfis: ["admin", "direcao"],
     },
+
     {
       id: "historico",
       label: "Histórico",
       icon: History,
       perfis: ["admin", "direcao"],
     },
+
     {
       id: "producoes",
       label: "Produções",
       icon: Factory,
       perfis: ["admin", "cozinha"],
     },
+
     {
       id: "utilizadores",
       label: "Utilizadores",
       icon: UserCircle,
       perfis: ["admin"],
     },
+
     {
       id: "sobre",
       label: "Sobre o Projeto",
       icon: Info,
-      perfis: ["admin", "direcao", "cozinha", "nutricionista", "haccp"],
+      perfis: [
+        "admin",
+        "direcao",
+        "cozinha",
+        "nutricionista",
+        "haccp",
+      ],
     },
   ];
 
-  const menuPermitido = menuItems.filter((item) => item.perfis.includes(perfil));
-  const notificacoesNaoLidas = notificacoes.filter((n) => !n.lida).length;
+  const menuPermitido = menuItems.filter((item) =>
+    item.perfis.includes(perfil)
+  );
 
-  useEffect(() => {
-    if (!menuPermitido.some((item) => item.id === pagina)) {
-      setPagina("dashboard");
-    }
-  }, [perfil]);
+  const notificacoesNaoLidas = notificacoes.filter(
+    (n) => !n.lida
+  ).length;
 
   if (!session) {
     return (
@@ -401,9 +488,10 @@ export default function App() {
             <h1>Gestão de Refeições</h1>
 
             <p>
-              Plataforma digital para apoio à gestão de refeições, custos,
-              ementas, dietas, fichas técnicas, stocks, valor nutricional, HACCP
-              e relatórios.
+              Plataforma digital para apoio à gestão de
+              refeições, custos, ementas, dietas, fichas
+              técnicas, stocks, valor nutricional, HACCP e
+              relatórios.
             </p>
 
             <input
@@ -422,11 +510,17 @@ export default function App() {
               className="input-login"
             />
 
-            <button className="botao-principal" onClick={login}>
+            <button
+              className="botao-principal"
+              onClick={login}
+            >
               Entrar
             </button>
 
-            <button className="botao-secundario" onClick={registar}>
+            <button
+              className="botao-secundario"
+              onClick={registar}
+            >
               Criar conta
             </button>
 
@@ -458,8 +552,18 @@ export default function App() {
 
   return (
     <>
-      <div className={darkMode ? "app-container dark" : "app-container"}>
-        <aside className={sidebarFechada ? "sidebar fechada" : "sidebar"}>
+      <div
+        className={
+          darkMode ? "app-container dark" : "app-container"
+        }
+      >
+        <aside
+          className={
+            sidebarFechada
+              ? "sidebar fechada"
+              : "sidebar"
+          }
+        >
           <div className="logo-area">
             <div className="logo-mini">IP</div>
 
@@ -478,24 +582,41 @@ export default function App() {
               return (
                 <button
                   key={item.id}
-                  className={pagina === item.id ? "ativo" : ""}
+                  className={
+                    pagina === item.id ? "ativo" : ""
+                  }
                   onClick={() => setPagina(item.id)}
                 >
                   <Icone size={19} />
-                  {!sidebarFechada && <span>{item.label}</span>}
+
+                  {!sidebarFechada && (
+                    <span>{item.label}</span>
+                  )}
                 </button>
               );
             })}
 
-            <button onClick={() => setDarkMode(!darkMode)}>
-              {darkMode ? <Sun size={19} /> : <Moon size={19} />}
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+            >
+              {darkMode ? (
+                <Sun size={19} />
+              ) : (
+                <Moon size={19} />
+              )}
+
               {!sidebarFechada && (
-                <span>{darkMode ? "Modo claro" : "Modo escuro"}</span>
+                <span>
+                  {darkMode
+                    ? "Modo claro"
+                    : "Modo escuro"}
+                </span>
               )}
             </button>
 
             <button onClick={logout}>
               <LogOut size={19} />
+
               {!sidebarFechada && <span>Sair</span>}
             </button>
           </nav>
@@ -505,25 +626,30 @@ export default function App() {
           <header className="topbar">
             <button
               className="botao-menu"
-              onClick={() => setSidebarFechada(!sidebarFechada)}
+              onClick={() =>
+                setSidebarFechada(!sidebarFechada)
+              }
             >
               <Menu size={22} />
             </button>
 
             <div className="topbar-search">
               <Search size={18} />
-              <input type="text" placeholder="Pesquisar na aplicação..." />
+
+              <input
+                type="text"
+                placeholder="Pesquisar na aplicação..."
+              />
             </div>
 
             <div className="topbar-actions">
               <div style={{ position: "relative" }}>
                 <button
                   className="topbar-icon"
-                  onClick={() => setMostrarNotificacoes(!mostrarNotificacoes)}
-                  title={
-                    notificacoesNaoLidas > 0
-                      ? `${notificacoesNaoLidas} notificação(ões) não lida(s)`
-                      : "Sem notificações não lidas"
+                  onClick={() =>
+                    setMostrarNotificacoes(
+                      !mostrarNotificacoes
+                    )
                   }
                 >
                   <Bell size={20} />
@@ -534,9 +660,7 @@ export default function App() {
                     </span>
                   ) : totalAlertas > 0 ? (
                     <span className="notification-dot"></span>
-                  ) : (
-                    <span className="notification-dot"></span>
-                  )}
+                  ) : null}
                 </button>
 
                 {mostrarNotificacoes && (
@@ -554,16 +678,15 @@ export default function App() {
                           }`}
                         >
                           <strong>{item.titulo}</strong>
-                          <p>{item.mensagem}</p>
 
-                          <small>
-                            Prioridade: {item.prioridade || "normal"}
-                          </small>
+                          <p>{item.mensagem}</p>
 
                           {!item.lida && (
                             <button
                               className="botao-secundario"
-                              onClick={() => marcarComoLida(item.id)}
+                              onClick={() =>
+                                marcarComoLida(item.id)
+                              }
                             >
                               Marcar como lida
                             </button>
@@ -579,7 +702,10 @@ export default function App() {
                 <UserCircle size={26} />
 
                 <div>
-                  <strong>{nomePerfil || session.user?.email}</strong>
+                  <strong>
+                    {nomePerfil || session.user?.email}
+                  </strong>
+
                   <span>{perfil}</span>
                 </div>
               </div>
@@ -587,27 +713,80 @@ export default function App() {
           </header>
 
           {pagina === "dashboard" && <Dashboard />}
-          {pagina === "estatisticas" && <Estatisticas />}
-          {pagina === "calendario" && <Calendario />}
-          {pagina === "alertas" && <CentroAlertas />}
-          {pagina === "assistente-ia" && <AssistenteIA />}
+
+          {pagina === "estatisticas" && (
+            <Estatisticas />
+          )}
+
+          {pagina === "calendario" && (
+            <Calendario />
+          )}
+
+          {pagina === "alertas" && (
+            <CentroAlertas />
+          )}
+
+          {pagina === "planeamento" && (
+            <PlaneamentoProducao />
+          )}
+
+          {pagina === "assistente-ia" && (
+            <AssistenteIA />
+          )}
+
           {pagina === "analytics" && <Analytics />}
-          {pagina === "compras-inteligentes" && <ComprasInteligentes />}
-          {pagina === "dados-ipss" && <Definicoes />}
-          {pagina === "capitacoes" && <Capitacoes />}
+
+          {pagina === "compras-inteligentes" && (
+            <ComprasInteligentes />
+          )}
+
+          {pagina === "dados-ipss" && (
+            <Definicoes />
+          )}
+
+          {pagina === "capitacoes" && (
+            <Capitacoes />
+          )}
+
           {pagina === "ementa" && <Ementa />}
+
           {pagina === "custos" && <Custos />}
+
           {pagina === "utentes" && <Utentes />}
+
           {pagina === "dietas" && <Dietas />}
-          {pagina === "fichas" && <FichasTecnicas />}
-          {pagina === "valor-nutricional" && <ValorNutricional />}
+
+          {pagina === "fichas" && (
+            <FichasTecnicas />
+          )}
+
+          {pagina === "valor-nutricional" && (
+            <ValorNutricional />
+          )}
+
           {pagina === "stocks" && <Stocks />}
+
           {pagina === "haccp" && <HACCP />}
-          {pagina === "relatorios" && <Relatorios />}
-          {pagina === "historico" && <Historico />}
-          {pagina === "producoes" && <Producoes />}
-          {pagina === "utilizadores" && <Utilizadores />}
-          {pagina === "sobre" && <SobreProjeto />}
+
+          {pagina === "relatorios" && (
+            <Relatorios />
+          )}
+
+          {pagina === "historico" && (
+            <Historico />
+          )}
+
+          {pagina === "producoes" && (
+            <Producoes />
+          )}
+
+          {pagina === "utilizadores" && (
+            <Utilizadores />
+          )}
+
+          {pagina === "sobre" && (
+            <SobreProjeto />
+          )}
         </main>
       </div>
 

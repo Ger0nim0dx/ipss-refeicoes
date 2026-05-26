@@ -33,6 +33,7 @@ import { supabase } from "./supabaseClient";
 import Dashboard from "./components/Dashboard";
 import Estatisticas from "./components/Estatisticas";
 import Calendario from "./components/Calendario";
+import CentroAlertas from "./components/CentroAlertas";
 import Relatorios from "./components/Relatorios";
 import Historico from "./components/Historico";
 import Producoes from "./components/Producoes";
@@ -261,6 +262,12 @@ export default function App() {
       id: "calendario",
       label: "Calendário",
       icon: CalendarDays,
+      perfis: ["admin", "direcao", "cozinha", "nutricionista", "haccp"],
+    },
+    {
+      id: "alertas",
+      label: "Centro de Alertas",
+      icon: Bell,
       perfis: ["admin", "direcao", "cozinha", "nutricionista", "haccp"],
     },
     {
@@ -582,6 +589,7 @@ export default function App() {
           {pagina === "dashboard" && <Dashboard />}
           {pagina === "estatisticas" && <Estatisticas />}
           {pagina === "calendario" && <Calendario />}
+          {pagina === "alertas" && <CentroAlertas />}
           {pagina === "assistente-ia" && <AssistenteIA />}
           {pagina === "analytics" && <Analytics />}
           {pagina === "compras-inteligentes" && <ComprasInteligentes />}

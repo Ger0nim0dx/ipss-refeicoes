@@ -14,6 +14,8 @@ import {
   BrainCircuit,
   Lightbulb,
   Users,
+  Trash2,
+  Leaf,
 } from "lucide-react";
 
 import {
@@ -28,6 +30,8 @@ import {
   Pie,
   Cell,
   Legend,
+  LineChart,
+  Line,
 } from "recharts";
 
 import { supabase } from "../supabaseClient";
@@ -41,6 +45,7 @@ function Dashboard() {
   const [dietas, setDietas] = useState([]);
   const [haccp, setHaccp] = useState([]);
   const [utentes, setUtentes] = useState([]);
+  const [desperdicio, setDesperdicio] = useState([]);
 
   const [diasSelecionados, setDiasSelecionados] = useState([]);
   const [mensagemOperacional, setMensagemOperacional] = useState("");
@@ -105,6 +110,16 @@ function Dashboard() {
       console.warn("Não foi possível carregar utentes:", utentesError.message);
     }
 
+    const { data: desperdicioData, error: desperdicioError } = await supabase
+      .from("desperdicio_alimentar")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("data", { ascending: false });
+
+    if (desperdicioError) {
+      console.warn("Não foi possível carregar desperdício alimentar:", desperdicioError.message);
+    }
+
     const { data: movimentosData } = await supabase
       .from("movimentos_stock")
       .select("*")
@@ -126,6 +141,7 @@ function Dashboard() {
     setDietas(dietasData || []);
     setHaccp(haccpData || []);
     setUtentes(utentesData || []);
+    setDesperdicio(desperdicioData || []);
     setMovimentos(movimentosData || []);
 
     await gerarNotificacoesAutomaticas(
@@ -717,6 +733,80 @@ function Dashboard() {
     quantidade: Number(item.quantidade || 0),
   }));
 
+  const totalDesperdicio = desperdicio.reduce(
+    (total, item) => total + Number(item.quantidade_desperdicada || 0),
+    0
+  );
+
+  const custoDesperdicio = desperdicio.reduce(
+    (total, item) => total + Number(item.custo_desperdicio || 0),
+    0
+  );
+
+  const totalProduzidoDesperdicio = desperdicio.reduce(
+    (total, item) => total + Number(item.quantidade_produzida || 0),
+    0
+  );
+
+  const taxaDesperdicioExecutiva =
+    totalProduzidoDesperdicio > 0
+      ? (totalDesperdicio / totalProduzidoDesperdicio) * 100
+      : 0;
+
+  const desperdicioPorValencia = Object.values(
+    desperdicio.reduce((acc, item) => {
+      const chave = item.valencia || "Sem valência";
+
+      if (!acc[chave]) {
+        acc[chave] = {
+          nome: chave,
+          desperdicio: 0,
+          custo: 0,
+        };
+      }
+
+      acc[chave].desperdicio += Number(item.quantidade_desperdicada || 0);
+      acc[chave].custo += Number(item.custo_desperdicio || 0);
+
+      return acc;
+    }, {})
+  ).sort((a, b) => b.desperdicio - a.desperdicio);
+
+  const evolucaoDesperdicio = Object.values(
+    desperdicio.reduce((acc, item) => {
+      const chave = item.data || "Sem data";
+
+      if (!acc[chave]) {
+        acc[chave] = {
+          data: chave,
+          desperdicio: 0,
+          custo: 0,
+        };
+      }
+
+      acc[chave].desperdicio += Number(item.quantidade_desperdicada || 0);
+      acc[chave].custo += Number(item.custo_desperdicio || 0);
+
+      return acc;
+    }, {})
+  )
+    .sort((a, b) => new Date(a.data) - new Date(b.data))
+    .slice(-8);
+
+  const indiceRiscoExecutivo =
+    produtosExpirados.length * 3 +
+    produtosStockBaixo.length * 2 +
+    produtosPrevisaoCritica.length * 2 +
+    alertasHaccp * 3 +
+    Math.round(taxaDesperdicioExecutiva);
+
+  const estadoExecutivo =
+    indiceRiscoExecutivo >= 20
+      ? "Crítico"
+      : indiceRiscoExecutivo >= 10
+      ? "Atenção"
+      : "Estável";
+
   const recomendacoesIA = [];
 
   if (produtosExpirados.length > 0) {
@@ -756,6 +846,14 @@ function Dashboard() {
       tipo: "haccp",
       titulo: "Atenção aos registos HACCP",
       texto: `Existem ${alertasHaccp} alerta(s) HACCP. Recomenda-se validar não conformidades antes de novas produções.`,
+    });
+  }
+
+  if (taxaDesperdicioExecutiva >= 15) {
+    recomendacoesIA.push({
+      tipo: "sustentabilidade",
+      titulo: "Desperdício alimentar elevado",
+      texto: `A taxa global de desperdício é de ${taxaDesperdicioExecutiva.toFixed(1)}%. Recomenda-se rever capitações, aceitação das refeições e quantidades produzidas.`,
     });
   }
 
@@ -1022,6 +1120,38 @@ function Dashboard() {
           </div>
         </div>
 
+        <div className="historico-grid">
+          <div className="historico-card">
+            <h3>Estado executivo da operação</h3>
+            <p>
+              <strong>Estado global:</strong> {estadoExecutivo}
+            </p>
+            <p>
+              <strong>Índice de risco:</strong> {indiceRiscoExecutivo}
+            </p>
+            <p>
+              Este indicador combina stock baixo, produtos expirados, previsão
+              de ruturas, alertas HACCP e taxa de desperdício alimentar.
+            </p>
+          </div>
+
+          <div className="historico-card">
+            <h3>Síntese para direção</h3>
+            <p>
+              Custo semanal planeado: <strong>{custoSemanalPlaneado.toFixed(2)} €</strong>
+            </p>
+            <p>
+              Custo mensal previsto: <strong>{custoMensalPlaneado.toFixed(2)} €</strong>
+            </p>
+            <p>
+              Desperdício acumulado: <strong>{totalDesperdicio.toFixed(1)} kg</strong>
+            </p>
+            <p>
+              Custo do desperdício: <strong>{custoDesperdicio.toFixed(2)} €</strong>
+            </p>
+          </div>
+        </div>
+
         <h3 style={{ marginTop: "25px" }}>Produtos mais críticos</h3>
 
         {topProdutosCriticos.length === 0 ? (
@@ -1174,6 +1304,100 @@ function Dashboard() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="dashboard-section">
+        <h2>
+          <Leaf size={22} /> Sustentabilidade e Desperdício
+        </h2>
+
+        <p className="dashboard-subtitle">
+          Indicadores executivos de desperdício alimentar, custo perdido e
+          impacto por valência.
+        </p>
+
+        <div className="dashboard-cards">
+          <div className="dashboard-card destaque">
+            <Trash2 size={30} />
+            <h3>Desperdício total</h3>
+            <p>{totalDesperdicio.toFixed(1)} kg</p>
+            <span>Registos acumulados</span>
+          </div>
+
+          <div className="dashboard-card">
+            <Euro size={30} />
+            <h3>Custo perdido</h3>
+            <p>{custoDesperdicio.toFixed(2)} €</p>
+            <span>Estimativa financeira</span>
+          </div>
+
+          <div className="dashboard-card">
+            <TrendingUp size={30} />
+            <h3>Taxa desperdício</h3>
+            <p>{taxaDesperdicioExecutiva.toFixed(1)}%</p>
+            <span>Face ao produzido</span>
+          </div>
+
+          <div className="dashboard-card">
+            <ClipboardList size={30} />
+            <h3>Registos</h3>
+            <p>{desperdicio.length}</p>
+            <span>Desperdício alimentar</span>
+          </div>
+        </div>
+
+        <div className="historico-grid">
+          <div className="historico-card">
+            <h3>Desperdício por valência</h3>
+
+            {desperdicioPorValencia.length === 0 ? (
+              <p>Ainda não existem registos de desperdício alimentar.</p>
+            ) : (
+              <div style={{ width: "100%", height: 300 }}>
+                <ResponsiveContainer>
+                  <BarChart data={desperdicioPorValencia}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="nome" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="desperdicio" radius={[10, 10, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          <div className="historico-card">
+            <h3>Evolução do desperdício</h3>
+
+            {evolucaoDesperdicio.length === 0 ? (
+              <p>Ainda não existem dados suficientes para evolução temporal.</p>
+            ) : (
+              <div style={{ width: "100%", height: 300 }}>
+                <ResponsiveContainer>
+                  <LineChart data={evolucaoDesperdicio}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="data" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line
+                      type="monotone"
+                      dataKey="desperdicio"
+                      stroke="#145c2a"
+                      strokeWidth={4}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="custo"
+                      stroke="#dc2626"
+                      strokeWidth={4}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="dashboard-section">

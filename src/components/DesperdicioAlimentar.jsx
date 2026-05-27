@@ -10,6 +10,21 @@ import {
   BarChart3,
 } from "lucide-react";
 
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+} from "recharts";
+
 import { supabase } from "../supabaseClient";
 
 export default function DesperdicioAlimentar() {
@@ -31,7 +46,6 @@ export default function DesperdicioAlimentar() {
 
   async function carregarRegistos() {
     const { data: userData } = await supabase.auth.getUser();
-
     if (!userData?.user) return;
 
     const { data, error } = await supabase
@@ -141,18 +155,85 @@ export default function DesperdicioAlimentar() {
     return (desperdicado / produzido) * 100 >= 15;
   });
 
-  const desperdicioPorValencia = ["Lar", "Creche", "Apoio Domiciliário", "Trabalhadores"]
+  const desperdicioPorValencia = [
+    "Lar",
+    "Creche",
+    "Apoio Domiciliário",
+    "Trabalhadores",
+  ]
     .map((nome) => {
       const total = registos
         .filter((item) => item.valencia === nome)
-        .reduce((soma, item) => soma + Number(item.quantidade_desperdicada || 0), 0);
+        .reduce(
+          (soma, item) => soma + Number(item.quantidade_desperdicada || 0),
+          0
+        );
 
-      return {
-        nome,
-        total,
-      };
+      return { nome, total };
     })
     .filter((item) => item.total > 0);
+
+  const desperdicioPorRefeicao = [
+    "Pequeno-almoço",
+    "Reforço da manhã",
+    "Almoço",
+    "Lanche",
+    "Jantar",
+    "Reforço da noite",
+  ]
+    .map((nome) => {
+      const total = registos
+        .filter((item) => item.refeicao === nome)
+        .reduce(
+          (soma, item) => soma + Number(item.quantidade_desperdicada || 0),
+          0
+        );
+
+      return { nome, total };
+    })
+    .filter((item) => item.total > 0);
+
+  const evolucaoTemporal = Object.values(
+    registos.reduce((acc, item) => {
+      const chave = item.data || "Sem data";
+
+      if (!acc[chave]) {
+        acc[chave] = {
+          data: chave,
+          desperdicio: 0,
+          custo: 0,
+        };
+      }
+
+      acc[chave].desperdicio += Number(item.quantidade_desperdicada || 0);
+      acc[chave].custo += Number(item.custo_desperdicio || 0);
+
+      return acc;
+    }, {})
+  ).sort((a, b) => new Date(a.data) - new Date(b.data));
+
+  const rankingReceitas = Object.values(
+    registos.reduce((acc, item) => {
+      const chave = item.receita || "Sem receita";
+
+      if (!acc[chave]) {
+        acc[chave] = {
+          nome: chave,
+          desperdicio: 0,
+          custo: 0,
+        };
+      }
+
+      acc[chave].desperdicio += Number(item.quantidade_desperdicada || 0);
+      acc[chave].custo += Number(item.custo_desperdicio || 0);
+
+      return acc;
+    }, {})
+  )
+    .sort((a, b) => b.desperdicio - a.desperdicio)
+    .slice(0, 5);
+
+  const cores = ["#145c2a", "#2563eb", "#dc2626", "#7c3aed", "#ea580c"];
 
   return (
     <div className="dashboard">
@@ -288,6 +369,118 @@ export default function DesperdicioAlimentar() {
       </div>
 
       <div className="dashboard-section">
+        <h2>Gráficos de desperdício</h2>
+
+        <div className="historico-grid">
+          <div className="historico-card">
+            <h3>Desperdício por valência</h3>
+
+            {desperdicioPorValencia.length === 0 ? (
+              <p>Sem dados suficientes.</p>
+            ) : (
+              <div style={{ width: "100%", height: 300 }}>
+                <ResponsiveContainer>
+                  <BarChart data={desperdicioPorValencia}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="nome" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="total" radius={[10, 10, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          <div className="historico-card">
+            <h3>Distribuição por refeição</h3>
+
+            {desperdicioPorRefeicao.length === 0 ? (
+              <p>Sem dados suficientes.</p>
+            ) : (
+              <div style={{ width: "100%", height: 300 }}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={desperdicioPorRefeicao}
+                      dataKey="total"
+                      nameKey="nome"
+                      outerRadius={100}
+                      label
+                    >
+                      {desperdicioPorRefeicao.map((entry, index) => (
+                        <Cell key={index} fill={cores[index % cores.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="dashboard-section">
+        <h2>Evolução temporal</h2>
+
+        {evolucaoTemporal.length === 0 ? (
+          <p>Sem dados suficientes.</p>
+        ) : (
+          <div style={{ width: "100%", height: 350 }}>
+            <ResponsiveContainer>
+              <LineChart data={evolucaoTemporal}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="data" />
+                <YAxis />
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="desperdicio"
+                  stroke="#145c2a"
+                  strokeWidth={4}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="custo"
+                  stroke="#dc2626"
+                  strokeWidth={4}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      <div className="dashboard-section">
+        <h2>Ranking de refeições com maior desperdício</h2>
+
+        {rankingReceitas.length === 0 ? (
+          <p>Sem dados suficientes.</p>
+        ) : (
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Receita</th>
+                <th>Desperdício</th>
+                <th>Custo perdido</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {rankingReceitas.map((item) => (
+                <tr key={item.nome}>
+                  <td>{item.nome}</td>
+                  <td>{item.desperdicio.toFixed(1)} kg</td>
+                  <td>{item.custo.toFixed(2)} €</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="dashboard-section">
         <h2>
           <BrainCircuit size={22} /> Análise inteligente
         </h2>
@@ -323,25 +516,6 @@ export default function DesperdicioAlimentar() {
             </>
           )}
         </div>
-      </div>
-
-      <div className="dashboard-section">
-        <h2>Desperdício por valência</h2>
-
-        {desperdicioPorValencia.length === 0 ? (
-          <p>Ainda não existem dados por valência.</p>
-        ) : (
-          <div className="historico-grid">
-            {desperdicioPorValencia.map((item) => (
-              <div className="historico-card" key={item.nome}>
-                <h3>{item.nome}</h3>
-                <p>
-                  <strong>{item.total.toFixed(1)} kg</strong> desperdiçados
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="dashboard-section">

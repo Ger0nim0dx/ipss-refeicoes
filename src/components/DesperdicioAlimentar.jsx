@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
 import {
   Trash2,
   Euro,
@@ -8,6 +11,7 @@ import {
   Save,
   AlertTriangle,
   BarChart3,
+  Download,
 } from "lucide-react";
 
 import {
@@ -233,6 +237,89 @@ export default function DesperdicioAlimentar() {
     .sort((a, b) => b.desperdicio - a.desperdicio)
     .slice(0, 5);
 
+  function exportarPDFAmbiental() {
+    const doc = new jsPDF();
+
+    doc.setFontSize(20);
+    doc.text("Relatório Ambiental de Desperdício", 14, 20);
+
+    doc.setFontSize(11);
+    doc.text(`Data: ${new Date().toLocaleDateString("pt-PT")}`, 14, 30);
+    doc.text(`Total desperdiçado: ${totalDesperdicio.toFixed(1)} kg`, 14, 40);
+    doc.text(`Custo estimado: ${custoTotalDesperdicio.toFixed(2)} €`, 14, 48);
+    doc.text(`Taxa de desperdício: ${taxaDesperdicio.toFixed(1)}%`, 14, 56);
+
+    autoTable(doc, {
+      startY: 70,
+      head: [
+        [
+          "Data",
+          "Valência",
+          "Refeição",
+          "Receita",
+          "Produzido",
+          "Sobrante",
+          "Desperdício",
+          "Custo",
+        ],
+      ],
+      body: registos.map((item) => [
+        item.data ? new Date(item.data).toLocaleDateString("pt-PT") : "-",
+        item.valencia || "-",
+        item.refeicao || "-",
+        item.receita || "-",
+        `${Number(item.quantidade_produzida || 0).toFixed(1)} kg`,
+        `${Number(item.quantidade_sobrante || 0).toFixed(1)} kg`,
+        `${Number(item.quantidade_desperdicada || 0).toFixed(1)} kg`,
+        `${Number(item.custo_desperdicio || 0).toFixed(2)} €`,
+      ]),
+    });
+
+    const y = doc.lastAutoTable.finalY + 15;
+
+    doc.setFontSize(12);
+    doc.text("Síntese Inteligente", 14, y);
+
+    doc.setFontSize(10);
+    doc.text(
+      `Foram registados ${totalDesperdicio.toFixed(
+        1
+      )} kg de desperdício alimentar.`,
+      14,
+      y + 10
+    );
+
+    doc.text(
+      `O custo estimado associado é de ${custoTotalDesperdicio.toFixed(2)} €.`,
+      14,
+      y + 18
+    );
+
+    doc.text(
+      `A taxa global de desperdício é de ${taxaDesperdicio.toFixed(1)}%.`,
+      14,
+      y + 26
+    );
+
+    if (registosCriticos.length > 0) {
+      doc.text(
+        `Existem ${registosCriticos.length} registo(s) crítico(s) acima do limiar definido.`,
+        14,
+        y + 34
+      );
+    } else {
+      doc.text("Não foram detetados registos críticos.", 14, y + 34);
+    }
+
+    doc.text(
+      "Assinatura do responsável: ______________________________",
+      14,
+      280
+    );
+
+    doc.save("relatorio-ambiental-desperdicio.pdf");
+  }
+
   const cores = ["#145c2a", "#2563eb", "#dc2626", "#7c3aed", "#ea580c"];
 
   return (
@@ -293,7 +380,11 @@ export default function DesperdicioAlimentar() {
 
         <div className="formulario">
           <label>Data</label>
-          <input type="date" value={data} onChange={(e) => setData(e.target.value)} />
+          <input
+            type="date"
+            value={data}
+            onChange={(e) => setData(e.target.value)}
+          />
 
           <label>Valência</label>
           <select value={valencia} onChange={(e) => setValencia(e.target.value)}>
@@ -369,7 +460,22 @@ export default function DesperdicioAlimentar() {
       </div>
 
       <div className="dashboard-section">
-        <h2>Gráficos de desperdício</h2>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "15px",
+            flexWrap: "wrap",
+            marginBottom: "20px",
+          }}
+        >
+          <h2>Gráficos de desperdício</h2>
+
+          <button className="botao-principal" onClick={exportarPDFAmbiental}>
+            <Download size={18} /> Exportar Relatório PDF
+          </button>
+        </div>
 
         <div className="historico-grid">
           <div className="historico-card">
@@ -491,8 +597,9 @@ export default function DesperdicioAlimentar() {
           ) : (
             <>
               <p>
-                Foram registados <strong>{totalDesperdicio.toFixed(1)} kg</strong>{" "}
-                de desperdício alimentar, com um custo estimado de{" "}
+                Foram registados{" "}
+                <strong>{totalDesperdicio.toFixed(1)} kg</strong> de desperdício
+                alimentar, com um custo estimado de{" "}
                 <strong>{custoTotalDesperdicio.toFixed(2)} €</strong>.
               </p>
 

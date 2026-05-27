@@ -320,6 +320,60 @@ export default function DesperdicioAlimentar() {
     doc.save("relatorio-ambiental-desperdicio.pdf");
   }
 
+
+  const previsoesIA = rankingReceitas.map((item) => {
+    const registosReceita = registos.filter((r) => r.receita === item.nome);
+
+    const mediaDesperdicio =
+      registosReceita.length > 0
+        ? registosReceita.reduce(
+            (soma, r) => soma + Number(r.quantidade_desperdicada || 0),
+            0
+          ) / registosReceita.length
+        : 0;
+
+    const mediaProduzida =
+      registosReceita.length > 0
+        ? registosReceita.reduce(
+            (soma, r) => soma + Number(r.quantidade_produzida || 0),
+            0
+          ) / registosReceita.length
+        : 0;
+
+    const taxaMedia =
+      mediaProduzida > 0 ? (mediaDesperdicio / mediaProduzida) * 100 : 0;
+
+    let risco = "Baixo";
+    let classe = "badge badge-success";
+    let recomendacao = "Produção adequada aos padrões atuais.";
+    let ajusteSugerido = "Manter produção atual";
+
+    if (taxaMedia >= 20 || mediaDesperdicio >= 8) {
+      risco = "Elevado";
+      classe = "badge badge-danger";
+      recomendacao =
+        "Recomenda-se reduzir a produção desta refeição e rever a aceitação junto da valência.";
+      ajusteSugerido = "Reduzir produção em 10% a 15%";
+    } else if (taxaMedia >= 10 || mediaDesperdicio >= 4) {
+      risco = "Moderado";
+      classe = "badge badge-warning";
+      recomendacao =
+        "Monitorizar esta refeição nas próximas produções e ajustar capitações se o padrão se mantiver.";
+      ajusteSugerido = "Reduzir produção em 5%";
+    }
+
+    return {
+      receita: item.nome,
+      mediaDesperdicio,
+      mediaProduzida,
+      taxaMedia,
+      risco,
+      classe,
+      recomendacao,
+      ajusteSugerido,
+    };
+  });
+
   const cores = ["#145c2a", "#2563eb", "#dc2626", "#7c3aed", "#ea580c"];
 
   return (
@@ -583,6 +637,45 @@ export default function DesperdicioAlimentar() {
               ))}
             </tbody>
           </table>
+        )}
+      </div>
+
+
+      <div className="dashboard-section">
+        <h2>
+          <BrainCircuit size={22} /> Previsão IA de Desperdício
+        </h2>
+
+        {previsoesIA.length === 0 ? (
+          <p>Sem dados suficientes para previsão.</p>
+        ) : (
+          <div className="historico-grid">
+            {previsoesIA.map((item) => (
+              <div className="historico-card" key={item.receita}>
+                <h3>{item.receita}</h3>
+
+                <p>
+                  <strong>Média desperdiçada:</strong>{" "}
+                  {item.mediaDesperdicio.toFixed(1)} kg
+                </p>
+
+                <p>
+                  <strong>Taxa média:</strong> {item.taxaMedia.toFixed(1)}%
+                </p>
+
+                <p>
+                  <strong>Risco:</strong>{" "}
+                  <span className={item.classe}>{item.risco}</span>
+                </p>
+
+                <p>
+                  <strong>Ajuste sugerido:</strong> {item.ajusteSugerido}
+                </p>
+
+                <p>{item.recomendacao}</p>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

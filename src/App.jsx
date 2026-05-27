@@ -36,6 +36,7 @@ import Estatisticas from "./components/Estatisticas";
 import Calendario from "./components/Calendario";
 import CentroAlertas from "./components/CentroAlertas";
 import PlaneamentoProducao from "./components/PlaneamentoProducao";
+import RelatoriosPremium from "./components/RelatoriosPremium";
 
 import Relatorios from "./components/Relatorios";
 import Historico from "./components/Historico";
@@ -318,6 +319,18 @@ export default function App() {
         "direcao",
         "cozinha",
         "nutricionista",
+      ],
+    },
+
+    {
+      id: "relatorios-premium",
+      label: "Relatórios Premium",
+      icon: FileText,
+      perfis: [
+        "admin",
+        "direcao",
+        "nutricionista",
+        "haccp",
       ],
     },
 
@@ -728,6 +741,10 @@ export default function App() {
 
           {pagina === "planeamento" && (
             <PlaneamentoProducao />
+          )}
+
+          {pagina === "relatorios-premium" && (
+            <RelatoriosPremium />
           )}
 
           {pagina === "assistente-ia" && (

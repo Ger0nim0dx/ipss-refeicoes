@@ -27,6 +27,7 @@ import {
   LineChart,
   CalendarDays,
   ChefHat,
+  Trash2,
 } from "lucide-react";
 
 import { supabase } from "./supabaseClient";
@@ -37,6 +38,7 @@ import Calendario from "./components/Calendario";
 import CentroAlertas from "./components/CentroAlertas";
 import PlaneamentoProducao from "./components/PlaneamentoProducao";
 import RelatoriosPremium from "./components/RelatoriosPremium";
+import DesperdicioAlimentar from "./components/DesperdicioAlimentar";
 
 import Relatorios from "./components/Relatorios";
 import Historico from "./components/Historico";
@@ -314,6 +316,18 @@ export default function App() {
       id: "planeamento",
       label: "Planeamento",
       icon: ChefHat,
+      perfis: [
+        "admin",
+        "direcao",
+        "cozinha",
+        "nutricionista",
+      ],
+    },
+
+    {
+      id: "desperdicio",
+      label: "Desperdício",
+      icon: Trash2,
       perfis: [
         "admin",
         "direcao",
@@ -741,6 +755,10 @@ export default function App() {
 
           {pagina === "planeamento" && (
             <PlaneamentoProducao />
+          )}
+
+          {pagina === "desperdicio" && (
+            <DesperdicioAlimentar />
           )}
 
           {pagina === "relatorios-premium" && (

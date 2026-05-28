@@ -27,6 +27,7 @@ export default function FichasTecnicas() {
       categoriaAlimentar: "",
       nome: "",
       quantidade: 0,
+      unidade: "kg",
       precoKg: 0,
       kcal: 0,
       proteina: 0,
@@ -132,6 +133,34 @@ export default function FichasTecnicas() {
       categoriaAlimentar: encontrado.categoria,
       precoKg: precoStock,
     };
+  }
+
+  function converterQuantidadeParaUnidadePreco(quantidade, unidade) {
+    const valor = Number(quantidade || 0);
+
+    if (unidade === "g") return valor / 1000;
+    if (unidade === "kg") return valor;
+    if (unidade === "ml") return valor / 1000;
+    if (unidade === "L") return valor;
+    if (unidade === "un") return valor;
+
+    return valor;
+  }
+
+  function converterQuantidadeParaGramas(quantidade, unidade) {
+    const valor = Number(quantidade || 0);
+
+    if (unidade === "kg") return valor * 1000;
+    if (unidade === "g") return valor;
+    if (unidade === "L") return valor * 1000;
+    if (unidade === "ml") return valor;
+    if (unidade === "un") return valor * 100;
+
+    return valor;
+  }
+
+  function obterUnidadeIngrediente(item) {
+    return item.unidade || "g";
   }
 
   function gerarComIA() {
@@ -257,6 +286,7 @@ export default function FichasTecnicas() {
     const novosIngredientes = fichaGerada.ingredientes.map((item) => ({
       ...procurarAlimento(item.nome),
       quantidade: item.quantidade,
+      unidade: item.unidade || "g",
     }));
 
     setIngredientes(novosIngredientes);
@@ -287,6 +317,7 @@ export default function FichasTecnicas() {
           ...alimentoEncontrado,
           categoriaAlimentar: alimentoEncontrado.categoria,
           quantidade: novaLista[index].quantidade,
+          unidade: novaLista[index].unidade || "kg",
           precoKg:
             novaLista[index].precoKg ||
             procurarPrecoStock(alimentoEncontrado.nome),
@@ -307,17 +338,24 @@ export default function FichasTecnicas() {
 
   function calcularCustoTotal() {
     return ingredientes.reduce((total, item) => {
-      const quantidadeKg = Number(item.quantidade) / 1000;
-      return total + quantidadeKg * Number(item.precoKg || 0);
+      const quantidadeConvertida = converterQuantidadeParaUnidadePreco(
+        item.quantidade,
+        obterUnidadeIngrediente(item)
+      );
+
+      return total + quantidadeConvertida * Number(item.precoKg || 0);
     }, 0);
   }
 
   function calcularTotalNutricional(campo) {
-    return ingredientes.reduce(
-      (total, item) =>
-        total + (Number(item.quantidade) / 100) * Number(item[campo] || 0),
-      0
-    );
+    return ingredientes.reduce((total, item) => {
+      const quantidadeGramas = converterQuantidadeParaGramas(
+        item.quantidade,
+        obterUnidadeIngrediente(item)
+      );
+
+      return total + (quantidadeGramas / 100) * Number(item[campo] || 0);
+    }, 0);
   }
 
   const numeroDoses = Number(doses) > 0 ? Number(doses) : 1;
@@ -438,15 +476,21 @@ export default function FichasTecnicas() {
 
     autoTable(doc, {
       startY: 74,
-      head: [["Categoria", "Ingrediente", "Qtd. (g)", "Preço/kg", "Custo"]],
+      head: [["Categoria", "Ingrediente", "Quantidade", "Unidade", "Preço/Un.", "Custo"]],
       body:
         ficha.ingredientes?.map((item) => {
-          const custo = (Number(item.quantidade) / 1000) * Number(item.precoKg);
+          const unidade = obterUnidadeIngrediente(item);
+          const quantidadeConvertida = converterQuantidadeParaUnidadePreco(
+            item.quantidade,
+            unidade
+          );
+          const custo = quantidadeConvertida * Number(item.precoKg || 0);
 
           return [
             item.categoriaAlimentar || item.categoria || "-",
             item.nome || "-",
             item.quantidade || "0",
+            unidade,
             `${Number(item.precoKg || 0).toFixed(2)} €`,
             `${custo.toFixed(2)} €`,
           ];
@@ -577,8 +621,9 @@ export default function FichasTecnicas() {
             <tr>
               <th>Tipo</th>
               <th>Ingrediente</th>
-              <th>Qtd. (g)</th>
-              <th>Preço/kg (€)</th>
+              <th>Quantidade</th>
+              <th>Unidade</th>
+              <th>Preço/Un. (€)</th>
               <th>Custo</th>
               <th>Kcal</th>
               <th>Prot.</th>
@@ -589,8 +634,13 @@ export default function FichasTecnicas() {
 
           <tbody>
             {ingredientes.map((item, index) => {
+              const unidade = obterUnidadeIngrediente(item);
+              const quantidadeConvertida = converterQuantidadeParaUnidadePreco(
+                item.quantidade,
+                unidade
+              );
               const custoIngrediente =
-                (Number(item.quantidade) / 1000) * Number(item.precoKg);
+                quantidadeConvertida * Number(item.precoKg || 0);
 
               const alimentosFiltrados = alimentos.filter(
                 (alimento) => alimento.categoria === item.categoriaAlimentar
@@ -641,11 +691,27 @@ export default function FichasTecnicas() {
                     <input
                       type="number"
                       min="0"
+                      step="0.001"
                       value={item.quantidade || ""}
                       onChange={(e) =>
                         atualizarIngrediente(index, "quantidade", e.target.value)
                       }
                     />
+                  </td>
+
+                  <td>
+                    <select
+                      value={obterUnidadeIngrediente(item)}
+                      onChange={(e) =>
+                        atualizarIngrediente(index, "unidade", e.target.value)
+                      }
+                    >
+                      <option value="kg">kg</option>
+                      <option value="g">g</option>
+                      <option value="L">L</option>
+                      <option value="ml">ml</option>
+                      <option value="un">un</option>
+                    </select>
                   </td>
 
                   <td>

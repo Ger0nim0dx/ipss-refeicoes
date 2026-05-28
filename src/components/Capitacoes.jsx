@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { supabase } from "../supabaseClient";
 
 export default function Capitacoes() {
   const [fichas, setFichas] = useState([]);
@@ -13,21 +14,65 @@ export default function Capitacoes() {
   ]);
 
   useEffect(() => {
-    const fichasGuardadas =
-      JSON.parse(localStorage.getItem("ipssFichasTecnicas")) || [];
-
-    setFichas(fichasGuardadas);
+    carregarFichas();
   }, []);
+
+  async function carregarFichas() {
+    const { data, error } = await supabase
+      .from("fichas_tecnicas")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error(error);
+      alert("Erro ao carregar fichas técnicas.");
+      return;
+    }
+
+    const fichasFormatadas = (data || []).map((ficha) => ({
+      id: ficha.id,
+      nome: ficha.nome,
+      categoria: ficha.categoria,
+      doses: ficha.doses,
+      ...ficha.dados,
+    }));
+
+    setFichas(fichasFormatadas);
+  }
 
   const fichaSelecionada = fichas.find(
     (ficha) => String(ficha.id) === String(fichaSelecionadaId)
   );
 
-  const atualizarGrupo = (index, campo, valor) => {
+  function atualizarGrupo(index, campo, valor) {
     const novaLista = [...grupos];
     novaLista[index][campo] = Number(valor);
     setGrupos(novaLista);
-  };
+  }
+
+  function converterParaBase(quantidade, unidade) {
+    const valor = Number(quantidade || 0);
+
+    if (unidade === "g") return valor / 1000;
+    if (unidade === "kg") return valor;
+    if (unidade === "ml") return valor / 1000;
+    if (unidade === "L") return valor;
+    if (unidade === "un") return valor;
+
+    return valor / 1000;
+  }
+
+  function formatarQuantidade(quantidade, unidade) {
+    const valor = Number(quantidade || 0);
+
+    if (unidade === "kg") return `${valor.toFixed(2)} kg`;
+    if (unidade === "g") return `${valor.toFixed(0)} g`;
+    if (unidade === "L") return `${valor.toFixed(2)} L`;
+    if (unidade === "ml") return `${valor.toFixed(0)} ml`;
+    if (unidade === "un") return `${valor.toFixed(0)} un`;
+
+    return `${valor.toFixed(0)} g`;
+  }
 
   const totalDosesEquivalentes = grupos.reduce(
     (total, grupo) => total + Number(grupo.pessoas) * Number(grupo.fator),
@@ -143,7 +188,7 @@ export default function Capitacoes() {
                 <th>Ingrediente</th>
                 <th>Qtd. na ficha</th>
                 <th>Qtd. necessária</th>
-                <th>Preço/kg</th>
+                <th>Preço unidade</th>
                 <th>Custo previsto</th>
               </tr>
             </thead>
@@ -153,18 +198,31 @@ export default function Capitacoes() {
                 const dosesFicha = Number(fichaSelecionada.doses) || 1;
                 const fatorProducao = totalDosesEquivalentes / dosesFicha;
 
-                const quantidadeNecessaria =
-                  Number(item.quantidade || 0) * fatorProducao;
+                const unidade = item.unidade || "g";
+
+                const quantidadeFicha = Number(item.quantidade || 0);
+                const quantidadeNecessaria = quantidadeFicha * fatorProducao;
+
+                const quantidadeBase = converterParaBase(
+                  quantidadeNecessaria,
+                  unidade
+                );
 
                 const custoIngrediente =
-                  (quantidadeNecessaria / 1000) * Number(item.precoKg || 0);
+                  quantidadeBase * Number(item.precoKg || 0);
 
                 return (
                   <tr key={index}>
                     <td>{item.nome || "-"}</td>
-                    <td>{Number(item.quantidade || 0).toFixed(0)} g</td>
-                    <td>{quantidadeNecessaria.toFixed(0)} g</td>
+
+                    <td>{formatarQuantidade(quantidadeFicha, unidade)}</td>
+
+                    <td>
+                      {formatarQuantidade(quantidadeNecessaria, unidade)}
+                    </td>
+
                     <td>{Number(item.precoKg || 0).toFixed(2)} €</td>
+
                     <td>{custoIngrediente.toFixed(2)} €</td>
                   </tr>
                 );

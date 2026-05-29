@@ -1,6 +1,21 @@
+// src/data/alimentos.js
+
 const base = [];
 
-function add(nome, categoria, kcal, proteina, hidratos, gordura, fibra = 0, sal = 0, alergenios = "", unidadePadrao = "kg", precoMedio = 0, co2 = 0) {
+function add(
+  nome,
+  categoria,
+  kcal,
+  proteina,
+  hidratos,
+  gordura,
+  fibra = 0,
+  sal = 0,
+  alergenios = "",
+  unidadePadrao = "kg",
+  precoMedio = 0,
+  co2 = 0
+) {
   base.push({
     nome,
     categoria,
@@ -20,53 +35,106 @@ function add(nome, categoria, kcal, proteina, hidratos, gordura, fibra = 0, sal 
 /* ================= FRUTA ================= */
 
 [
-  "Maçã", "Banana", "Laranja", "Pera", "Pêssego", "Nectarina", "Ameixa",
-  "Uvas", "Melancia", "Melão", "Kiwi", "Morango", "Framboesa", "Amora",
-  "Mirtilo", "Ananás", "Manga", "Papaia", "Clementina", "Tangerina",
-  "Limão", "Lima", "Toranja", "Romã", "Figo", "Damasco", "Cereja",
-  "Maracujá", "Goiaba", "Dióspiro", "Nêspera", "Abacate", "Tâmara",
-  "Passas", "Ameixa seca", "Figo seco", "Fruta em calda", "Pêssego em calda",
-  "Ananás em calda", "Cocktail de fruta"
+  "Maçã",
+  "Banana",
+  "Laranja",
+  "Pera",
+  "Pêssego",
+  "Nectarina",
+  "Ameixa",
+  "Uvas",
+  "Melancia",
+  "Melão",
+  "Kiwi",
+  "Morango",
+  "Framboesa",
+  "Amora",
+  "Mirtilo",
+  "Ananás",
+  "Manga",
+  "Papaia",
+  "Clementina",
+  "Tangerina",
+  "Limão",
+  "Lima",
+  "Toranja",
+  "Romã",
+  "Figo",
+  "Damasco",
+  "Cereja",
+  "Maracujá",
+  "Goiaba",
+  "Dióspiro",
+  "Nêspera",
+  "Abacate",
+  "Tâmara",
+  "Passas",
+  "Ameixa seca",
+  "Figo seco",
+  "Fruta em calda",
+  "Pêssego em calda",
+  "Ananás em calda",
+  "Cocktail de fruta",
 ].forEach((nome) =>
   add(nome, "Fruta", 55, 0.7, 13, 0.2, 2, 0, "", "kg", 2, 0.5)
-);
-
-/* ================= TEMPEROS / MERCEARIA ================= */
-
-[
-  "Sal", "Açúcar", "Açúcar amarelo", "Mel", "Farinha de trigo",
-  "Farinha de milho", "Farinha integral", "Farinha de arroz",
-  "Farinha de aveia", "Farinha sem glúten", "Amido de milho",
-  "Fécula de batata", "Fermento em pó", "Gelatina", "Chocolate em pó",
-  "Cacau em pó", "Canela", "Louro", "Pimenta preta", "Pimenta branca",
-  "Colorau", "Pimentão doce", "Piri-piri", "Cominhos", "Noz-moscada",
-  "Orégãos", "Tomilho", "Alecrim", "Caril", "Açafrão", "Gengibre em pó",
-  "Erva-doce", "Baunilha", "Sementes de sésamo", "Sementes de linhaça",
-  "Sementes de chia", "Sementes de girassol", "Pinhões", "Amendoim",
-  "Caju", "Pistácio", "Avelã", "Amêndoa", "Noz", "Coco ralado",
-  "Caldo de galinha", "Caldo de carne", "Caldo de legumes", "Caldo de peixe",
-  "Polpa de tomate", "Tomate pelado", "Concentrado de tomate", "Pickles",
-  "Azeitonas", "Milho enlatado", "Cogumelos enlatados", "Atum enlatado",
-  "Sardinha enlatada", "Feijão enlatado", "Grão enlatado", "Leite de coco",
-  "Vinagre", "Molho inglês", "Molho de soja", "Mostarda", "Ketchup",
-  "Maionese", "Pesto", "Molho barbecue", "Molho cocktail"
-].forEach((nome) =>
-  add(nome, "Mercearia e temperos", 250, 5, 35, 6, 5, 1, "validar rótulo", "kg", 4, 1)
 );
 
 /* ================= HORTÍCOLAS ================= */
 
 [
-  "Batata", "Batata-doce", "Cenoura", "Cebola", "Alho", "Alho francês",
-  "Tomate", "Tomate cherry", "Brócolos", "Couve portuguesa", "Couve lombarda",
-  "Couve coração", "Couve-flor", "Couve roxa", "Espinafres", "Grelos",
-  "Nabiças", "Agrião", "Alface", "Alface iceberg", "Alface romana",
-  "Pepino", "Curgete", "Beringela", "Abóbora", "Nabo", "Beterraba",
-  "Pimento vermelho", "Pimento verde", "Pimento amarelo", "Cogumelos",
-  "Milho doce", "Aipo", "Chuchu", "Feijão-verde", "Ervilhas tortas",
-  "Salsa", "Coentros", "Hortelã", "Rúcula", "Endívia", "Rabanete",
-  "Escarola", "Funcho", "Espargos", "Alcachofra", "Quiabo", "Repolho",
-  "Couve kale", "Pak choi", "Rebentos de soja", "Rebentos de bambu"
+  "Batata",
+  "Batata-doce",
+  "Batata palha",
+  "Cenoura",
+  "Cebola",
+  "Alho",
+  "Alho francês",
+  "Tomate",
+  "Tomate cherry",
+  "Brócolos",
+  "Couve portuguesa",
+  "Couve lombarda",
+  "Couve coração",
+  "Couve-flor",
+  "Couve roxa",
+  "Espinafres",
+  "Grelos",
+  "Nabiças",
+  "Agrião",
+  "Alface",
+  "Alface iceberg",
+  "Alface romana",
+  "Pepino",
+  "Curgete",
+  "Beringela",
+  "Abóbora",
+  "Nabo",
+  "Beterraba",
+  "Pimento vermelho",
+  "Pimento verde",
+  "Pimento amarelo",
+  "Cogumelos",
+  "Milho doce",
+  "Aipo",
+  "Chuchu",
+  "Feijão-verde",
+  "Ervilhas tortas",
+  "Salsa",
+  "Coentros",
+  "Hortelã",
+  "Rúcula",
+  "Endívia",
+  "Rabanete",
+  "Escarola",
+  "Funcho",
+  "Espargos",
+  "Alcachofra",
+  "Quiabo",
+  "Repolho",
+  "Couve kale",
+  "Pak choi",
+  "Rebentos de soja",
+  "Rebentos de bambu",
 ].forEach((nome) =>
   add(nome, "Hortícolas", 30, 1.5, 6, 0.2, 2.5, 0.05, "", "kg", 1.8, 0.4)
 );
@@ -74,148 +142,424 @@ function add(nome, categoria, kcal, proteina, hidratos, gordura, fibra = 0, sal 
 /* ================= PEIXE E MARISCO ================= */
 
 [
-  "Pescada", "Filetes de pescada", "Medalhões de pescada", "Bacalhau",
-  "Bacalhau desfiado", "Bacalhau demolhado", "Bacalhau posta",
-  "Bacalhau lascado", "Atum", "Atum enlatado em água", "Atum enlatado em óleo",
-  "Salmão", "Salmão fumado", "Sardinha", "Carapau", "Cavala", "Dourada",
-  "Robalo", "Red fish", "Abrótea", "Maruca", "Solha", "Linguado",
-  "Tamboril", "Raia", "Corvina", "Faneca", "Douradinhos", "Polvo",
-  "Lulas", "Chocos", "Miolo de camarão", "Camarão", "Delícias do mar",
-  "Mexilhão", "Amêijoa"
+  "Pescada",
+  "Filetes de pescada",
+  "Medalhões de pescada",
+  "Bacalhau",
+  "Bacalhau desfiado",
+  "Bacalhau demolhado",
+  "Bacalhau posta",
+  "Bacalhau lascado",
+  "Atum",
+  "Atum enlatado em água",
+  "Atum enlatado em óleo",
+  "Salmão",
+  "Salmão fumado",
+  "Sardinha",
+  "Carapau",
+  "Cavala",
+  "Dourada",
+  "Robalo",
+  "Red fish",
+  "Abrótea",
+  "Maruca",
+  "Solha",
+  "Linguado",
+  "Tamboril",
+  "Raia",
+  "Corvina",
+  "Faneca",
+  "Douradinhos",
+  "Polvo",
+  "Lulas",
+  "Chocos",
+  "Miolo de camarão",
+  "Camarão",
+  "Delícias do mar",
+  "Mexilhão",
+  "Amêijoa",
 ].forEach((nome) =>
-  add(nome, "Peixe e marisco", 110, 20, 0, 3, 0, 0.5, "peixe/marisco", "kg", 8, 6)
+  add(
+    nome,
+    "Peixe e marisco",
+    110,
+    20,
+    0,
+    3,
+    0,
+    0.5,
+    "peixe/marisco",
+    "kg",
+    8,
+    6
+  )
 );
 
-/* ================= CARNE / PROTEÍNA ANIMAL ================= */
+/* ================= PROTEÍNA ANIMAL ================= */
 
 [
-  "Frango", "Frango inteiro", "Peito de frango", "Coxa de frango",
-  "Perna de frango", "Asas de frango", "Frango desfiado", "Peru",
-  "Peito de peru", "Perna de peru", "Pato", "Pato desfiado",
-  "Carne de vaca", "Carne de vaca para estufar", "Novilho", "Vitela",
-  "Carne picada de vaca", "Almôndegas", "Hambúrguer de vaca",
-  "Carne de porco", "Lombo de porco", "Febras de porco", "Bifanas",
-  "Entremeada", "Entrecosto", "Costeletas de porco", "Pá de porco",
-  "Coelho", "Cabrito", "Borrego", "Fígado de vaca", "Fígado de porco",
-  "Ovo", "Ovo cozido", "Clara de ovo"
+  "Frango",
+  "Frango inteiro",
+  "Peito de frango",
+  "Coxa de frango",
+  "Perna de frango",
+  "Asas de frango",
+  "Frango desfiado",
+  "Peru",
+  "Peito de peru",
+  "Perna de peru",
+  "Pato",
+  "Pato desfiado",
+  "Carne de vaca",
+  "Carne de vaca para estufar",
+  "Novilho",
+  "Vitela",
+  "Carne picada de vaca",
+  "Almôndegas",
+  "Hambúrguer de vaca",
+  "Carne de porco",
+  "Lombo de porco",
+  "Febras de porco",
+  "Bifanas",
+  "Entremeada",
+  "Entrecosto",
+  "Costeletas de porco",
+  "Pá de porco",
+  "Coelho",
+  "Cabrito",
+  "Borrego",
+  "Fígado de vaca",
+  "Fígado de porco",
+  "Ovo",
+  "Ovo cozido",
+  "Clara de ovo",
 ].forEach((nome) =>
-  add(nome, "Proteína animal", 210, 24, 0, 12, 0, 0.25, nome.includes("Ovo") ? "ovo" : "", "kg", 6, 10)
+  add(
+    nome,
+    "Proteína animal",
+    210,
+    24,
+    0,
+    12,
+    0,
+    0.25,
+    nome.includes("Ovo") ? "ovo" : "",
+    "kg",
+    6,
+    10
+  )
 );
 
-/* ================= ENCHIDOS E CHARCUTARIA ================= */
+/* ================= ENCHIDOS ================= */
 
 [
-  "Alheira", "Alheira de Mirandela", "Chouriço", "Chouriça de carne",
-  "Chouriça moura", "Morcela", "Farinheira", "Salpicão", "Presunto",
-  "Bacon", "Fiambre", "Paio", "Mortadela", "Salsicha fresca", "Salsichas"
+  "Alheira",
+  "Alheira de Mirandela",
+  "Chouriço",
+  "Chouriça de carne",
+  "Chouriça moura",
+  "Morcela",
+  "Farinheira",
+  "Salpicão",
+  "Presunto",
+  "Bacon",
+  "Fiambre",
+  "Paio",
+  "Mortadela",
+  "Salsicha fresca",
+  "Salsichas",
 ].forEach((nome) =>
-  add(nome, "Enchidos e charcutaria", 360, 18, 8, 28, 1, 3, "validar glúten", "kg", 8, 12)
+  add(
+    nome,
+    "Enchidos e charcutaria",
+    360,
+    18,
+    8,
+    28,
+    1,
+    3,
+    "validar glúten",
+    "kg",
+    8,
+    12
+  )
 );
 
 /* ================= LEGUMINOSAS ================= */
 
 [
-  "Feijão", "Feijão encarnado", "Feijão branco", "Feijão manteiga",
-  "Feijão frade", "Feijão preto", "Grão-de-bico", "Lentilhas",
-  "Ervilhas", "Ervilhas congeladas", "Favas", "Soja granulada",
-  "Tofu", "Seitan", "Húmus"
+  "Feijão",
+  "Feijão encarnado",
+  "Feijão branco",
+  "Feijão manteiga",
+  "Feijão frade",
+  "Feijão preto",
+  "Grão-de-bico",
+  "Lentilhas",
+  "Ervilhas",
+  "Ervilhas congeladas",
+  "Favas",
+  "Soja granulada",
+  "Tofu",
+  "Seitan",
+  "Húmus",
 ].forEach((nome) =>
-  add(nome, "Leguminosas e proteína vegetal", 130, 8, 22, 1, 7, 0.05, nome === "Seitan" ? "glúten" : "", "kg", 2.5, 1)
+  add(
+    nome,
+    "Leguminosas e proteína vegetal",
+    130,
+    8,
+    22,
+    1,
+    7,
+    0.05,
+    nome === "Seitan" ? "glúten" : "",
+    "kg",
+    2.5,
+    1
+  )
 );
 
-/* ================= CEREAIS / HIDRATOS ================= */
+/* ================= CEREAIS ================= */
 
 [
-  "Arroz", "Arroz carolino", "Arroz agulha", "Arroz vaporizado",
-  "Arroz integral", "Massa", "Massa espiral", "Massa cotovelo",
-  "Massa macarrão", "Massa pevide", "Massa esparguete", "Massa aletria",
-  "Cuscuz", "Quinoa", "Bulgur", "Batata palha", "Puré de batata instantâneo",
-  "Pão", "Papo-seco", "Carcaça", "Baguete", "Pão de mistura",
-  "Pão de centeio", "Pão integral", "Broa de milho", "Pão de forma",
-  "Pão ralado", "Tostas", "Bolacha Maria", "Corn flakes", "Aveia"
+  "Arroz",
+  "Arroz carolino",
+  "Arroz agulha",
+  "Arroz vaporizado",
+  "Arroz integral",
+  "Massa",
+  "Massa espiral",
+  "Massa cotovelo",
+  "Massa macarrão",
+  "Massa pevide",
+  "Massa esparguete",
+  "Massa aletria",
+  "Cuscuz",
+  "Quinoa",
+  "Bulgur",
+  "Puré de batata instantâneo",
+  "Pão",
+  "Papo-seco",
+  "Carcaça",
+  "Baguete",
+  "Pão de mistura",
+  "Pão de centeio",
+  "Pão integral",
+  "Broa de milho",
+  "Pão de forma",
+  "Pão ralado",
+  "Tostas",
+  "Bolacha Maria",
+  "Corn flakes",
+  "Aveia",
 ].forEach((nome) =>
-  add(nome, "Cereais e hidratos", 250, 7, 50, 3, 3, 0.8, "glúten possível", "kg", 1.8, 1.5)
+  add(
+    nome,
+    "Cereais e hidratos",
+    250,
+    7,
+    50,
+    3,
+    3,
+    0.8,
+    "glúten possível",
+    "kg",
+    1.8,
+    1.5
+  )
 );
 
 /* ================= LACTICÍNIOS ================= */
 
 [
-  "Leite meio-gordo", "Leite magro", "Leite gordo", "Leite sem lactose",
-  "Bebida de soja", "Bebida de aveia", "Iogurte natural",
-  "Iogurte natural magro", "Iogurte sólido aromatizado", "Queijo flamengo",
-  "Queijo ralado", "Queijo fresco", "Requeijão", "Natas",
-  "Natas culinária", "Manteiga", "Margarina", "Bechamel"
+  "Leite meio-gordo",
+  "Leite magro",
+  "Leite gordo",
+  "Leite sem lactose",
+  "Bebida de soja",
+  "Bebida de aveia",
+  "Iogurte natural",
+  "Iogurte natural magro",
+  "Iogurte sólido aromatizado",
+  "Queijo flamengo",
+  "Queijo ralado",
+  "Queijo fresco",
+  "Requeijão",
+  "Natas",
+  "Natas culinária",
+  "Manteiga",
+  "Margarina",
+  "Bechamel",
 ].forEach((nome) =>
-  add(nome, "Lacticínios", 180, 8, 5, 12, 0, 0.5, "leite", nome.includes("Leite") || nome.includes("Natas") ? "L" : "kg", 3, 3)
+  add(
+    nome,
+    "Lacticínios",
+    180,
+    8,
+    5,
+    12,
+    0,
+    0.5,
+    "leite",
+    nome.includes("Leite") || nome.includes("Natas") ? "L" : "kg",
+    3,
+    3
+  )
 );
 
-/* ================= CONGELADOS / INDUSTRIAIS ================= */
+/* ================= GORDURAS E MOLHOS ================= */
 
 [
-  "Legumes congelados", "Mistura chinesa congelada", "Espinafres congelados",
-  "Brócolos congelados", "Feijão-verde congelado", "Batata pré-frita",
-  "Rissóis", "Croquetes", "Pastéis de bacalhau", "Panados de frango",
-  "Hambúrgueres congelados", "Nuggets de frango", "Panados de pescada",
-  "Lasanha congelada", "Pizza congelada", "Lasanha vegetariana",
-  "Hambúrguer vegetal", "Empadas", "Quiche", "Pataniscas de bacalhau"
+  "Azeite",
+  "Óleo alimentar",
+  "Óleo de girassol",
+  "Maionese",
+  "Ketchup",
+  "Mostarda",
+  "Molho de soja",
+  "Molho inglês",
+  "Vinagre",
+  "Pesto",
+  "Molho barbecue",
+  "Molho cocktail",
 ].forEach((nome) =>
-  add(nome, "Congelados e preparados", 240, 10, 25, 10, 2, 1, "validar rótulo", "kg", 5, 5)
+  add(
+    nome,
+    "Gorduras e molhos",
+    400,
+    2,
+    10,
+    35,
+    1,
+    1,
+    "validar rótulo",
+    "L",
+    3,
+    2
+  )
 );
 
-/* ================= SOBREMESAS / PASTELARIA ================= */
+/* ================= MERCEARIA E TEMPEROS ================= */
 
 [
-  "Arroz doce", "Aletria doce", "Leite creme", "Pudim flan",
-  "Gelatina sobremesa", "Mousse de chocolate", "Bolo simples",
-  "Bolo de iogurte", "Bolo de aniversário", "Massa folhada",
-  "Massa quebrada", "Leite condensado", "Coco ralado", "Serradura",
-  "Baba de camelo", "Farófias", "Pão de ló", "Tarte de maçã",
-  "Tarte de nata", "Queijada", "Pastel de nata", "Bolo de arroz",
-  "Madalenas", "Rabanadas", "Sonhos", "Filhós", "Doce de abóbora",
-  "Marmelada", "Compota de morango"
+  "Sal",
+  "Açúcar",
+  "Açúcar amarelo",
+  "Mel",
+  "Farinha de trigo",
+  "Farinha de milho",
+  "Farinha integral",
+  "Farinha de arroz",
+  "Farinha de aveia",
+  "Farinha sem glúten",
+  "Amido de milho",
+  "Fécula de batata",
+  "Fermento em pó",
+  "Gelatina",
+  "Chocolate em pó",
+  "Cacau em pó",
+  "Canela",
+  "Louro",
+  "Pimenta preta",
+  "Pimenta branca",
+  "Colorau",
+  "Pimentão doce",
+  "Piri-piri",
+  "Cominhos",
+  "Noz-moscada",
+  "Orégãos",
+  "Tomilho",
+  "Alecrim",
+  "Caril",
+  "Açafrão",
+  "Gengibre em pó",
+  "Erva-doce",
+  "Baunilha",
+  "Sementes de sésamo",
+  "Sementes de linhaça",
+  "Sementes de chia",
+  "Sementes de girassol",
+  "Pinhões",
+  "Amendoim",
+  "Caju",
+  "Pistácio",
+  "Avelã",
+  "Amêndoa",
+  "Noz",
+  "Coco ralado",
+  "Caldo de galinha",
+  "Caldo de carne",
+  "Caldo de legumes",
+  "Caldo de peixe",
+  "Polpa de tomate",
+  "Tomate pelado",
+  "Concentrado de tomate",
+  "Pickles",
+  "Azeitonas",
+  "Milho enlatado",
+  "Cogumelos enlatados",
+  "Atum enlatado",
+  "Sardinha enlatada",
+  "Feijão enlatado",
+  "Grão enlatado",
+  "Leite de coco",
 ].forEach((nome) =>
-  add(nome, "Pastelaria e sobremesas", 300, 5, 45, 12, 1, 0.3, "glúten; ovo; leite possível", "kg", 4.5, 2)
+  add(
+    nome,
+    "Mercearia e temperos",
+    250,
+    5,
+    35,
+    6,
+    5,
+    1,
+    "validar rótulo",
+    "kg",
+    4,
+    1
+  )
 );
 
-/* ================= DIETAS ESPECIAIS / TEXTURAS ================= */
+/* ================= RECEITAS BASE ================= */
 
 [
-  "Puré de legumes", "Puré de batata", "Papa láctea", "Creme de arroz",
-  "Espessante alimentar", "Suplemento hiperproteico", "Compota sem açúcar",
-  "Bolacha sem açúcar", "Pão sem glúten", "Massa sem glúten",
-  "Farinha sem glúten", "Bebida vegetal sem açúcar", "Preparado hipercalórico",
-  "Preparado hiperproteico", "Creme triturado", "Dieta pastosa de carne",
-  "Dieta pastosa de peixe", "Dieta pastosa vegetariana", "Papa sem glúten",
-  "Papa sem lactose", "Sobremesa sem açúcar", "Iogurte sem lactose",
-  "Queijo sem lactose", "Leite em pó", "Fórmula infantil 1",
-  "Fórmula infantil 2", "Boião de fruta", "Boião de legumes"
+  "Caldo verde",
+  "Sopa juliana",
+  "Creme de cenoura",
+  "Creme de legumes",
+  "Sopa de feijão",
+  "Sopa de grão",
+  "Sopa de couve",
+  "Sopa de peixe",
+  "Arroz de frango",
+  "Arroz de pato",
+  "Jardineira",
+  "Rancho",
+  "Feijoada",
+  "Bacalhau espiritual",
+  "Massa com atum",
+  "Esparguete à bolonhesa",
+  "Empadão",
+  "Omelete",
+  "Tortilha",
+  "Arroz de legumes",
+  "Massa gratinada",
 ].forEach((nome) =>
-  add(nome, "Dietas especiais", 180, 8, 25, 5, 2, 0.3, "validar rótulo", "kg", 5, 2)
-);
-
-/* ================= LÍQUIDOS / BEBIDAS / CALDOS ================= */
-
-[
-  "Água", "Chá", "Infusão", "Café", "Café descafeinado",
-  "Sumo de laranja", "Néctar", "Vinho branco culinário",
-  "Vinho tinto culinário", "Caldo de legumes líquido",
-  "Caldo de carne líquido", "Caldo de peixe", "Chá de camomila",
-  "Chá de cidreira", "Chá preto", "Chá verde"
-].forEach((nome) =>
-  add(nome, "Líquidos e caldos", 15, 0.5, 2, 0.2, 0, 0.1, nome.includes("Vinho") ? "sulfitos" : "", "L", 1, 0.5)
-);
-
-/* ================= RECEITAS-BASE ================= */
-
-[
-  "Caldo verde", "Sopa juliana", "Creme de cenoura", "Creme de legumes",
-  "Sopa de feijão", "Sopa de grão", "Sopa de couve", "Sopa de peixe",
-  "Arroz de frango", "Arroz de pato", "Jardineira", "Rancho",
-  "Feijoada", "Bacalhau espiritual", "Massa com atum",
-  "Esparguete à bolonhesa", "Empadão", "Omelete", "Tortilha",
-  "Arroz de legumes", "Massa gratinada"
-].forEach((nome) =>
-  add(nome, "Receitas-base", 140, 7, 18, 5, 2, 0.7, "validar receita", "kg", 3, 3)
+  add(
+    nome,
+    "Receitas-base",
+    140,
+    7,
+    18,
+    5,
+    2,
+    0.7,
+    "validar receita",
+    "kg",
+    3,
+    3
+  )
 );
 
 export const alimentos = base;

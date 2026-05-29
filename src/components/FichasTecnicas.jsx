@@ -16,6 +16,7 @@ export default function FichasTecnicas() {
 
   const [nome, setNome] = useState("");
   const [categoria, setCategoria] = useState("Sopa");
+  const [momentoRefeicao, setMomentoRefeicao] = useState("Almoço");
   const [doses, setDoses] = useState(10);
   const [preparacao, setPreparacao] = useState("");
   const [alergenios, setAlergenios] = useState("");
@@ -283,6 +284,7 @@ export default function FichasTecnicas() {
 
     setNome(fichaGerada.nome);
     setCategoria(fichaGerada.categoria);
+    setMomentoRefeicao("Almoço");
     setDoses(dosesEstimadas);
     setPreparacao(
       fichaGerada.preparacao +
@@ -411,6 +413,7 @@ export default function FichasTecnicas() {
     setPedidoIA("");
     setNome("");
     setCategoria("Sopa");
+    setMomentoRefeicao("Almoço");
     setDoses(10);
     setPreparacao("");
     setAlergenios("");
@@ -423,6 +426,7 @@ export default function FichasTecnicas() {
     setFichaEmEdicaoId(ficha.id);
     setNome(ficha.nome || "");
     setCategoria(ficha.categoria || "Sopa");
+    setMomentoRefeicao(ficha.momentoRefeicao || "Almoço");
     setDoses(ficha.doses || 10);
     setPreparacao(ficha.preparacao || "");
     setAlergenios(ficha.alergenios || "");
@@ -457,6 +461,7 @@ export default function FichasTecnicas() {
     }
 
     const dados = {
+      momentoRefeicao,
       ingredientes,
       preparacao,
       alergenios,
@@ -543,20 +548,21 @@ export default function FichasTecnicas() {
     doc.setFontSize(11);
     doc.text(`Receita: ${ficha.nome}`, 14, 32);
     doc.text(`Categoria: ${ficha.categoria}`, 14, 40);
-    doc.text(`Doses: ${ficha.doses || "-"}`, 14, 48);
+    doc.text(`Momento: ${ficha.momentoRefeicao || "-"}`, 14, 48);
+    doc.text(`Doses: ${ficha.doses || "-"}`, 14, 56);
     doc.text(
       `Custo total: ${Number(ficha.custoTotal || 0).toFixed(2)} €`,
       14,
-      56
+      64
     );
     doc.text(
       `Custo por dose: ${Number(ficha.custoPorDose || 0).toFixed(2)} €`,
       14,
-      64
+      72
     );
 
     autoTable(doc, {
-      startY: 74,
+      startY: 82,
       head: [["Categoria", "Ingrediente", "Quantidade", "Unidade", "Preço/Un.", "Custo"]],
       body:
         ficha.ingredientes?.map((item) => {
@@ -619,6 +625,7 @@ export default function FichasTecnicas() {
     const tabela = listaFichas.map((ficha) => [
       ficha.nome,
       ficha.categoria,
+      ficha.momentoRefeicao || "-",
       ficha.doses || "-",
       `${Number(ficha.custoTotal || 0).toFixed(2)} €`,
       `${Number(ficha.custoPorDose || 0).toFixed(2)} €`,
@@ -626,7 +633,7 @@ export default function FichasTecnicas() {
 
     autoTable(doc, {
       startY: 32,
-      head: [["Receita", "Categoria", "Doses", "Custo total", "Custo/dose"]],
+      head: [["Receita", "Categoria", "Momento", "Doses", "Custo total", "Custo/dose"]],
       body: tabela,
     });
 
@@ -687,6 +694,19 @@ export default function FichasTecnicas() {
           <option>Sobremesa</option>
           <option>Dieta especial</option>
           <option>Acompanhamento</option>
+        </select>
+
+        <label>Momento da refeição</label>
+        <select
+          value={momentoRefeicao}
+          onChange={(e) => setMomentoRefeicao(e.target.value)}
+        >
+          <option>Pequeno-almoço</option>
+          <option>Reforço da manhã</option>
+          <option>Almoço</option>
+          <option>Lanche</option>
+          <option>Jantar</option>
+          <option>Reforço da noite</option>
         </select>
 
         <label>Número de doses</label>
@@ -922,6 +942,10 @@ export default function FichasTecnicas() {
 
             <p>
               <strong>Categoria:</strong> {item.categoria}
+            </p>
+
+            <p>
+              <strong>Momento da refeição:</strong> {item.momentoRefeicao || "-"}
             </p>
 
             <p>

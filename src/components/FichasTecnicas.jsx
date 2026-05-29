@@ -8,6 +8,7 @@ export default function FichasTecnicas() {
   const [listaFichas, setListaFichas] = useState([]);
   const [stocks, setStocks] = useState([]);
   const [pedidoIA, setPedidoIA] = useState("");
+  const [fichaEmEdicaoId, setFichaEmEdicaoId] = useState(null);
 
   const categoriasAlimentos = [
     ...new Set(alimentos.map((alimento) => alimento.categoria)),
@@ -405,6 +406,50 @@ export default function FichasTecnicas() {
     sal: nutrientesTotais.sal / numeroDoses,
   };
 
+
+  function limparFormulario() {
+    setPedidoIA("");
+    setNome("");
+    setCategoria("Sopa");
+    setDoses(10);
+    setPreparacao("");
+    setAlergenios("");
+    setHaccp("");
+    setIngredientes([criarIngredienteVazio()]);
+    setFichaEmEdicaoId(null);
+  }
+
+  function iniciarEdicao(ficha) {
+    setFichaEmEdicaoId(ficha.id);
+    setNome(ficha.nome || "");
+    setCategoria(ficha.categoria || "Sopa");
+    setDoses(ficha.doses || 10);
+    setPreparacao(ficha.preparacao || "");
+    setAlergenios(ficha.alergenios || "");
+    setHaccp(ficha.haccp || "");
+
+    const ingredientesEditaveis =
+      ficha.ingredientes && ficha.ingredientes.length > 0
+        ? ficha.ingredientes.map((item) => ({
+            ...criarIngredienteVazio(),
+            ...item,
+            categoriaAlimentar:
+              item.categoriaAlimentar || item.categoria || "",
+            qb: Boolean(item.qb),
+            quantidade: item.qb ? "" : item.quantidade || 0,
+            unidade: item.qb ? "" : item.unidade || "kg",
+          }))
+        : [criarIngredienteVazio()];
+
+    setIngredientes(ingredientesEditaveis);
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelarEdicao() {
+    limparFormulario();
+  }
+
   async function guardarFicha() {
     if (!nome) {
       alert("Indica o nome da receita.");
@@ -430,34 +475,45 @@ export default function FichasTecnicas() {
       return;
     }
 
-    const { error } = await supabase.from("fichas_tecnicas").insert([
-      {
-        user_id: userData.user.id,
-        nome,
-        categoria,
-        doses: Number(doses),
-        dados,
-      },
-    ]);
+    let error;
+
+    if (fichaEmEdicaoId) {
+      const resultado = await supabase
+        .from("fichas_tecnicas")
+        .update({
+          nome,
+          categoria,
+          doses: Number(doses),
+          dados,
+        })
+        .eq("id", fichaEmEdicaoId)
+        .eq("user_id", userData.user.id);
+
+      error = resultado.error;
+    } else {
+      const resultado = await supabase.from("fichas_tecnicas").insert([
+        {
+          user_id: userData.user.id,
+          nome,
+          categoria,
+          doses: Number(doses),
+          dados,
+        },
+      ]);
+
+      error = resultado.error;
+    }
 
     if (error) {
-      alert("Erro ao guardar no Supabase.");
+      alert(fichaEmEdicaoId ? "Erro ao atualizar ficha técnica." : "Erro ao guardar no Supabase.");
       console.error(error);
       return;
     }
 
     await carregarFichas();
+    limparFormulario();
 
-    setPedidoIA("");
-    setNome("");
-    setCategoria("Sopa");
-    setDoses(10);
-    setPreparacao("");
-    setAlergenios("");
-    setHaccp("");
-    setIngredientes([criarIngredienteVazio()]);
-
-    alert("Ficha técnica guardada no Supabase.");
+    alert(fichaEmEdicaoId ? "Ficha técnica atualizada com sucesso." : "Ficha técnica guardada no Supabase.");
   }
 
   async function eliminarFicha(id) {
@@ -614,7 +670,7 @@ export default function FichasTecnicas() {
       </div>
 
       <div className="painel">
-        <h3>Nova ficha técnica</h3>
+        <h3>{fichaEmEdicaoId ? "Editar ficha técnica" : "Nova ficha técnica"}</h3>
 
         <label>Nome da receita</label>
         <input
@@ -846,9 +902,17 @@ export default function FichasTecnicas() {
           placeholder="Ex.: temperatura, conservação, cuidados de manipulação..."
         />
 
-        <button className="botao-principal" onClick={guardarFicha}>
-          Guardar ficha técnica
-        </button>
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+          <button className="botao-principal" onClick={guardarFicha}>
+            {fichaEmEdicaoId ? "Guardar alterações" : "Guardar ficha técnica"}
+          </button>
+
+          {fichaEmEdicaoId && (
+            <button className="botao-secundario" onClick={cancelarEdicao}>
+              Cancelar edição
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="historico-grid">
@@ -895,19 +959,28 @@ export default function FichasTecnicas() {
               <strong>HACCP:</strong> {item.haccp || "-"}
             </p>
 
-            <button
-              className="botao-principal"
-              onClick={() => exportarFichaPDF(item)}
-            >
-              Exportar ficha PDF
-            </button>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <button
+                className="botao-principal"
+                onClick={() => iniciarEdicao(item)}
+              >
+                Editar
+              </button>
 
-            <button
-              className="botao-secundario"
-              onClick={() => eliminarFicha(item.id)}
-            >
-              Eliminar
-            </button>
+              <button
+                className="botao-principal"
+                onClick={() => exportarFichaPDF(item)}
+              >
+                Exportar ficha PDF
+              </button>
+
+              <button
+                className="botao-secundario"
+                onClick={() => eliminarFicha(item.id)}
+              >
+                Eliminar
+              </button>
+            </div>
           </div>
         ))}
       </div>

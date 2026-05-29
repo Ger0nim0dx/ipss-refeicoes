@@ -28,6 +28,7 @@ export default function FichasTecnicas() {
       nome: "",
       quantidade: 0,
       unidade: "kg",
+      qb: false,
       precoKg: 0,
       kcal: 0,
       proteina: 0,
@@ -160,7 +161,13 @@ export default function FichasTecnicas() {
   }
 
   function obterUnidadeIngrediente(item) {
+    if (item.qb) return "";
     return item.unidade || "g";
+  }
+
+  function formatarQuantidadeIngrediente(item) {
+    if (item.qb) return "q.b.";
+    return `${item.quantidade || 0} ${obterUnidadeIngrediente(item)}`;
   }
 
   function gerarComIA() {
@@ -285,8 +292,9 @@ export default function FichasTecnicas() {
 
     const novosIngredientes = fichaGerada.ingredientes.map((item) => ({
       ...procurarAlimento(item.nome),
-      quantidade: item.quantidade,
-      unidade: item.unidade || "g",
+      quantidade: item.qb ? "" : item.quantidade,
+      unidade: item.qb ? "" : item.unidade || "g",
+      qb: Boolean(item.qb),
     }));
 
     setIngredientes(novosIngredientes);
@@ -295,6 +303,18 @@ export default function FichasTecnicas() {
   function atualizarIngrediente(index, campo, valor) {
     const novaLista = [...ingredientes];
     novaLista[index][campo] = valor;
+
+    if (campo === "qb") {
+      novaLista[index].qb = Boolean(valor);
+
+      if (valor) {
+        novaLista[index].quantidade = "";
+        novaLista[index].unidade = "";
+      } else {
+        novaLista[index].quantidade = 0;
+        novaLista[index].unidade = "kg";
+      }
+    }
 
     if (campo === "categoriaAlimentar") {
       novaLista[index].nome = "";
@@ -316,8 +336,9 @@ export default function FichasTecnicas() {
           ...novaLista[index],
           ...alimentoEncontrado,
           categoriaAlimentar: alimentoEncontrado.categoria,
-          quantidade: novaLista[index].quantidade,
-          unidade: novaLista[index].unidade || "kg",
+          quantidade: novaLista[index].qb ? "" : novaLista[index].quantidade,
+          unidade: novaLista[index].qb ? "" : novaLista[index].unidade || "kg",
+          qb: novaLista[index].qb || false,
           precoKg:
             novaLista[index].precoKg ||
             procurarPrecoStock(alimentoEncontrado.nome),
@@ -338,6 +359,8 @@ export default function FichasTecnicas() {
 
   function calcularCustoTotal() {
     return ingredientes.reduce((total, item) => {
+      if (item.qb) return total;
+
       const quantidadeConvertida = converterQuantidadeParaUnidadePreco(
         item.quantidade,
         obterUnidadeIngrediente(item)
@@ -349,6 +372,8 @@ export default function FichasTecnicas() {
 
   function calcularTotalNutricional(campo) {
     return ingredientes.reduce((total, item) => {
+      if (item.qb) return total;
+
       const quantidadeGramas = converterQuantidadeParaGramas(
         item.quantidade,
         obterUnidadeIngrediente(item)
@@ -480,19 +505,20 @@ export default function FichasTecnicas() {
       body:
         ficha.ingredientes?.map((item) => {
           const unidade = obterUnidadeIngrediente(item);
-          const quantidadeConvertida = converterQuantidadeParaUnidadePreco(
-            item.quantidade,
-            unidade
-          );
-          const custo = quantidadeConvertida * Number(item.precoKg || 0);
+          const quantidadeConvertida = item.qb
+            ? 0
+            : converterQuantidadeParaUnidadePreco(item.quantidade, unidade);
+          const custo = item.qb
+            ? 0
+            : quantidadeConvertida * Number(item.precoKg || 0);
 
           return [
             item.categoriaAlimentar || item.categoria || "-",
             item.nome || "-",
-            item.quantidade || "0",
-            unidade,
-            `${Number(item.precoKg || 0).toFixed(2)} €`,
-            `${custo.toFixed(2)} €`,
+            item.qb ? "q.b." : item.quantidade || "0",
+            item.qb ? "" : unidade,
+            item.qb ? "-" : `${Number(item.precoKg || 0).toFixed(2)} €`,
+            item.qb ? "-" : `${custo.toFixed(2)} €`,
           ];
         }) || [],
     });
@@ -623,6 +649,7 @@ export default function FichasTecnicas() {
               <th>Ingrediente</th>
               <th>Quantidade</th>
               <th>Unidade</th>
+              <th>q.b.</th>
               <th>Preço/Un. (€)</th>
               <th>Custo</th>
               <th>Kcal</th>
@@ -635,12 +662,12 @@ export default function FichasTecnicas() {
           <tbody>
             {ingredientes.map((item, index) => {
               const unidade = obterUnidadeIngrediente(item);
-              const quantidadeConvertida = converterQuantidadeParaUnidadePreco(
-                item.quantidade,
-                unidade
-              );
-              const custoIngrediente =
-                quantidadeConvertida * Number(item.precoKg || 0);
+              const quantidadeConvertida = item.qb
+                ? 0
+                : converterQuantidadeParaUnidadePreco(item.quantidade, unidade);
+              const custoIngrediente = item.qb
+                ? 0
+                : quantidadeConvertida * Number(item.precoKg || 0);
 
               const alimentosFiltrados = alimentos.filter(
                 (alimento) => alimento.categoria === item.categoriaAlimentar
@@ -692,7 +719,9 @@ export default function FichasTecnicas() {
                       type="number"
                       min="0"
                       step="0.001"
-                      value={item.quantidade || ""}
+                      value={item.qb ? "" : item.quantidade || ""}
+                      disabled={item.qb}
+                      placeholder={item.qb ? "q.b." : ""}
                       onChange={(e) =>
                         atualizarIngrediente(index, "quantidade", e.target.value)
                       }
@@ -701,11 +730,13 @@ export default function FichasTecnicas() {
 
                   <td>
                     <select
-                      value={obterUnidadeIngrediente(item)}
+                      value={item.qb ? "" : obterUnidadeIngrediente(item)}
+                      disabled={item.qb}
                       onChange={(e) =>
                         atualizarIngrediente(index, "unidade", e.target.value)
                       }
                     >
+                      <option value="">q.b.</option>
                       <option value="kg">kg</option>
                       <option value="g">g</option>
                       <option value="L">L</option>
@@ -714,19 +745,31 @@ export default function FichasTecnicas() {
                     </select>
                   </td>
 
+                  <td style={{ textAlign: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(item.qb)}
+                      onChange={(e) =>
+                        atualizarIngrediente(index, "qb", e.target.checked)
+                      }
+                    />
+                  </td>
+
                   <td>
                     <input
                       type="number"
                       step="0.01"
                       min="0"
-                      value={item.precoKg || ""}
+                      value={item.qb ? "" : item.precoKg || ""}
+                      disabled={item.qb}
+                      placeholder={item.qb ? "-" : ""}
                       onChange={(e) =>
                         atualizarIngrediente(index, "precoKg", e.target.value)
                       }
                     />
                   </td>
 
-                  <td>{custoIngrediente.toFixed(2)} €</td>
+                  <td>{item.qb ? "-" : `${custoIngrediente.toFixed(2)} €`}</td>
                   <td>{Number(item.kcal || 0).toFixed(0)}</td>
                   <td>{Number(item.proteina || 0).toFixed(1)} g</td>
                   <td>{Number(item.sal || 0).toFixed(2)} g</td>

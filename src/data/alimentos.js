@@ -1,101 +1,221 @@
-export const alimentos = [
-  // PROTEÍNA ANIMAL
-  { nome: "Frango", categoria: "Proteína animal", kcal: 165, proteina: 31, hidratos: 0, gordura: 3.6, fibra: 0, sal: 0.2 },
-  { nome: "Peru", categoria: "Proteína animal", kcal: 135, proteina: 29, hidratos: 0, gordura: 1.5, fibra: 0, sal: 0.2 },
-  { nome: "Carne de vaca", categoria: "Proteína animal", kcal: 250, proteina: 26, hidratos: 0, gordura: 15, fibra: 0, sal: 0.2 },
-  { nome: "Carne de porco", categoria: "Proteína animal", kcal: 242, proteina: 27, hidratos: 0, gordura: 14, fibra: 0, sal: 0.2 },
-  { nome: "Vitela", categoria: "Proteína animal", kcal: 172, proteina: 24, hidratos: 0, gordura: 8, fibra: 0, sal: 0.2 },
-  { nome: "Carne picada", categoria: "Proteína animal", kcal: 250, proteina: 26, hidratos: 0, gordura: 15, fibra: 0, sal: 0.2 },
-  { nome: "Coelho", categoria: "Proteína animal", kcal: 173, proteina: 33, hidratos: 0, gordura: 3.5, fibra: 0, sal: 0.2 },
-  { nome: "Pato", categoria: "Proteína animal", kcal: 337, proteina: 19, hidratos: 0, gordura: 28, fibra: 0, sal: 0.2 },
-  { nome: "Cabrito", categoria: "Proteína animal", kcal: 143, proteina: 27, hidratos: 0, gordura: 3, fibra: 0, sal: 0.2 },
-  { nome: "Borrego", categoria: "Proteína animal", kcal: 258, proteina: 25, hidratos: 0, gordura: 17, fibra: 0, sal: 0.2 },
-  { nome: "Entrecosto", categoria: "Proteína animal", kcal: 350, proteina: 22, hidratos: 0, gordura: 29, fibra: 0, sal: 0.3 },
-  { nome: "Febras de porco", categoria: "Proteína animal", kcal: 220, proteina: 26, hidratos: 0, gordura: 12, fibra: 0, sal: 0.2 },
-  { nome: "Bifanas", categoria: "Proteína animal", kcal: 242, proteina: 26, hidratos: 0, gordura: 14, fibra: 0, sal: 0.3 },
-  { nome: "Ovo", categoria: "Proteína animal", kcal: 143, proteina: 13, hidratos: 1.1, gordura: 10, fibra: 0, sal: 0.3 },
+const base = [];
 
-  // ENCHIDOS
-  { nome: "Alheira", categoria: "Enchidos", kcal: 280, proteina: 12, hidratos: 18, gordura: 18, fibra: 1, sal: 2.2 },
-  { nome: "Chouriço", categoria: "Enchidos", kcal: 455, proteina: 24, hidratos: 2, gordura: 38, fibra: 0, sal: 3.5 },
-  { nome: "Morcela", categoria: "Enchidos", kcal: 310, proteina: 14, hidratos: 6, gordura: 25, fibra: 0, sal: 2.5 },
-  { nome: "Farinheira", categoria: "Enchidos", kcal: 410, proteina: 10, hidratos: 28, gordura: 29, fibra: 1, sal: 3 },
-  { nome: "Presunto", categoria: "Enchidos", kcal: 270, proteina: 30, hidratos: 0, gordura: 16, fibra: 0, sal: 5 },
+function add(nome, categoria, kcal, proteina, hidratos, gordura, fibra = 0, sal = 0, alergenios = "", unidadePadrao = "kg", precoMedio = 0, co2 = 0) {
+  base.push({
+    nome,
+    categoria,
+    kcal,
+    proteina,
+    hidratos,
+    gordura,
+    fibra,
+    sal,
+    alergenios,
+    unidadePadrao,
+    precoMedio,
+    co2,
+  });
+}
 
-  // PEIXE
-  { nome: "Pescada", categoria: "Peixe", kcal: 82, proteina: 18, hidratos: 0, gordura: 1.2, fibra: 0, sal: 0.2 },
-  { nome: "Salmão", categoria: "Peixe", kcal: 208, proteina: 20, hidratos: 0, gordura: 13, fibra: 0, sal: 0.2 },
-  { nome: "Bacalhau", categoria: "Peixe", kcal: 82, proteina: 18, hidratos: 0, gordura: 0.7, fibra: 0, sal: 1.5 },
-  { nome: "Atum", categoria: "Peixe", kcal: 132, proteina: 28, hidratos: 0, gordura: 1, fibra: 0, sal: 0.4 },
-  { nome: "Sardinha", categoria: "Peixe", kcal: 208, proteina: 25, hidratos: 0, gordura: 11, fibra: 0, sal: 0.4 },
-  { nome: "Carapau", categoria: "Peixe", kcal: 124, proteina: 20, hidratos: 0, gordura: 5, fibra: 0, sal: 0.3 },
-  { nome: "Cavala", categoria: "Peixe", kcal: 205, proteina: 19, hidratos: 0, gordura: 14, fibra: 0, sal: 0.3 },
-  { nome: "Polvo", categoria: "Peixe", kcal: 82, proteina: 15, hidratos: 2.2, gordura: 1, fibra: 0, sal: 0.6 },
-  { nome: "Lulas", categoria: "Peixe", kcal: 92, proteina: 15.6, hidratos: 3.1, gordura: 1.4, fibra: 0, sal: 0.4 },
-  { nome: "Chocos", categoria: "Peixe", kcal: 79, proteina: 16, hidratos: 0.8, gordura: 0.9, fibra: 0, sal: 0.4 },
-  { nome: "Filetes de pescada", categoria: "Peixe", kcal: 82, proteina: 18, hidratos: 0, gordura: 1.2, fibra: 0, sal: 0.2 },
-  { nome: "Dourada", categoria: "Peixe", kcal: 130, proteina: 20, hidratos: 0, gordura: 5, fibra: 0, sal: 0.2 },
-  { nome: "Robalo", categoria: "Peixe", kcal: 124, proteina: 23, hidratos: 0, gordura: 3, fibra: 0, sal: 0.2 },
+/* ================= FRUTA ================= */
 
-  // PROTEÍNA VEGETAL
-  { nome: "Feijão", categoria: "Proteína vegetal", kcal: 127, proteina: 8.7, hidratos: 22.8, gordura: 0.5, fibra: 6.4, sal: 0 },
-  { nome: "Feijão frade", categoria: "Proteína vegetal", kcal: 116, proteina: 7.7, hidratos: 20, gordura: 0.5, fibra: 6.5, sal: 0 },
-  { nome: "Feijão branco", categoria: "Proteína vegetal", kcal: 139, proteina: 9.7, hidratos: 25, gordura: 0.4, fibra: 6.3, sal: 0 },
-  { nome: "Feijão manteiga", categoria: "Proteína vegetal", kcal: 115, proteina: 7.8, hidratos: 20.9, gordura: 0.4, fibra: 6.2, sal: 0 },
-  { nome: "Grão-de-bico", categoria: "Proteína vegetal", kcal: 164, proteina: 8.9, hidratos: 27.4, gordura: 2.6, fibra: 7.6, sal: 0 },
-  { nome: "Lentilhas", categoria: "Proteína vegetal", kcal: 116, proteina: 9, hidratos: 20, gordura: 0.4, fibra: 7.9, sal: 0 },
-  { nome: "Ervilhas", categoria: "Proteína vegetal", kcal: 81, proteina: 5.4, hidratos: 14, gordura: 0.4, fibra: 5.1, sal: 0 },
+[
+  "Maçã", "Banana", "Laranja", "Pera", "Pêssego", "Nectarina", "Ameixa",
+  "Uvas", "Melancia", "Melão", "Kiwi", "Morango", "Framboesa", "Amora",
+  "Mirtilo", "Ananás", "Manga", "Papaia", "Clementina", "Tangerina",
+  "Limão", "Lima", "Toranja", "Romã", "Figo", "Damasco", "Cereja",
+  "Maracujá", "Goiaba", "Dióspiro", "Nêspera", "Abacate", "Tâmara",
+  "Passas", "Ameixa seca", "Figo seco", "Fruta em calda", "Pêssego em calda",
+  "Ananás em calda", "Cocktail de fruta"
+].forEach((nome) =>
+  add(nome, "Fruta", 55, 0.7, 13, 0.2, 2, 0, "", "kg", 2, 0.5)
+);
 
-  // CEREAIS E HIDRATOS
-  { nome: "Arroz", categoria: "Cereais e hidratos", kcal: 130, proteina: 2.7, hidratos: 28, gordura: 0.3, fibra: 0.4, sal: 0 },
-  { nome: "Arroz carolino", categoria: "Cereais e hidratos", kcal: 130, proteina: 2.7, hidratos: 28, gordura: 0.3, fibra: 0.4, sal: 0 },
-  { nome: "Massa", categoria: "Cereais e hidratos", kcal: 158, proteina: 5.8, hidratos: 31, gordura: 0.9, fibra: 1.8, sal: 0 },
-  { nome: "Massa cotovelos", categoria: "Cereais e hidratos", kcal: 158, proteina: 5.8, hidratos: 31, gordura: 0.9, fibra: 1.8, sal: 0 },
-  { nome: "Massa pevide", categoria: "Cereais e hidratos", kcal: 158, proteina: 5.8, hidratos: 31, gordura: 0.9, fibra: 1.8, sal: 0 },
-  { nome: "Massa esparguete", categoria: "Cereais e hidratos", kcal: 158, proteina: 5.8, hidratos: 31, gordura: 0.9, fibra: 1.8, sal: 0 },
-  { nome: "Batata", categoria: "Cereais e hidratos", kcal: 87, proteina: 1.9, hidratos: 20, gordura: 0.1, fibra: 1.8, sal: 0 },
-  { nome: "Batata-doce", categoria: "Cereais e hidratos", kcal: 86, proteina: 1.6, hidratos: 20, gordura: 0.1, fibra: 3, sal: 0.1 },
-  { nome: "Aveia", categoria: "Cereais e hidratos", kcal: 389, proteina: 17, hidratos: 66, gordura: 7, fibra: 10.6, sal: 0 },
-  { nome: "Pão", categoria: "Cereais e hidratos", kcal: 265, proteina: 9, hidratos: 49, gordura: 3.2, fibra: 2.7, sal: 1.2 },
+/* ================= TEMPEROS / MERCEARIA ================= */
 
-  // HORTÍCOLAS
-  { nome: "Cenoura", categoria: "Hortícolas", kcal: 41, proteina: 0.9, hidratos: 10, gordura: 0.2, fibra: 2.8, sal: 0.1 },
-  { nome: "Cebola", categoria: "Hortícolas", kcal: 40, proteina: 1.1, hidratos: 9.3, gordura: 0.1, fibra: 1.7, sal: 0 },
-  { nome: "Alho", categoria: "Hortícolas", kcal: 149, proteina: 6.4, hidratos: 33, gordura: 0.5, fibra: 2.1, sal: 0 },
-  { nome: "Tomate", categoria: "Hortícolas", kcal: 18, proteina: 0.9, hidratos: 3.9, gordura: 0.2, fibra: 1.2, sal: 0 },
-  { nome: "Brócolos", categoria: "Hortícolas", kcal: 34, proteina: 2.8, hidratos: 6.6, gordura: 0.4, fibra: 2.6, sal: 0 },
-  { nome: "Couve portuguesa", categoria: "Hortícolas", kcal: 32, proteina: 2.6, hidratos: 5, gordura: 0.4, fibra: 3.1, sal: 0.1 },
-  { nome: "Grelos", categoria: "Hortícolas", kcal: 22, proteina: 2.7, hidratos: 2.5, gordura: 0.4, fibra: 3, sal: 0.1 },
-  { nome: "Curgete", categoria: "Hortícolas", kcal: 17, proteina: 1.2, hidratos: 3.1, gordura: 0.3, fibra: 1, sal: 0 },
-  { nome: "Abóbora", categoria: "Hortícolas", kcal: 26, proteina: 1, hidratos: 6.5, gordura: 0.1, fibra: 0.5, sal: 0 },
+[
+  "Sal", "Açúcar", "Açúcar amarelo", "Mel", "Farinha de trigo",
+  "Farinha de milho", "Farinha integral", "Farinha de arroz",
+  "Farinha de aveia", "Farinha sem glúten", "Amido de milho",
+  "Fécula de batata", "Fermento em pó", "Gelatina", "Chocolate em pó",
+  "Cacau em pó", "Canela", "Louro", "Pimenta preta", "Pimenta branca",
+  "Colorau", "Pimentão doce", "Piri-piri", "Cominhos", "Noz-moscada",
+  "Orégãos", "Tomilho", "Alecrim", "Caril", "Açafrão", "Gengibre em pó",
+  "Erva-doce", "Baunilha", "Sementes de sésamo", "Sementes de linhaça",
+  "Sementes de chia", "Sementes de girassol", "Pinhões", "Amendoim",
+  "Caju", "Pistácio", "Avelã", "Amêndoa", "Noz", "Coco ralado",
+  "Caldo de galinha", "Caldo de carne", "Caldo de legumes", "Caldo de peixe",
+  "Polpa de tomate", "Tomate pelado", "Concentrado de tomate", "Pickles",
+  "Azeitonas", "Milho enlatado", "Cogumelos enlatados", "Atum enlatado",
+  "Sardinha enlatada", "Feijão enlatado", "Grão enlatado", "Leite de coco",
+  "Vinagre", "Molho inglês", "Molho de soja", "Mostarda", "Ketchup",
+  "Maionese", "Pesto", "Molho barbecue", "Molho cocktail"
+].forEach((nome) =>
+  add(nome, "Mercearia e temperos", 250, 5, 35, 6, 5, 1, "validar rótulo", "kg", 4, 1)
+);
 
-  // FRUTA
-  { nome: "Maçã", categoria: "Fruta", kcal: 52, proteina: 0.3, hidratos: 14, gordura: 0.2, fibra: 2.4, sal: 0 },
-  { nome: "Banana", categoria: "Fruta", kcal: 89, proteina: 1.1, hidratos: 23, gordura: 0.3, fibra: 2.6, sal: 0 },
-  { nome: "Laranja", categoria: "Fruta", kcal: 47, proteina: 0.9, hidratos: 12, gordura: 0.1, fibra: 2.4, sal: 0 },
-  { nome: "Pera", categoria: "Fruta", kcal: 57, proteina: 0.4, hidratos: 15, gordura: 0.1, fibra: 3.1, sal: 0 },
+/* ================= HORTÍCOLAS ================= */
 
-  // LACTICÍNIOS
-  { nome: "Leite meio-gordo", categoria: "Lacticínios", kcal: 47, proteina: 3.3, hidratos: 4.8, gordura: 1.6, fibra: 0, sal: 0.1 },
-  { nome: "Iogurte natural", categoria: "Lacticínios", kcal: 61, proteina: 3.5, hidratos: 4.7, gordura: 3.3, fibra: 0, sal: 0.1 },
-  { nome: "Queijo flamengo", categoria: "Lacticínios", kcal: 356, proteina: 25, hidratos: 1.5, gordura: 28, fibra: 0, sal: 1.8 },
+[
+  "Batata", "Batata-doce", "Cenoura", "Cebola", "Alho", "Alho francês",
+  "Tomate", "Tomate cherry", "Brócolos", "Couve portuguesa", "Couve lombarda",
+  "Couve coração", "Couve-flor", "Couve roxa", "Espinafres", "Grelos",
+  "Nabiças", "Agrião", "Alface", "Alface iceberg", "Alface romana",
+  "Pepino", "Curgete", "Beringela", "Abóbora", "Nabo", "Beterraba",
+  "Pimento vermelho", "Pimento verde", "Pimento amarelo", "Cogumelos",
+  "Milho doce", "Aipo", "Chuchu", "Feijão-verde", "Ervilhas tortas",
+  "Salsa", "Coentros", "Hortelã", "Rúcula", "Endívia", "Rabanete",
+  "Escarola", "Funcho", "Espargos", "Alcachofra", "Quiabo", "Repolho",
+  "Couve kale", "Pak choi", "Rebentos de soja", "Rebentos de bambu"
+].forEach((nome) =>
+  add(nome, "Hortícolas", 30, 1.5, 6, 0.2, 2.5, 0.05, "", "kg", 1.8, 0.4)
+);
 
-  // GORDURAS
-  { nome: "Azeite", categoria: "Gorduras", kcal: 884, proteina: 0, hidratos: 0, gordura: 100, fibra: 0, sal: 0 },
-  { nome: "Óleo alimentar", categoria: "Gorduras", kcal: 884, proteina: 0, hidratos: 0, gordura: 100, fibra: 0, sal: 0 },
-  { nome: "Manteiga", categoria: "Gorduras", kcal: 717, proteina: 0.9, hidratos: 0.1, gordura: 81, fibra: 0, sal: 1.5 },
+/* ================= PEIXE E MARISCO ================= */
 
-  // MERCEARIA / TEMPEROS
-  { nome: "Sal", categoria: "Mercearia e temperos", kcal: 0, proteina: 0, hidratos: 0, gordura: 0, fibra: 0, sal: 100 },
-  { nome: "Açúcar", categoria: "Mercearia e temperos", kcal: 387, proteina: 0, hidratos: 100, gordura: 0, fibra: 0, sal: 0 },
-  { nome: "Farinha", categoria: "Mercearia e temperos", kcal: 364, proteina: 10, hidratos: 76, gordura: 1, fibra: 2.7, sal: 0 },
-  { nome: "Polpa de tomate", categoria: "Mercearia e temperos", kcal: 29, proteina: 1.3, hidratos: 5, gordura: 0.2, fibra: 1.4, sal: 0.3 },
-  { nome: "Vinagre", categoria: "Mercearia e temperos", kcal: 18, proteina: 0, hidratos: 0.9, gordura: 0, fibra: 0, sal: 0 },
-  { nome: "Colorau", categoria: "Mercearia e temperos", kcal: 282, proteina: 14, hidratos: 54, gordura: 13, fibra: 35, sal: 0.1 },
-  { nome: "Orégãos", categoria: "Mercearia e temperos", kcal: 265, proteina: 9, hidratos: 69, gordura: 4.3, fibra: 43, sal: 0.1 },
+[
+  "Pescada", "Filetes de pescada", "Medalhões de pescada", "Bacalhau",
+  "Bacalhau desfiado", "Bacalhau demolhado", "Bacalhau posta",
+  "Bacalhau lascado", "Atum", "Atum enlatado em água", "Atum enlatado em óleo",
+  "Salmão", "Salmão fumado", "Sardinha", "Carapau", "Cavala", "Dourada",
+  "Robalo", "Red fish", "Abrótea", "Maruca", "Solha", "Linguado",
+  "Tamboril", "Raia", "Corvina", "Faneca", "Douradinhos", "Polvo",
+  "Lulas", "Chocos", "Miolo de camarão", "Camarão", "Delícias do mar",
+  "Mexilhão", "Amêijoa"
+].forEach((nome) =>
+  add(nome, "Peixe e marisco", 110, 20, 0, 3, 0, 0.5, "peixe/marisco", "kg", 8, 6)
+);
 
-  // LÍQUIDOS
-  { nome: "Água", categoria: "Líquidos", kcal: 0, proteina: 0, hidratos: 0, gordura: 0, fibra: 0, sal: 0 },
-  { nome: "Caldo de legumes", categoria: "Líquidos", kcal: 15, proteina: 0.5, hidratos: 2, gordura: 0.3, fibra: 0, sal: 0.8 },
-  { nome: "Caldo de carne", categoria: "Líquidos", kcal: 20, proteina: 1.5, hidratos: 1, gordura: 0.5, fibra: 0, sal: 0.8 },
-];
+/* ================= CARNE / PROTEÍNA ANIMAL ================= */
+
+[
+  "Frango", "Frango inteiro", "Peito de frango", "Coxa de frango",
+  "Perna de frango", "Asas de frango", "Frango desfiado", "Peru",
+  "Peito de peru", "Perna de peru", "Pato", "Pato desfiado",
+  "Carne de vaca", "Carne de vaca para estufar", "Novilho", "Vitela",
+  "Carne picada de vaca", "Almôndegas", "Hambúrguer de vaca",
+  "Carne de porco", "Lombo de porco", "Febras de porco", "Bifanas",
+  "Entremeada", "Entrecosto", "Costeletas de porco", "Pá de porco",
+  "Coelho", "Cabrito", "Borrego", "Fígado de vaca", "Fígado de porco",
+  "Ovo", "Ovo cozido", "Clara de ovo"
+].forEach((nome) =>
+  add(nome, "Proteína animal", 210, 24, 0, 12, 0, 0.25, nome.includes("Ovo") ? "ovo" : "", "kg", 6, 10)
+);
+
+/* ================= ENCHIDOS E CHARCUTARIA ================= */
+
+[
+  "Alheira", "Alheira de Mirandela", "Chouriço", "Chouriça de carne",
+  "Chouriça moura", "Morcela", "Farinheira", "Salpicão", "Presunto",
+  "Bacon", "Fiambre", "Paio", "Mortadela", "Salsicha fresca", "Salsichas"
+].forEach((nome) =>
+  add(nome, "Enchidos e charcutaria", 360, 18, 8, 28, 1, 3, "validar glúten", "kg", 8, 12)
+);
+
+/* ================= LEGUMINOSAS ================= */
+
+[
+  "Feijão", "Feijão encarnado", "Feijão branco", "Feijão manteiga",
+  "Feijão frade", "Feijão preto", "Grão-de-bico", "Lentilhas",
+  "Ervilhas", "Ervilhas congeladas", "Favas", "Soja granulada",
+  "Tofu", "Seitan", "Húmus"
+].forEach((nome) =>
+  add(nome, "Leguminosas e proteína vegetal", 130, 8, 22, 1, 7, 0.05, nome === "Seitan" ? "glúten" : "", "kg", 2.5, 1)
+);
+
+/* ================= CEREAIS / HIDRATOS ================= */
+
+[
+  "Arroz", "Arroz carolino", "Arroz agulha", "Arroz vaporizado",
+  "Arroz integral", "Massa", "Massa espiral", "Massa cotovelo",
+  "Massa macarrão", "Massa pevide", "Massa esparguete", "Massa aletria",
+  "Cuscuz", "Quinoa", "Bulgur", "Batata palha", "Puré de batata instantâneo",
+  "Pão", "Papo-seco", "Carcaça", "Baguete", "Pão de mistura",
+  "Pão de centeio", "Pão integral", "Broa de milho", "Pão de forma",
+  "Pão ralado", "Tostas", "Bolacha Maria", "Corn flakes", "Aveia"
+].forEach((nome) =>
+  add(nome, "Cereais e hidratos", 250, 7, 50, 3, 3, 0.8, "glúten possível", "kg", 1.8, 1.5)
+);
+
+/* ================= LACTICÍNIOS ================= */
+
+[
+  "Leite meio-gordo", "Leite magro", "Leite gordo", "Leite sem lactose",
+  "Bebida de soja", "Bebida de aveia", "Iogurte natural",
+  "Iogurte natural magro", "Iogurte sólido aromatizado", "Queijo flamengo",
+  "Queijo ralado", "Queijo fresco", "Requeijão", "Natas",
+  "Natas culinária", "Manteiga", "Margarina", "Bechamel"
+].forEach((nome) =>
+  add(nome, "Lacticínios", 180, 8, 5, 12, 0, 0.5, "leite", nome.includes("Leite") || nome.includes("Natas") ? "L" : "kg", 3, 3)
+);
+
+/* ================= CONGELADOS / INDUSTRIAIS ================= */
+
+[
+  "Legumes congelados", "Mistura chinesa congelada", "Espinafres congelados",
+  "Brócolos congelados", "Feijão-verde congelado", "Batata pré-frita",
+  "Rissóis", "Croquetes", "Pastéis de bacalhau", "Panados de frango",
+  "Hambúrgueres congelados", "Nuggets de frango", "Panados de pescada",
+  "Lasanha congelada", "Pizza congelada", "Lasanha vegetariana",
+  "Hambúrguer vegetal", "Empadas", "Quiche", "Pataniscas de bacalhau"
+].forEach((nome) =>
+  add(nome, "Congelados e preparados", 240, 10, 25, 10, 2, 1, "validar rótulo", "kg", 5, 5)
+);
+
+/* ================= SOBREMESAS / PASTELARIA ================= */
+
+[
+  "Arroz doce", "Aletria doce", "Leite creme", "Pudim flan",
+  "Gelatina sobremesa", "Mousse de chocolate", "Bolo simples",
+  "Bolo de iogurte", "Bolo de aniversário", "Massa folhada",
+  "Massa quebrada", "Leite condensado", "Coco ralado", "Serradura",
+  "Baba de camelo", "Farófias", "Pão de ló", "Tarte de maçã",
+  "Tarte de nata", "Queijada", "Pastel de nata", "Bolo de arroz",
+  "Madalenas", "Rabanadas", "Sonhos", "Filhós", "Doce de abóbora",
+  "Marmelada", "Compota de morango"
+].forEach((nome) =>
+  add(nome, "Pastelaria e sobremesas", 300, 5, 45, 12, 1, 0.3, "glúten; ovo; leite possível", "kg", 4.5, 2)
+);
+
+/* ================= DIETAS ESPECIAIS / TEXTURAS ================= */
+
+[
+  "Puré de legumes", "Puré de batata", "Papa láctea", "Creme de arroz",
+  "Espessante alimentar", "Suplemento hiperproteico", "Compota sem açúcar",
+  "Bolacha sem açúcar", "Pão sem glúten", "Massa sem glúten",
+  "Farinha sem glúten", "Bebida vegetal sem açúcar", "Preparado hipercalórico",
+  "Preparado hiperproteico", "Creme triturado", "Dieta pastosa de carne",
+  "Dieta pastosa de peixe", "Dieta pastosa vegetariana", "Papa sem glúten",
+  "Papa sem lactose", "Sobremesa sem açúcar", "Iogurte sem lactose",
+  "Queijo sem lactose", "Leite em pó", "Fórmula infantil 1",
+  "Fórmula infantil 2", "Boião de fruta", "Boião de legumes"
+].forEach((nome) =>
+  add(nome, "Dietas especiais", 180, 8, 25, 5, 2, 0.3, "validar rótulo", "kg", 5, 2)
+);
+
+/* ================= LÍQUIDOS / BEBIDAS / CALDOS ================= */
+
+[
+  "Água", "Chá", "Infusão", "Café", "Café descafeinado",
+  "Sumo de laranja", "Néctar", "Vinho branco culinário",
+  "Vinho tinto culinário", "Caldo de legumes líquido",
+  "Caldo de carne líquido", "Caldo de peixe", "Chá de camomila",
+  "Chá de cidreira", "Chá preto", "Chá verde"
+].forEach((nome) =>
+  add(nome, "Líquidos e caldos", 15, 0.5, 2, 0.2, 0, 0.1, nome.includes("Vinho") ? "sulfitos" : "", "L", 1, 0.5)
+);
+
+/* ================= RECEITAS-BASE ================= */
+
+[
+  "Caldo verde", "Sopa juliana", "Creme de cenoura", "Creme de legumes",
+  "Sopa de feijão", "Sopa de grão", "Sopa de couve", "Sopa de peixe",
+  "Arroz de frango", "Arroz de pato", "Jardineira", "Rancho",
+  "Feijoada", "Bacalhau espiritual", "Massa com atum",
+  "Esparguete à bolonhesa", "Empadão", "Omelete", "Tortilha",
+  "Arroz de legumes", "Massa gratinada"
+].forEach((nome) =>
+  add(nome, "Receitas-base", 140, 7, 18, 5, 2, 0.7, "validar receita", "kg", 3, 3)
+);
+
+export const alimentos = base;

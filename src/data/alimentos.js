@@ -369,7 +369,73 @@ function add(
     1.5
   )
 );
+/* ================= BEBIDAS ================= */
 
+[
+  "Água",
+  "Café",
+  "Café descafeinado",
+  "Café solúvel",
+  "Café com leite",
+  "Cevada",
+  "Chá",
+  "Chá de camomila",
+  "Chá de cidreira",
+  "Chá preto",
+  "Chá verde",
+  "Infusão",
+  "Leite",
+  "Leite meio-gordo",
+  "Leite magro",
+  "Leite gordo",
+  "Leite sem lactose",
+  "Leite achocolatado",
+  "Chocolate quente",
+  "Cacau com leite",
+  "Bebida de soja",
+  "Bebida de aveia",
+  "Bebida de arroz",
+  "Bebida de amêndoa",
+  "Sumo de laranja",
+  "Sumo de maçã",
+  "Néctar",
+  "Água aromatizada",
+].forEach((nome) =>
+  add(
+    nome,
+    "Bebidas",
+    nome === "Água"
+      ? 0
+      : nome.includes("Leite") ||
+        nome.includes("Chocolate") ||
+        nome.includes("Cacau")
+      ? 60
+      : 5,
+    nome.includes("Leite") || nome.includes("Bebida") ? 3 : 0.2,
+    nome.includes("Leite") ||
+      nome.includes("Chocolate") ||
+      nome.includes("Cacau")
+      ? 8
+      : 1,
+    nome.includes("Leite") ||
+      nome.includes("Chocolate") ||
+      nome.includes("Cacau")
+      ? 2
+      : 0,
+    0,
+    0.05,
+    nome.includes("Leite") ||
+      nome.includes("Chocolate") ||
+      nome.includes("Cacau")
+      ? "leite"
+      : nome.includes("soja")
+      ? "soja"
+      : "validar rótulo",
+    "L",
+    1.2,
+    0.8
+  )
+);
 /* ================= LACTICÍNIOS ================= */
 
 [

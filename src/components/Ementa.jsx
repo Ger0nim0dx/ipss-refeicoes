@@ -232,37 +232,19 @@ export default function Ementa() {
   }
 
   function receitaAdequada(ficha, refeicao) {
-    const texto = textoNormalizado(
-      `${ficha.nome} ${ficha.categoria} ${ficha.tipo}`
+    if (!ficha) return false;
+
+    const momentoFicha = normalizarTexto(
+      ficha.momentoRefeicao || ficha.momento || ""
     );
 
-    if (refeicao === "Almoço" || refeicao === "Jantar") {
-      return (
-        texto.includes("principal") ||
-        texto.includes("carne") ||
-        texto.includes("peixe") ||
-        texto.includes("prato") ||
-        texto.includes("sopa")
-      );
-    }
+    const momentoAtual = normalizarTexto(refeicao);
 
-    if (
-      refeicao === "Pequeno-almoço" ||
-      refeicao === "Lanche" ||
-      refeicao.includes("Reforço")
-    ) {
-      return (
-        texto.includes("lanche") ||
-        texto.includes("pequeno") ||
-        texto.includes("reforco") ||
-        texto.includes("iogurte") ||
-        texto.includes("fruta") ||
-        texto.includes("pao") ||
-        texto.includes("leite")
-      );
-    }
+    return momentoFicha === momentoAtual;
+  }
 
-    return true;
+  function obterFichasPorRefeicao(refeicao) {
+    return fichas.filter((ficha) => receitaAdequada(ficha, refeicao));
   }
 
   function pontuarReceita(ficha, refeicao, usadasSemana, usadasDia) {
@@ -466,7 +448,7 @@ export default function Ementa() {
       const gruposDia = [];
 
       refeicoes.forEach((refeicao) => {
-        const receitasOrdenadas = [...fichas].sort(
+        const receitasOrdenadas = obterFichasPorRefeicao(refeicao).sort(
           (a, b) =>
             pontuarReceitaIA(
               b,
@@ -487,6 +469,23 @@ export default function Ementa() {
         );
 
         const escolhida = receitasOrdenadas[0];
+
+        if (!escolhida) {
+          novaEmenta[dia][refeicao] = "";
+          explicacoes.push({
+            dia,
+            refeicao,
+            receita: "Sem ficha técnica disponível",
+            grupo: "-",
+            custo: 0,
+            kcal: 0,
+            stock: 0,
+            emFalta: [],
+            aExpirar: [],
+          });
+          return;
+        }
+
         const grupo = obterGrupoReceita(escolhida);
         const disponibilidade = calcularDisponibilidadeStock(escolhida);
 
@@ -560,13 +559,18 @@ export default function Ementa() {
       const usadasDia = [];
 
       refeicoes.forEach((refeicao) => {
-        const receitasOrdenadas = [...fichas].sort(
+        const receitasOrdenadas = obterFichasPorRefeicao(refeicao).sort(
           (a, b) =>
             pontuarReceita(b, refeicao, usadasSemana, usadasDia) -
             pontuarReceita(a, refeicao, usadasSemana, usadasDia)
         );
 
         const escolhida = receitasOrdenadas[0];
+
+        if (!escolhida) {
+          novaEmenta[dia][refeicao] = "";
+          return;
+        }
 
         novaEmenta[dia][refeicao] = escolhida.id;
         usadasDia.push(escolhida.id);
@@ -878,7 +882,7 @@ export default function Ementa() {
                       >
                         <option value="">Selecionar receita</option>
 
-                        {fichas.map((ficha) => (
+                        {obterFichasPorRefeicao(refeicao).map((ficha) => (
                           <option key={ficha.id} value={ficha.id}>
                             {ficha.nome}
                           </option>

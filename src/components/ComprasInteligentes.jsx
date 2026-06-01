@@ -64,12 +64,12 @@ function ComprasInteligentes() {
   function encontrarProdutoStock(nomeIngrediente) {
     return stocks.find((item) => {
       const nomeStock = normalizarTexto(item.produto || item.nome);
-      const nomeIngrediente = normalizarTexto(nomeIngrediente);
+      const ingredienteNormalizado = normalizarTexto(nomeIngrediente);
 
       return (
-        nomeStock === nomeIngrediente ||
-        nomeStock.includes(nomeIngrediente) ||
-        nomeIngrediente.includes(nomeStock)
+        nomeStock === ingredienteNormalizado ||
+        nomeStock.includes(ingredienteNormalizado) ||
+        ingredienteNormalizado.includes(nomeStock)
       );
     });
   }

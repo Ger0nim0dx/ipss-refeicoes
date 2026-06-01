@@ -6,6 +6,7 @@ import { supabase } from "../supabaseClient";
 export default function Ementa() {
   const [fichas, setFichas] = useState([]);
   const [stocks, setStocks] = useState([]);
+  const [utentes, setUtentes] = useState([]);
 
   const [ementa, setEmenta] = useState({});
   const [modoIA, setModoIA] = useState("equilibrada");
@@ -49,6 +50,7 @@ export default function Ementa() {
   async function carregarDados() {
     await carregarFichas();
     await carregarStocks();
+    await carregarUtentes();
     await carregarEmenta();
   }
 
@@ -99,6 +101,20 @@ export default function Ementa() {
     }));
 
     setStocks(stocksFormatados);
+  }
+
+  async function carregarUtentes() {
+    const { data, error } = await supabase
+      .from("utentes")
+      .select("*")
+      .eq("ativo", true);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setUtentes(data || []);
   }
 
   async function carregarEmenta() {
@@ -197,6 +213,110 @@ export default function Ementa() {
 
     setEmenta(novaEmenta);
     await guardarEmentaSupabase(novaEmenta);
+  }
+
+  function receitaTemAlergenio(ficha, alergia) {
+    const texto = normalizarTexto(
+      `
+      ${ficha?.alergenios || ""}
+      ${ficha?.nome || ""}
+      ${ficha?.categoria || ""}
+      ${(ficha?.ingredientes || []).map((item) => item.nome).join(" ")}
+      `
+    );
+
+    return texto.includes(normalizarTexto(alergia));
+  }
+
+  function obterAlertasReceita(ficha) {
+    if (!ficha) return [];
+
+    const alertas = [];
+
+    utentes.forEach((utente) => {
+      const nomeUtente = utente.nome || "Utente";
+      const alergias = normalizarTexto(utente.alergias || "");
+      const dieta = normalizarTexto(utente.dieta || "");
+      const textura = normalizarTexto(utente.textura_alimentar || "");
+
+      if (alergias.includes("leite") && receitaTemAlergenio(ficha, "leite")) {
+        alertas.push(`⚠ ${nomeUtente} tem alergia/intolerância ao leite`);
+      }
+
+      if (alergias.includes("lactose") && receitaTemAlergenio(ficha, "leite")) {
+        alertas.push(`⚠ ${nomeUtente} necessita alimentação sem lactose`);
+      }
+
+      if (alergias.includes("ovo") && receitaTemAlergenio(ficha, "ovo")) {
+        alertas.push(`⚠ ${nomeUtente} tem alergia ao ovo`);
+      }
+
+      if (
+        (alergias.includes("gluten") || dieta.includes("gluten")) &&
+        receitaTemAlergenio(ficha, "glúten")
+      ) {
+        alertas.push(`⚠ ${nomeUtente} necessita alimentação sem glúten`);
+      }
+
+      if (alergias.includes("peixe") && receitaTemAlergenio(ficha, "peixe")) {
+        alertas.push(`⚠ ${nomeUtente} tem alergia ao peixe`);
+      }
+
+      if (
+        (alergias.includes("marisco") || alergias.includes("crustaceos")) &&
+        (receitaTemAlergenio(ficha, "marisco") ||
+          receitaTemAlergenio(ficha, "crustáceos") ||
+          receitaTemAlergenio(ficha, "moluscos"))
+      ) {
+        alertas.push(`⚠ ${nomeUtente} tem alergia/intolerância a marisco`);
+      }
+
+      if (alergias.includes("soja") && receitaTemAlergenio(ficha, "soja")) {
+        alertas.push(`⚠ ${nomeUtente} tem alergia/intolerância à soja`);
+      }
+
+      if (
+        (alergias.includes("frutos secos") ||
+          alergias.includes("frutos de casca")) &&
+        receitaTemAlergenio(ficha, "frutos")
+      ) {
+        alertas.push(`⚠ ${nomeUtente} tem alergia a frutos de casca rija`);
+      }
+
+      if (dieta.includes("diabet")) {
+        alertas.push(`ℹ ${nomeUtente} tem dieta diabética`);
+      }
+
+      if (dieta.includes("hipossod") || dieta.includes("sem sal")) {
+        alertas.push(`ℹ ${nomeUtente} necessita dieta com restrição de sal`);
+      }
+
+      if (dieta.includes("hiperprote")) {
+        alertas.push(`ℹ ${nomeUtente} necessita reforço hiperproteico`);
+      }
+
+      if (dieta.includes("hipercal")) {
+        alertas.push(`ℹ ${nomeUtente} necessita reforço hipercalórico`);
+      }
+
+      if (textura.includes("triturada")) {
+        alertas.push(`⚠ ${nomeUtente} necessita textura triturada`);
+      }
+
+      if (textura.includes("pastosa")) {
+        alertas.push(`⚠ ${nomeUtente} necessita textura pastosa`);
+      }
+
+      if (textura.includes("espessada")) {
+        alertas.push(`⚠ ${nomeUtente} necessita líquidos espessados`);
+      }
+
+      if (textura.includes("liquida")) {
+        alertas.push(`⚠ ${nomeUtente} necessita dieta líquida`);
+      }
+    });
+
+    return [...new Set(alertas)];
   }
 
   function obterFicha(id) {
@@ -813,6 +933,12 @@ export default function Ementa() {
         </div>
 
         <div className="dashboard-card">
+          <h3>Utentes ativos</h3>
+          <p>{utentes.length}</p>
+          <span>Dietas, alergias e texturas</span>
+        </div>
+
+        <div className="dashboard-card">
           <h3>Refeições planeadas</h3>
           <p>{receitasPlaneadas.length}</p>
           <span>Semana atual</span>
@@ -890,19 +1016,41 @@ export default function Ementa() {
                       </select>
 
                       {ficha && (
-                        <div className="ementa-info">
-                          <span>
-                            💰 {Number(ficha.custoTotal || 0).toFixed(2)} €
-                          </span>
+                        <>
+                          <div className="ementa-info">
+                            <span>
+                              💰 {Number(ficha.custoTotal || 0).toFixed(2)} €
+                            </span>
 
-                          <span>
-                            🔥{" "}
-                            {Number(ficha.nutrientesTotais?.kcal || 0).toFixed(
-                              0
-                            )}{" "}
-                            kcal
-                          </span>
-                        </div>
+                            <span>
+                              🔥{" "}
+                              {Number(
+                                ficha.nutrientesTotais?.kcal || 0
+                              ).toFixed(0)}{" "}
+                              kcal
+                            </span>
+                          </div>
+
+                          {obterAlertasReceita(ficha).length > 0 && (
+                            <div
+                              style={{
+                                marginTop: "10px",
+                                background: "#fff7ed",
+                                border: "1px solid #fdba74",
+                                padding: "8px",
+                                borderRadius: "8px",
+                                fontSize: "12px",
+                                lineHeight: "1.4",
+                              }}
+                            >
+                              {obterAlertasReceita(ficha).map(
+                                (alerta, index) => (
+                                  <div key={index}>{alerta}</div>
+                                )
+                              )}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   );

@@ -14,7 +14,9 @@ export default function Utentes() {
   const [quarto, setQuarto] = useState("");
   const [valencia, setValencia] = useState("Lar");
   const [dieta, setDieta] = useState("Normal");
+  const [texturaAlimentar, setTexturaAlimentar] = useState("Normal");
   const [alergias, setAlergias] = useState("");
+  const [observacoesClinicas, setObservacoesClinicas] = useState("");
   const [observacoes, setObservacoes] = useState("");
 
   useEffect(() => {
@@ -50,7 +52,9 @@ export default function Utentes() {
     setQuarto("");
     setValencia("Lar");
     setDieta("Normal");
+    setTexturaAlimentar("Normal");
     setAlergias("");
+    setObservacoesClinicas("");
     setObservacoes("");
 
     setModoEdicao(false);
@@ -84,7 +88,9 @@ export default function Utentes() {
         quarto,
         valencia,
         dieta,
+        textura_alimentar: texturaAlimentar,
         alergias,
+        observacoes_clinicas: observacoesClinicas,
         observacoes,
         ativo: true,
       },
@@ -109,7 +115,9 @@ export default function Utentes() {
         quarto,
         valencia,
         dieta,
+        textura_alimentar: texturaAlimentar,
         alergias,
+        observacoes_clinicas: observacoesClinicas,
         observacoes,
       })
       .eq("id", utenteEditarId);
@@ -134,7 +142,9 @@ export default function Utentes() {
     setQuarto(utente.quarto || "");
     setValencia(utente.valencia || "Lar");
     setDieta(utente.dieta || "Normal");
+    setTexturaAlimentar(utente.textura_alimentar || "Normal");
     setAlergias(utente.alergias || "");
+    setObservacoesClinicas(utente.observacoes_clinicas || "");
     setObservacoes(utente.observacoes || "");
 
     window.scrollTo({
@@ -191,12 +201,13 @@ export default function Utentes() {
 
     autoTable(doc, {
       startY: 50,
-      head: [["Nome", "Quarto", "Valência", "Dieta", "Alergias", "Estado"]],
+      head: [["Nome", "Quarto", "Valência", "Dieta", "Textura", "Alergias", "Estado"]],
       body: utentes.map((item) => [
         item.nome || "-",
         item.quarto || "-",
         item.valencia || "-",
         item.dieta || "-",
+        item.textura_alimentar || "Normal",
         item.alergias || "Nenhuma",
         item.ativo ? "Ativo" : "Inativo",
       ]),
@@ -291,12 +302,30 @@ export default function Utentes() {
         >
           <option>Normal</option>
           <option>Sem sal</option>
+          <option>Hipossódica</option>
           <option>Diabética</option>
-          <option>Triturada</option>
-          <option>Pastosa</option>
+          <option>Sem glúten</option>
+          <option>Sem lactose</option>
           <option>Vegetariana</option>
           <option>Hipocalórica</option>
+          <option>Hiperproteica</option>
+          <option>Hipercalórica</option>
+          <option>Renal</option>
           <option>Outra</option>
+        </select>
+
+        <label>Textura alimentar</label>
+
+        <select
+          value={texturaAlimentar}
+          onChange={(e) => setTexturaAlimentar(e.target.value)}
+        >
+          <option>Normal</option>
+          <option>Macia</option>
+          <option>Pastosa</option>
+          <option>Triturada</option>
+          <option>Líquida</option>
+          <option>Espessada</option>
         </select>
 
         <label>Alergias / intolerâncias</label>
@@ -305,6 +334,14 @@ export default function Utentes() {
           type="text"
           value={alergias}
           onChange={(e) => setAlergias(e.target.value)}
+        />
+
+        <label>Observações clínicas alimentares</label>
+
+        <textarea
+          value={observacoesClinicas}
+          onChange={(e) => setObservacoesClinicas(e.target.value)}
+          placeholder="Ex.: disfagia, risco de aspiração, necessita espessante, baixo apetite, suplementação oral..."
         />
 
         <label>Observações</label>
@@ -365,8 +402,18 @@ export default function Utentes() {
               </p>
 
               <p>
+                <strong>Textura alimentar:</strong>{" "}
+                {item.textura_alimentar || "Normal"}
+              </p>
+
+              <p>
                 <strong>Alergias:</strong>{" "}
                 {item.alergias || "Nenhuma"}
+              </p>
+
+              <p>
+                <strong>Observações clínicas:</strong>{" "}
+                {item.observacoes_clinicas || "-"}
               </p>
 
               <p>

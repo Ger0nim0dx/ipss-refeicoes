@@ -369,6 +369,7 @@ function add(
     1.5
   )
 );
+
 /* ================= BEBIDAS ================= */
 
 [
@@ -384,58 +385,115 @@ function add(
   "Chá preto",
   "Chá verde",
   "Infusão",
+
   "Leite",
   "Leite meio-gordo",
   "Leite magro",
   "Leite gordo",
   "Leite sem lactose",
   "Leite achocolatado",
+
   "Chocolate quente",
   "Cacau com leite",
+
   "Bebida de soja",
   "Bebida de aveia",
   "Bebida de arroz",
   "Bebida de amêndoa",
+
   "Sumo de laranja",
   "Sumo de maçã",
   "Néctar",
   "Água aromatizada",
+
+  "Iogurte líquido",
+  "Iogurte líquido natural",
+  "Iogurte líquido de morango",
+  "Iogurte líquido de banana",
+  "Iogurte líquido sem lactose",
+  "Iogurte líquido proteico",
+
+  "Leite fermentado",
+
+  "Bebida hiperproteica",
+  "Bebida hipercalórica",
+
+  "Suplemento nutricional oral",
+  "Suplemento nutricional oral baunilha",
+  "Suplemento nutricional oral chocolate",
+  "Suplemento nutricional oral morango",
+
+  "Água gelificada",
 ].forEach((nome) =>
   add(
     nome,
     "Bebidas",
+
     nome === "Água"
       ? 0
+      : nome.includes("Suplemento") ||
+        nome.includes("hiperproteica") ||
+        nome.includes("hipercalórica")
+      ? 150
+      : nome.includes("Iogurte") ||
+        nome.includes("Leite fermentado")
+      ? 75
       : nome.includes("Leite") ||
         nome.includes("Chocolate") ||
         nome.includes("Cacau")
       ? 60
       : 5,
-    nome.includes("Leite") || nome.includes("Bebida") ? 3 : 0.2,
-    nome.includes("Leite") ||
-      nome.includes("Chocolate") ||
-      nome.includes("Cacau")
+
+    nome.includes("Suplemento") ||
+    nome.includes("hiperproteica")
+      ? 8
+      : nome.includes("Leite") ||
+        nome.includes("Iogurte") ||
+        nome.includes("Bebida")
+      ? 3
+      : 0.2,
+
+    nome.includes("Suplemento") ||
+    nome.includes("hipercalórica")
+      ? 22
+      : nome.includes("Leite") ||
+        nome.includes("Iogurte") ||
+        nome.includes("Chocolate") ||
+        nome.includes("Cacau")
       ? 8
       : 1,
-    nome.includes("Leite") ||
-      nome.includes("Chocolate") ||
-      nome.includes("Cacau")
+
+    nome.includes("Suplemento") ||
+    nome.includes("hipercalórica")
+      ? 4
+      : nome.includes("Leite") ||
+        nome.includes("Iogurte") ||
+        nome.includes("Chocolate") ||
+        nome.includes("Cacau")
       ? 2
       : 0,
+
     0,
     0.05,
+
     nome.includes("Leite") ||
-      nome.includes("Chocolate") ||
-      nome.includes("Cacau")
-      ? "leite"
+    nome.includes("Iogurte") ||
+    nome.includes("Chocolate") ||
+    nome.includes("Cacau") ||
+    nome.includes("Suplemento")
+      ? "leite; validar rótulo"
       : nome.includes("soja")
       ? "soja"
       : "validar rótulo",
-    "L",
-    1.2,
+
+    nome.includes("Suplemento") ? "un" : "L",
+
+    nome.includes("Suplemento") ? 2.2 : 1.2,
+
     0.8
   )
 );
+
 /* ================= LACTICÍNIOS ================= */
 
 [
@@ -584,6 +642,69 @@ function add(
     "kg",
     4,
     1
+  )
+);
+
+/* ================= DIETAS ESPECIAIS E SUPLEMENTAÇÃO ================= */
+
+[
+  "Preparado hipercalórico",
+  "Preparado hiperproteico",
+
+  "Bebida hiperproteica",
+  "Bebida hipercalórica",
+
+  "Suplemento nutricional oral",
+  "Suplemento nutricional oral baunilha",
+  "Suplemento nutricional oral chocolate",
+  "Suplemento nutricional oral morango",
+
+  "Creme hiperproteico",
+  "Pudim hiperproteico",
+  "Papa hiperproteica",
+
+  "Espessante alimentar",
+  "Água gelificada",
+  "Gelatina proteica",
+
+  "Dieta pastosa de carne",
+  "Dieta pastosa de peixe",
+  "Dieta pastosa vegetariana",
+
+  "Creme triturado",
+  "Puré de legumes",
+  "Puré de batata",
+
+  "Compota sem açúcar",
+  "Sobremesa sem açúcar",
+
+  "Iogurte sem lactose",
+  "Iogurte líquido sem lactose",
+
+  "Leite em pó",
+
+  "Papa láctea",
+  "Papa sem glúten",
+  "Papa sem lactose",
+].forEach((nome) =>
+  add(
+    nome,
+    "Dietas especiais e suplementação",
+
+    120,
+    8,
+    18,
+    4,
+    1,
+    0.2,
+
+    "validar rótulo; leite possível",
+
+    nome.includes("Suplemento") ? "un" : "kg",
+
+    4,
+
+    2
   )
 );
 

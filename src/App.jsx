@@ -616,41 +616,137 @@ export default function App() {
           </div>
 
           <nav>
-            {menuPermitido.map((item) => {
-              const Icone = item.icon;
+            {!sidebarFechada && (
+              <div className="menu-section-title">OPERAÇÃO DIÁRIA</div>
+            )}
 
-              return (
-                <button
-                  key={item.id}
-                  className={
-                    pagina === item.id ? "ativo" : ""
-                  }
-                  onClick={() => setPagina(item.id)}
-                >
-                  <Icone size={19} />
+            {menuPermitido
+              .filter((item) =>
+                [
+                  "ementa",
+                  "mapa-producao",
+                  "planeamento",
+                  "producoes",
+                  "compras-inteligentes",
+                  "desperdicio",
+                ].includes(item.id)
+              )
+              .map((item) => {
+                const Icone = item.icon;
 
-                  {!sidebarFechada && (
-                    <span>{item.label}</span>
-                  )}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={item.id}
+                    className={pagina === item.id ? "ativo" : ""}
+                    onClick={() => setPagina(item.id)}
+                  >
+                    <Icone size={19} />
 
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-            >
-              {darkMode ? (
-                <Sun size={19} />
-              ) : (
-                <Moon size={19} />
-              )}
+                    {!sidebarFechada && <span>{item.label}</span>}
+                  </button>
+                );
+              })}
+
+            {!sidebarFechada && (
+              <div className="menu-section-title">GESTÃO TÉCNICA</div>
+            )}
+
+            {menuPermitido
+              .filter((item) =>
+                [
+                  "fichas",
+                  "dietas",
+                  "valor-nutricional",
+                  "stocks",
+                  "haccp",
+                  "capitacoes",
+                ].includes(item.id)
+              )
+              .map((item) => {
+                const Icone = item.icon;
+
+                return (
+                  <button
+                    key={item.id}
+                    className={pagina === item.id ? "ativo" : ""}
+                    onClick={() => setPagina(item.id)}
+                  >
+                    <Icone size={19} />
+
+                    {!sidebarFechada && <span>{item.label}</span>}
+                  </button>
+                );
+              })}
+
+            {!sidebarFechada && (
+              <div className="menu-section-title">GESTÃO E DIREÇÃO</div>
+            )}
+
+            {menuPermitido
+              .filter((item) =>
+                [
+                  "dashboard",
+                  "estatisticas",
+                  "analytics",
+                  "relatorios",
+                  "relatorios-premium",
+                  "alertas",
+                  "historico",
+                ].includes(item.id)
+              )
+              .map((item) => {
+                const Icone = item.icon;
+
+                return (
+                  <button
+                    key={item.id}
+                    className={pagina === item.id ? "ativo" : ""}
+                    onClick={() => setPagina(item.id)}
+                  >
+                    <Icone size={19} />
+
+                    {!sidebarFechada && <span>{item.label}</span>}
+                  </button>
+                );
+              })}
+
+            {!sidebarFechada && (
+              <div className="menu-section-title">ADMINISTRAÇÃO</div>
+            )}
+
+            {menuPermitido
+              .filter((item) =>
+                [
+                  "utentes",
+                  "utilizadores",
+                  "dados-ipss",
+                  "assistente-ia",
+                  "calendario",
+                  "custos",
+                  "sobre",
+                ].includes(item.id)
+              )
+              .map((item) => {
+                const Icone = item.icon;
+
+                return (
+                  <button
+                    key={item.id}
+                    className={pagina === item.id ? "ativo" : ""}
+                    onClick={() => setPagina(item.id)}
+                  >
+                    <Icone size={19} />
+
+                    {!sidebarFechada && <span>{item.label}</span>}
+                  </button>
+                );
+              })}
+
+            <button onClick={() => setDarkMode(!darkMode)}>
+              {darkMode ? <Sun size={19} /> : <Moon size={19} />}
 
               {!sidebarFechada && (
-                <span>
-                  {darkMode
-                    ? "Modo claro"
-                    : "Modo escuro"}
-                </span>
+                <span>{darkMode ? "Modo claro" : "Modo escuro"}</span>
               )}
             </button>
 

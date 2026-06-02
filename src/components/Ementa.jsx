@@ -1032,23 +1032,71 @@ export default function Ementa() {
                           </div>
 
                           {obterAlertasReceita(ficha).length > 0 && (
-                            <div
+                            <details
                               style={{
-                                marginTop: "10px",
+                                marginTop: "12px",
                                 background: "#fff7ed",
                                 border: "1px solid #fdba74",
-                                padding: "8px",
-                                borderRadius: "8px",
-                                fontSize: "12px",
-                                lineHeight: "1.4",
+                                borderRadius: "14px",
+                                overflow: "hidden",
+                                transition: "0.2s",
                               }}
                             >
-                              {obterAlertasReceita(ficha).map(
-                                (alerta, index) => (
-                                  <div key={index}>{alerta}</div>
-                                )
-                              )}
-                            </div>
+                              <summary
+                                style={{
+                                  cursor: "pointer",
+                                  padding: "12px 14px",
+                                  fontWeight: "600",
+                                  color: "#c2410c",
+                                  listStyle: "none",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  userSelect: "none",
+                                  fontSize: "14px",
+                                }}
+                              >
+                                <span>
+                                  ⚠ Ver avisos ({obterAlertasReceita(ficha).length})
+                                </span>
+
+                                <span
+                                  style={{
+                                    fontSize: "18px",
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  ⌄
+                                </span>
+                              </summary>
+
+                              <div
+                                style={{
+                                  padding: "14px",
+                                  borderTop: "1px solid #fdba74",
+                                  fontSize: "13px",
+                                  lineHeight: "1.6",
+                                  background: "#fffaf5",
+                                }}
+                              >
+                                {obterAlertasReceita(ficha).map(
+                                  (alerta, index) => (
+                                    <div
+                                      key={index}
+                                      style={{
+                                        marginBottom: "10px",
+                                        display: "flex",
+                                        alignItems: "flex-start",
+                                        gap: "8px",
+                                      }}
+                                    >
+                                      <span>•</span>
+                                      <span>{alerta}</span>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            </details>
                           )}
                         </>
                       )}

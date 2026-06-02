@@ -552,19 +552,135 @@ export default function Ementa() {
   }
 
 
-  function obterAlternativaReceita(fichaAtual, refeicaoAtual) {
-    if (!fichaAtual) return null;
+  function obterNecessidadesReceita(ficha) {
+    if (!ficha) return [];
 
-    const alertasTexto = normalizarTexto(obterAlertasReceita(fichaAtual).join(" "));
+    const necessidades = {};
+
+    function adicionar(chave, texto, icone = "👤") {
+      if (!necessidades[chave]) {
+        necessidades[chave] = {
+          chave,
+          texto,
+          icone,
+          quantidade: 0,
+          utentes: [],
+        };
+      }
+
+      necessidades[chave].quantidade += 1;
+    }
+
+    utentes.forEach((utente) => {
+      const nomeUtente = utente.nome || "Utente";
+      const alergias = normalizarTexto(utente.alergias || "");
+      const dieta = normalizarTexto(utente.dieta || "");
+      const textura = normalizarTexto(utente.textura_alimentar || "");
+
+      if (
+        (alergias.includes("leite") || alergias.includes("lactose")) &&
+        receitaTemAlergenio(ficha, "leite")
+      ) {
+        adicionar("sem-lactose", "Sem lactose", "🥛");
+        necessidades["sem-lactose"].utentes.push(nomeUtente);
+      }
+
+      if (
+        (alergias.includes("gluten") || dieta.includes("gluten")) &&
+        receitaTemAlergenio(ficha, "glúten")
+      ) {
+        adicionar("sem-gluten", "Sem glúten", "🌾");
+        necessidades["sem-gluten"].utentes.push(nomeUtente);
+      }
+
+      if (alergias.includes("ovo") && receitaTemAlergenio(ficha, "ovo")) {
+        adicionar("sem-ovo", "Sem ovo", "🥚");
+        necessidades["sem-ovo"].utentes.push(nomeUtente);
+      }
+
+      if (alergias.includes("peixe") && receitaTemAlergenio(ficha, "peixe")) {
+        adicionar("sem-peixe", "Sem peixe", "🐟");
+        necessidades["sem-peixe"].utentes.push(nomeUtente);
+      }
+
+      if (dieta.includes("diabet")) {
+        adicionar("diabetica", "Dieta diabética", "👤");
+        necessidades.diabetica.utentes.push(nomeUtente);
+      }
+
+      if (dieta.includes("hipossod") || dieta.includes("sem sal")) {
+        adicionar("hipossodica", "Restrição de sal", "🧂");
+        necessidades.hipossodica.utentes.push(nomeUtente);
+      }
+
+      if (textura.includes("triturada")) {
+        adicionar("triturada", "Textura triturada", "🍽");
+        necessidades.triturada.utentes.push(nomeUtente);
+      }
+
+      if (textura.includes("pastosa")) {
+        adicionar("pastosa", "Textura pastosa", "🍽");
+        necessidades.pastosa.utentes.push(nomeUtente);
+      }
+
+      if (textura.includes("espessada")) {
+        adicionar("espessada", "Líquidos espessados", "💧");
+        necessidades.espessada.utentes.push(nomeUtente);
+      }
+
+      if (textura.includes("liquida")) {
+        adicionar("liquida", "Dieta líquida", "🥣");
+        necessidades.liquida.utentes.push(nomeUtente);
+      }
+    });
+
+    return Object.values(necessidades);
+  }
+
+  function obterEtiquetasAlternativa(ficha, necessidades = []) {
+    const texto = normalizarTexto(`
+      ${ficha?.nome || ""}
+      ${ficha?.categoria || ""}
+      ${ficha?.tipo || ""}
+      ${ficha?.alergenios || ""}
+      ${ficha?.observacoes || ""}
+      ${(ficha?.ingredientes || []).map((item) => item.nome).join(" ")}
+    `);
+
+    const etiquetas = [];
+
+    necessidades.forEach((necessidade) => {
+      if (necessidade.chave === "diabetica") etiquetas.push("Dieta diabética");
+      if (necessidade.chave === "hipossodica") etiquetas.push("Hipossódica");
+      if (necessidade.chave === "sem-lactose") etiquetas.push("Sem lactose");
+      if (necessidade.chave === "sem-gluten") etiquetas.push("Sem glúten");
+      if (necessidade.chave === "triturada") etiquetas.push("Textura triturada");
+      if (necessidade.chave === "pastosa") etiquetas.push("Textura pastosa");
+      if (necessidade.chave === "liquida") etiquetas.push("Dieta líquida");
+      if (necessidade.chave === "espessada") etiquetas.push("Líquidos espessados");
+    });
+
+    if (texto.includes("creme") || texto.includes("sopa") || texto.includes("pure") || texto.includes("puré")) {
+      etiquetas.push("Textura adaptável");
+    }
+
+    return [...new Set(etiquetas)].slice(0, 3);
+  }
+
+  function obterAlternativasReceita(fichaAtual, refeicaoAtual) {
+    if (!fichaAtual) return [];
+
+    const necessidades = obterNecessidadesReceita(fichaAtual);
+
+    if (necessidades.length === 0) return [];
+
+    const alertasTexto = normalizarTexto(
+      obterAlertasReceita(fichaAtual).join(" ")
+    );
 
     const precisaSemLactose =
-      alertasTexto.includes("lactose") ||
-      alertasTexto.includes("leite");
-
-    const precisaSemGluten =
-      alertasTexto.includes("gluten") ||
-      alertasTexto.includes("gluten");
-
+      alertasTexto.includes("lactose") || alertasTexto.includes("leite");
+    const precisaSemGluten = alertasTexto.includes("gluten");
     const precisaSemOvo = alertasTexto.includes("ovo");
     const precisaSemPeixe = alertasTexto.includes("peixe");
     const precisaSemMarisco = alertasTexto.includes("marisco");
@@ -599,11 +715,35 @@ export default function Ementa() {
 
       if (String(ficha.id) === String(fichaAtual.id)) return false;
 
-      if (precisaSemLactose && contemAlgum(texto, ["leite", "lactose", "iogurte", "queijo", "manteiga", "natas", "bechamel"])) {
+      if (
+        precisaSemLactose &&
+        contemAlgum(texto, [
+          "leite",
+          "lactose",
+          "iogurte",
+          "queijo",
+          "manteiga",
+          "natas",
+          "bechamel",
+        ])
+      ) {
         return false;
       }
 
-      if (precisaSemGluten && contemAlgum(texto, ["gluten", "glúten", "pao", "pão", "massa", "farinha", "bolacha", "cereais", "torrada"])) {
+      if (
+        precisaSemGluten &&
+        contemAlgum(texto, [
+          "gluten",
+          "glúten",
+          "pao",
+          "pão",
+          "massa",
+          "farinha",
+          "bolacha",
+          "cereais",
+          "torrada",
+        ])
+      ) {
         return false;
       }
 
@@ -656,19 +796,29 @@ export default function Ementa() {
 
     const candidatas = obterFichasPorRefeicao(refeicaoAtual)
       .filter(eCompativel)
-      .map((ficha) => ({
-        ficha,
-        alertas: obterAlertasReceita(ficha).length,
-        custo: obterCustoPorDose(ficha),
-        stock: calcularDisponibilidadeStock(ficha).percentagem,
-      }))
+      .map((ficha) => {
+        const stock = calcularDisponibilidadeStock(ficha).percentagem;
+        const alertas = obterAlertasReceita(ficha).length;
+        const custo = obterCustoPorDose(ficha);
+        const kcal = obterKcal(ficha);
+        const etiquetas = obterEtiquetasAlternativa(ficha, necessidades);
+
+        return {
+          ficha,
+          alertas,
+          custo,
+          kcal,
+          stock,
+          etiquetas,
+        };
+      })
       .sort((a, b) => {
         if (a.alertas !== b.alertas) return a.alertas - b.alertas;
         if (b.stock !== a.stock) return b.stock - a.stock;
         return a.custo - b.custo;
       });
 
-    return candidatas[0]?.ficha || null;
+    return candidatas.slice(0, 3);
   }
 
   async function gerarEmentaIA() {
@@ -961,36 +1111,277 @@ export default function Ementa() {
   );
 
   function exportarEmentaPDF() {
-    const doc = new jsPDF("landscape");
+    const doc = new jsPDF("p", "mm", "a4");
 
-    doc.setFontSize(18);
-    doc.text("Ementa Semanal - IPSS", 14, 18);
+    const verde = [22, 101, 52];
+    const verdeClaro = [236, 253, 245];
+    const laranja = [194, 65, 12];
+    const cinza = [71, 85, 105];
+    const cinzaClaro = [241, 245, 249];
+
+    const margem = 14;
+    const larguraPagina = 210;
+    const larguraConteudo = larguraPagina - margem * 2;
+
+    let y = 44;
+
+    function verificarPagina(alturaNecessaria = 20) {
+      if (y + alturaNecessaria > 282) {
+        doc.addPage();
+        y = 18;
+      }
+    }
+
+    function textoSeguro(valor) {
+      return String(valor || "-")
+        .replace(/[⚠ℹ✅🍽💚💰🔥🥛🌾🥚🐟🧂👤💧🥣•]/g, "")
+        .replace(/[→]/g, "-")
+        .replace(/[★☆]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function escreverLinhas(texto, x, yInicial, largura, alturaLinha = 5) {
+      const linhas = doc.splitTextToSize(textoSeguro(texto), largura);
+
+      linhas.forEach((linha, index) => {
+        doc.text(linha, x, yInicial + index * alturaLinha);
+      });
+
+      return linhas.length * alturaLinha;
+    }
+
+    doc.setFillColor(...verde);
+    doc.rect(0, 0, 210, 34, "F");
+
+    doc.setFontSize(22);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Ementa Semanal", margem, 15);
 
     doc.setFontSize(10);
-    doc.text(`Custo semanal estimado: ${custoSemanal.toFixed(2)} €`, 14, 26);
-    doc.text(`Energia semanal estimada: ${kcalSemanais.toFixed(0)} kcal`, 14, 32);
-    doc.text(`Refeições planeadas: ${receitasPlaneadas.length}`, 14, 38);
+    doc.text("Plano alimentar com alternativas e adaptações para IPSS", margem, 23);
+    doc.text(`Exportado em ${new Date().toLocaleDateString("pt-PT")}`, margem, 29);
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(11);
 
     autoTable(doc, {
-      startY: 46,
-      head: [["Dia", ...refeicoes]],
-      body: diasSemana.map((dia) => [
-        dia,
-        ...refeicoes.map((refeicao) => {
-          const receitaId = ementa[dia]?.[refeicao];
-          const ficha = obterFicha(receitaId);
-          return ficha ? ficha.nome : "-";
-        }),
-      ]),
-      styles: {
-        fontSize: 8,
-      },
+      startY: y,
+      head: [["Indicador", "Valor"]],
+      body: [
+        ["Refeições planeadas", receitasPlaneadas.length],
+        ["Dias com ementa", numeroDiasComEmenta],
+        ["Energia semanal estimada", `${kcalSemanais.toFixed(0)} kcal`],
+        ["Produtos em falta para compras", listaComprasSemanal.length],
+      ],
+      theme: "grid",
       headStyles: {
-        fillColor: [20, 92, 42],
+        fillColor: verde,
+        textColor: [255, 255, 255],
       },
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+      },
+      columnStyles: {
+        0: { cellWidth: 80, fontStyle: "bold" },
+        1: { cellWidth: 95 },
+      },
+      margin: { left: margem, right: margem },
     });
 
-    doc.save("ementa-semanal-ipss.pdf");
+    y = doc.lastAutoTable.finalY + 12;
+
+    diasSemana.forEach((dia) => {
+      const refeicoesDoDia = refeicoes
+        .map((refeicao) => {
+          const receitaId = ementa[dia]?.[refeicao];
+          const ficha = obterFicha(receitaId);
+          return { refeicao, ficha };
+        })
+        .filter((item) => item.ficha);
+
+      if (refeicoesDoDia.length === 0) return;
+
+      verificarPagina(30);
+
+      doc.setFillColor(...verde);
+      doc.roundedRect(margem, y, larguraConteudo, 9, 2, 2, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(13);
+      doc.text(dia, margem + 4, y + 6.2);
+      y += 15;
+
+      refeicoesDoDia.forEach(({ refeicao, ficha }) => {
+        const alertas = obterAlertasReceita(ficha).map(textoSeguro);
+        const alternativas = obterAlternativasReceita(ficha, refeicao);
+        const alturaBase = 26 + Math.min(alertas.length, 6) * 5 + alternativas.length * 12;
+
+        verificarPagina(Math.min(alturaBase, 85));
+
+        doc.setFillColor(...cinzaClaro);
+        doc.roundedRect(margem, y, larguraConteudo, 9, 2, 2, "F");
+        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(11);
+        doc.text(textoSeguro(refeicao), margem + 3, y + 6.2);
+        doc.setFontSize(9);
+        doc.setTextColor(...cinza);
+        doc.text("Receita principal", 160, y + 6.2);
+        y += 14;
+
+        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(11);
+        doc.text(textoSeguro(ficha.nome), margem + 4, y);
+
+        doc.setFontSize(9);
+        doc.setTextColor(...cinza);
+        doc.text(
+          `Energia: ${Number(ficha.nutrientesTotais?.kcal || 0).toFixed(0)} kcal`,
+          margem + 4,
+          y + 6
+        );
+        y += 13;
+
+        if (alertas.length > 0) {
+          verificarPagina(12 + Math.min(alertas.length, 8) * 5);
+
+          doc.setFillColor(255, 247, 237);
+          doc.roundedRect(margem + 4, y, larguraConteudo - 8, 8, 2, 2, "F");
+          doc.setTextColor(...laranja);
+          doc.setFontSize(10);
+          doc.text(`Avisos / necessidades específicas (${alertas.length})`, margem + 7, y + 5.6);
+          y += 12;
+
+          doc.setFontSize(8.5);
+          doc.setTextColor(15, 23, 42);
+
+          alertas.slice(0, 8).forEach((alerta) => {
+            verificarPagina(6);
+            const altura = escreverLinhas(`- ${alerta}`, margem + 8, y, larguraConteudo - 16, 4.5);
+            y += Math.max(5, altura);
+          });
+
+          if (alertas.length > 8) {
+            doc.setTextColor(...cinza);
+            doc.text(`- Mais ${alertas.length - 8} aviso(s) na aplicação`, margem + 8, y);
+            y += 5;
+          }
+        }
+
+        if (alternativas.length > 0) {
+          verificarPagina(16 + alternativas.length * 15);
+
+          doc.setFillColor(...verdeClaro);
+          doc.roundedRect(margem + 4, y, larguraConteudo - 8, 8, 2, 2, "F");
+          doc.setTextColor(...verde);
+          doc.setFontSize(10);
+          doc.text("Alternativas e adaptações sugeridas", margem + 7, y + 5.6);
+          y += 12;
+
+          alternativas.forEach((alternativa, index) => {
+            verificarPagina(18);
+
+            const etiquetas = alternativa.etiquetas?.length
+              ? alternativa.etiquetas.map(textoSeguro).join(" - ")
+              : "Sugestão de apoio";
+
+            doc.setTextColor(15, 23, 42);
+            doc.setFontSize(9.5);
+            doc.text(
+              `${index + 1}. ${textoSeguro(alternativa.ficha.nome)}`,
+              margem + 8,
+              y
+            );
+
+            if (index === 0) {
+              doc.setTextColor(...verde);
+              doc.setFontSize(8);
+              doc.text("Mais adequada", 165, y);
+            }
+
+            y += 5;
+            doc.setTextColor(...cinza);
+            doc.setFontSize(8.5);
+            const alturaEtiquetas = escreverLinhas(etiquetas, margem + 12, y, 125, 4.3);
+
+            doc.text(`Kcal: ${Number(alternativa.kcal || 0).toFixed(0)}`, 170, y);
+
+            y += Math.max(6, alturaEtiquetas + 1);
+          });
+
+          doc.setTextColor(...verde);
+          doc.setFontSize(8.5);
+          doc.text(
+            "Nota: as alternativas são sugestões de apoio e não substituem a receita principal da ementa.",
+            margem + 8,
+            y
+          );
+          y += 7;
+        }
+
+        y += 7;
+      });
+    });
+
+    doc.addPage();
+    y = 18;
+
+    doc.setTextColor(...verde);
+    doc.setFontSize(18);
+    doc.text("Indicações técnicas para a cozinha", margem, y);
+    y += 10;
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(10);
+
+    const notas = [
+      "A receita principal deve ser preparada para os utentes sem restrições específicas.",
+      "As alternativas devem ser preparadas em separado e servidas apenas aos utentes identificados.",
+      "Confirmar sempre dietas, alergias e texturas alimentares antes da distribuição.",
+      "Em caso de dúvida, validar com a equipa técnica/nutrição antes do serviço.",
+      "Este documento é um apoio operacional e não substitui a avaliação técnica individual.",
+    ];
+
+    notas.forEach((nota) => {
+      const altura = escreverLinhas(`- ${nota}`, margem, y, larguraConteudo, 5);
+      y += altura + 2;
+    });
+
+    y += 8;
+
+    if (listaComprasSemanal.length > 0) {
+      autoTable(doc, {
+        startY: y,
+        head: [["Produto em falta", "Quantidade", "Observação"]],
+        body: listaComprasSemanal.map((item) => [
+          textoSeguro(item.nome),
+          formatarQuantidade(Math.abs(item.diferenca)),
+          "Comprar para cumprir a ementa semanal",
+        ]),
+        theme: "grid",
+        headStyles: {
+          fillColor: verde,
+          textColor: [255, 255, 255],
+        },
+        styles: {
+          fontSize: 8.5,
+          cellPadding: 3,
+        },
+        margin: { left: margem, right: margem },
+      });
+
+      y = doc.lastAutoTable.finalY + 12;
+    }
+
+    verificarPagina(24);
+
+    doc.setTextColor(...cinza);
+    doc.setFontSize(10);
+    doc.text("Responsável pela cozinha: ______________________________", margem, y);
+    y += 9;
+    doc.text("Data: ____ / ____ / ______", margem, y);
+
+    doc.save("ementa-semanal-impressao-ipss.pdf");
   }
 
   return (
@@ -1135,7 +1526,7 @@ export default function Ementa() {
                         ))}
                       </select>
 
-                      {ficha && (
+                      {ficha ? (
                         <>
                           <div className="ementa-info">
                             <span>
@@ -1218,15 +1609,208 @@ export default function Ementa() {
                                 </div>
                               </details>
 
+                              <div
+                                style={{
+                                  marginTop: "16px",
+                                  padding: "14px",
+                                  border: "1px solid #bbf7d0",
+                                  background: "#f0fdf4",
+                                  borderRadius: "16px",
+                                }}
+                              >
+                                <strong style={{ color: "#166534" }}>
+                                  Receita principal da ementa
+                                </strong>
+
+                                <p
+                                  style={{
+                                    margin: "8px 0 0",
+                                    fontSize: "13px",
+                                    color: "#166534",
+                                  }}
+                                >
+                                  Esta refeição mantém-se como prato principal. As alternativas abaixo são apenas sugestões para utentes com necessidades específicas.
+                                </p>
+                              </div>
+
+                              {obterAlternativasReceita(ficha, refeicao).length > 0 ? (
+                                <div style={{ marginTop: "18px" }}>
+                                  <div
+                                    style={{
+                                      fontWeight: "800",
+                                      color: "#166534",
+                                      marginBottom: "4px",
+                                      fontSize: "16px",
+                                    }}
+                                  >
+                                    💚 Alternativas e adaptações sugeridas
+                                  </div>
+
+                                  <p
+                                    style={{
+                                      margin: "0 0 12px",
+                                      color: "#475569",
+                                      fontSize: "13px",
+                                    }}
+                                  >
+                                    Sugestões adicionais para dietas, alergias e texturas. Não substituem a receita principal.
+                                  </p>
+
+                                  <div
+                                    style={{
+                                      border: "1px solid #86efac",
+                                      borderRadius: "16px",
+                                      overflow: "hidden",
+                                      background: "white",
+                                    }}
+                                  >
+                                    {obterAlternativasReceita(ficha, refeicao).map(
+                                      (alternativa, index) => (
+                                        <div
+                                          key={alternativa.ficha.id}
+                                          style={{
+                                            display: "grid",
+                                            gridTemplateColumns: "110px 1fr auto",
+                                            gap: "12px",
+                                            alignItems: "center",
+                                            padding: "14px",
+                                            borderBottom:
+                                              index === obterAlternativasReceita(ficha, refeicao).length - 1
+                                                ? "none"
+                                                : "1px solid #e5e7eb",
+                                          }}
+                                        >
+                                          <div>
+                                            <span
+                                              style={{
+                                                display: "inline-block",
+                                                background:
+                                                  index === 0 ? "#dcfce7" : "#f0fdf4",
+                                                color: "#166534",
+                                                padding: "5px 10px",
+                                                borderRadius: "999px",
+                                                fontSize: "12px",
+                                                fontWeight: "800",
+                                              }}
+                                            >
+                                              {index === 0
+                                                ? "Mais adequada"
+                                                : `Alternativa ${index + 1}`}
+                                            </span>
+                                          </div>
+
+                                          <div>
+                                            <strong
+                                              style={{
+                                                display: "block",
+                                                color: "#0f172a",
+                                                fontSize: "15px",
+                                                marginBottom: "6px",
+                                              }}
+                                            >
+                                              {alternativa.ficha.nome}
+                                            </strong>
+
+                                            <div
+                                              style={{
+                                                display: "flex",
+                                                flexWrap: "wrap",
+                                                gap: "6px",
+                                                marginBottom: "8px",
+                                              }}
+                                            >
+                                              {alternativa.etiquetas.map((etiqueta) => (
+                                                <span
+                                                  key={etiqueta}
+                                                  style={{
+                                                    background: "#eef2ff",
+                                                    color: "#3730a3",
+                                                    padding: "4px 8px",
+                                                    borderRadius: "999px",
+                                                    fontSize: "12px",
+                                                    fontWeight: "600",
+                                                  }}
+                                                >
+                                                  {etiqueta}
+                                                </span>
+                                              ))}
+                                            </div>
+
+                                            <div
+                                              style={{
+                                                display: "flex",
+                                                gap: "14px",
+                                                fontSize: "13px",
+                                                color: "#475569",
+                                              }}
+                                            >
+                                              <span>
+                                                💰 {alternativa.custo.toFixed(2)} €
+                                              </span>
+
+                                              <span>
+                                                🔥 {alternativa.kcal.toFixed(0)} kcal
+                                              </span>
+                                            </div>
+                                          </div>
+
+                                          <div
+                                            style={{
+                                              color: "#166534",
+                                              fontSize: "13px",
+                                              fontWeight: "700",
+                                              textAlign: "right",
+                                              minWidth: "110px",
+                                            }}
+                                          >
+                                            Sugestão de apoio
+                                          </div>
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
+
+                                  <div
+                                    style={{
+                                      marginTop: "12px",
+                                      padding: "12px",
+                                      background: "#ecfdf5",
+                                      border: "1px solid #bbf7d0",
+                                      borderRadius: "14px",
+                                      color: "#166534",
+                                      fontSize: "13px",
+                                      lineHeight: "1.5",
+                                    }}
+                                  >
+                                    ✅ A receita principal mantém-se ativa na ementa. As alternativas devem ser preparadas apenas para os utentes identificados nos avisos.
+                                  </div>
+                                </div>
+                              ) : (
+                                <div
+                                  style={{
+                                    marginTop: "12px",
+                                    background: "#eff6ff",
+                                    border: "1px solid #bfdbfe",
+                                    color: "#1d4ed8",
+                                    padding: "12px",
+                                    borderRadius: "12px",
+                                    fontSize: "13px",
+                                    lineHeight: "1.5",
+                                  }}
+                                >
+                                  ℹ Não existem alternativas adequadas disponíveis nas fichas técnicas para esta refeição.
+                                </div>
+                              )}
+
                               <button
                                 type="button"
                                 style={{
-                                  marginTop: "10px",
+                                  marginTop: "12px",
                                   width: "100%",
                                   background: "#14532d",
                                   color: "white",
                                   border: "none",
-                                  padding: "11px 12px",
+                                  padding: "12px",
                                   borderRadius: "12px",
                                   cursor: "pointer",
                                   fontWeight: "700",
@@ -1234,32 +1818,43 @@ export default function Ementa() {
                                   boxShadow: "0 8px 18px rgba(20, 83, 45, 0.18)",
                                 }}
                                 onClick={() => {
-                                  const alternativa = obterAlternativaReceita(
+                                  const alternativas = obterAlternativasReceita(
                                     ficha,
                                     refeicao
                                   );
 
-                                  if (!alternativa) {
+                                  if (alternativas.length === 0) {
                                     alert(
-                                      "Não foi encontrada alternativa adequada para esta refeição. Cria primeiro uma ficha técnica compatível com a dieta/alergia identificada."
+                                      "Não existem alternativas adequadas disponíveis. Cria fichas técnicas compatíveis com as dietas, alergias ou texturas identificadas."
                                     );
                                     return;
                                   }
 
-                                  const confirmar = window.confirm(
-                                    `Substituir "${ficha.nome}" por "${alternativa.nome}"?`
+                                  alert(
+                                    `Foram identificadas ${alternativas.length} alternativa(s) de apoio. A receita principal mantém-se ativa na ementa.`
                                   );
-
-                                  if (!confirmar) return;
-
-                                  atualizarEmenta(dia, refeicao, alternativa.id);
                                 }}
                               >
-                                🍽 Criar alternativa automática
+                                🍽 Criar alternativas automáticas
                               </button>
                             </div>
                           )}
                         </>
+                      ) : (
+                        <div
+                          style={{
+                            marginTop: "12px",
+                            background: "#eff6ff",
+                            border: "1px solid #bfdbfe",
+                            color: "#1d4ed8",
+                            padding: "12px",
+                            borderRadius: "12px",
+                            fontSize: "13px",
+                            lineHeight: "1.5",
+                          }}
+                        >
+                          ℹ Selecione uma receita para ver informações, avisos e alternativas adequadas.
+                        </div>
                       )}
                     </div>
                   );

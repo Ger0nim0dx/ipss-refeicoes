@@ -997,11 +997,40 @@ export default function Ementa() {
   }
 
   function formatarQuantidade(gramas) {
-    if (gramas >= 1000) {
-      return `${(gramas / 1000).toFixed(2)} kg`;
+    const valor = Number(gramas || 0);
+
+    if (valor >= 1000) {
+      return `${(valor / 1000).toFixed(2)} kg`;
     }
 
-    return `${gramas.toFixed(0)} g`;
+    return `${valor.toFixed(0)} g`;
+  }
+
+  function converterDeGramas(gramas, unidade) {
+    const valor = Number(gramas || 0);
+
+    if (unidade === "kg") return valor / 1000;
+    if (unidade === "g") return valor;
+    if (unidade === "L") return valor / 1000;
+    if (unidade === "ml") return valor;
+    if (unidade === "un") return valor / 100;
+
+    return valor;
+  }
+
+  function formatarQuantidadeNaUnidade(gramas, unidadePreferencial) {
+    const unidade = unidadePreferencial || "g";
+    const valorConvertido = converterDeGramas(gramas, unidade);
+
+    if (unidade === "kg" || unidade === "L") {
+      return `${valorConvertido.toFixed(2)} ${unidade}`;
+    }
+
+    if (unidade === "un") {
+      return `${Math.ceil(valorConvertido)} un`;
+    }
+
+    return `${valorConvertido.toFixed(0)} ${unidade}`;
   }
 
   const receitasPlaneadas = [];
@@ -1068,16 +1097,21 @@ export default function Ementa() {
     item.ficha.ingredientes?.forEach((ingrediente) => {
       const nomeNormalizado = normalizarTexto(ingrediente.nome);
 
+      const unidadeIngrediente = ingrediente.unidade || "g";
+      const quantidadeEmGramas = converterParaGramas(
+        ingrediente.quantidade,
+        unidadeIngrediente
+      );
+
       if (!acumulador[nomeNormalizado]) {
         acumulador[nomeNormalizado] = {
           nome: ingrediente.nome,
           quantidadeNecessaria: 0,
+          unidadeOrigem: unidadeIngrediente,
         };
       }
 
-      acumulador[nomeNormalizado].quantidadeNecessaria += Number(
-        ingrediente.quantidade || 0
-      );
+      acumulador[nomeNormalizado].quantidadeNecessaria += quantidadeEmGramas;
     });
 
     return acumulador;
@@ -1103,6 +1137,7 @@ export default function Ementa() {
       stockDisponivel,
       diferenca,
       suficiente: diferenca >= 0,
+      unidadePreferencial: produtoStock?.unidade || ingrediente.unidadeOrigem || "g",
     };
   });
 
@@ -1355,7 +1390,7 @@ export default function Ementa() {
         head: [["Produto em falta", "Quantidade", "Observação"]],
         body: listaComprasSemanal.map((item) => [
           textoSeguro(item.nome),
-          formatarQuantidade(Math.abs(item.diferenca)),
+          formatarQuantidadeNaUnidade(Math.abs(item.diferenca), item.unidadePreferencial),
           "Comprar para cumprir a ementa semanal",
         ]),
         theme: "grid",
@@ -2003,7 +2038,7 @@ export default function Ementa() {
               {listaIngredientesSemana.map((item, index) => (
                 <tr key={index}>
                   <td>{item.nome}</td>
-                  <td>{formatarQuantidade(item.quantidadeNecessaria)}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{formatarQuantidade(item.quantidadeNecessaria)}</td>
                 </tr>
               ))}
             </tbody>
@@ -2032,9 +2067,9 @@ export default function Ementa() {
               {verificacaoStockSemanal.map((item, index) => (
                 <tr key={index}>
                   <td>{item.nome}</td>
-                  <td>{formatarQuantidade(item.quantidadeNecessaria)}</td>
-                  <td>{formatarQuantidade(item.stockDisponivel)}</td>
-                  <td>{formatarQuantidade(Math.abs(item.diferenca))}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{formatarQuantidade(item.quantidadeNecessaria)}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{formatarQuantidadeNaUnidade(item.stockDisponivel, item.unidadePreferencial)}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{formatarQuantidadeNaUnidade(Math.abs(item.diferenca), item.unidadePreferencial)}</td>
                   <td>
                     {item.suficiente ? (
                       <span style={{ color: "#16a34a", fontWeight: "bold" }}>
@@ -2070,7 +2105,7 @@ export default function Ementa() {
               {listaComprasSemanal.map((item, index) => (
                 <tr key={index}>
                   <td>{item.nome}</td>
-                  <td>{formatarQuantidade(Math.abs(item.diferenca))}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>{formatarQuantidadeNaUnidade(Math.abs(item.diferenca), item.unidadePreferencial)}</td>
                   <td>Comprar para cumprir a ementa semanal</td>
                 </tr>
               ))}

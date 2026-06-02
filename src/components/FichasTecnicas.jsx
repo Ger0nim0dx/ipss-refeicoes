@@ -718,7 +718,10 @@ export default function FichasTecnicas() {
 
         <h3>Ingredientes</h3>
 
-        <table className="dashboard-table fichas-table">
+        <table
+          className="dashboard-table fichas-table"
+          style={{ whiteSpace: "nowrap" }}
+        >
           <thead>
             <tr>
               <th>Tipo</th>

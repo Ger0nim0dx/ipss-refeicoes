@@ -848,7 +848,9 @@ export default function App() {
             </div>
           </header>
 
-          {pagina === "dashboard" && <Dashboard />}
+          {pagina === "dashboard" && (
+  <Dashboard onNavigate={setPagina} />
+)}
 
           {pagina === "estatisticas" && (
             <Estatisticas />

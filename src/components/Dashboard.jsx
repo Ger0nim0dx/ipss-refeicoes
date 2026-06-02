@@ -16,6 +16,7 @@ import {
   Users,
   Trash2,
   Leaf,
+  CalendarDays,
 } from "lucide-react";
 
 import {
@@ -36,7 +37,7 @@ import {
 
 import { supabase } from "../supabaseClient";
 
-function Dashboard() {
+function Dashboard({ onNavigate } = {}) {
   const [dadosIPSS, setDadosIPSS] = useState({});
   const [stocks, setStocks] = useState([]);
   const [movimentos, setMovimentos] = useState([]);
@@ -876,6 +877,69 @@ function Dashboard() {
     });
   }
 
+
+  const diaAtual = diasSemana[(hoje.getDay() + 6) % 7];
+  const ementaHoje = ementaAtual[diaAtual] || {};
+
+  const refeicoesHoje = Object.entries(ementaHoje)
+    .map(([refeicao, receitaId]) => {
+      const ficha = fichas.find((item) => String(item.id) === String(receitaId));
+
+      return {
+        refeicao,
+        ficha,
+      };
+    })
+    .filter((item) => item.ficha);
+
+  const utentesComNecessidades = utentes.filter((utente) => {
+    const dieta = String(utente.dieta || "").trim();
+    const alergias = String(utente.alergias || "").trim();
+    const textura = String(utente.textura_alimentar || "").trim();
+
+    return dieta || alergias || textura;
+  });
+
+  const alertasPrioritarios = [
+    ...produtosExpirados.slice(0, 2).map((item) => ({
+      tipo: "crítico",
+      titulo: item.produto || item.nome || "Produto expirado",
+      texto: "Validade ultrapassada. Verificar antes de qualquer utilização.",
+      cor: "#dc2626",
+    })),
+
+    ...produtosAExpirar.slice(0, 2).map((item) => ({
+      tipo: "validade",
+      titulo: item.produto || item.nome || "Produto a expirar",
+      texto: "Produto com validade próxima. Priorizar utilização ou validação.",
+      cor: "#ea580c",
+    })),
+
+    ...produtosStockBaixo.slice(0, 2).map((item) => ({
+      tipo: "stock",
+      titulo: item.produto || item.nome || "Stock baixo",
+      texto: "Produto abaixo ou no limite do stock mínimo.",
+      cor: "#ca8a04",
+    })),
+  ].slice(0, 5);
+
+  function abrirModulo(id, nome) {
+    if (typeof onNavigate === "function") {
+      onNavigate(id);
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("navegar-app", {
+        detail: id,
+      })
+    );
+
+    setMensagemOperacional(
+      `Atalho selecionado: ${nome}. Se a página não abrir automaticamente, usa o menu lateral.`
+    );
+  }
+
   async function executarProducaoSelecionada() {
     if (diasSelecionados.length === 0) {
       alert("Seleciona pelo menos um dia para produzir.");
@@ -1045,6 +1109,130 @@ function Dashboard() {
         </div>
 
         <div className="data-box">{new Date().toLocaleDateString("pt-PT")}</div>
+      </div>
+
+      <div className="dashboard-section">
+        <h2>
+          <BrainCircuit size={22} /> Centro de Controlo Diário
+        </h2>
+
+        <p className="dashboard-subtitle">
+          Visão rápida para orientar o trabalho da cozinha no dia de hoje.
+        </p>
+
+        <div className="dashboard-cards">
+          <div className="dashboard-card destaque">
+            <CalendarDays size={30} />
+            <h3>Hoje</h3>
+            <p>{refeicoesHoje.length}</p>
+            <span>{diaAtual} · refeições planeadas</span>
+          </div>
+
+          <div className="dashboard-card">
+            <Users size={30} />
+            <h3>Necessidades especiais</h3>
+            <p>{utentesComNecessidades.length}</p>
+            <span>Dietas, alergias ou texturas</span>
+          </div>
+
+          <div className="dashboard-card">
+            <AlertTriangle size={30} />
+            <h3>Alertas críticos</h3>
+            <p>{produtosExpirados.length + alertasHaccp}</p>
+            <span>Validade e HACCP</span>
+          </div>
+
+          <div className="dashboard-card">
+            <ShoppingCart size={30} />
+            <h3>Compras urgentes</h3>
+            <p>{comprasPendentes}</p>
+            <span>Stock baixo ou expirado</span>
+          </div>
+
+          <div className="dashboard-card">
+            <Trash2 size={30} />
+            <h3>Desperdício</h3>
+            <p>{taxaDesperdicioExecutiva.toFixed(1)}%</p>
+            <span>Taxa acumulada</span>
+          </div>
+        </div>
+
+        <div className="historico-grid">
+          <div className="historico-card">
+            <h3>Resumo operacional de hoje</h3>
+
+            {refeicoesHoje.length === 0 ? (
+              <p>Ainda não existem refeições planeadas para hoje.</p>
+            ) : (
+              refeicoesHoje.map((item) => (
+                <p key={item.refeicao}>
+                  <strong>{item.refeicao}:</strong> {item.ficha.nome}
+                </p>
+              ))
+            )}
+          </div>
+
+          <div className="historico-card">
+            <h3>Alertas prioritários</h3>
+
+            {alertasPrioritarios.length === 0 ? (
+              <p>Não existem alertas prioritários neste momento.</p>
+            ) : (
+              alertasPrioritarios.map((alerta, index) => (
+                <div
+                  key={index}
+                  style={{
+                    borderLeft: `5px solid ${alerta.cor}`,
+                    paddingLeft: "12px",
+                    marginBottom: "14px",
+                  }}
+                >
+                  <strong>{alerta.titulo}</strong>
+                  <p style={{ marginTop: "4px" }}>{alerta.texto}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: "12px",
+            flexWrap: "wrap",
+            marginTop: "18px",
+          }}
+        >
+          <button
+            className="botao-principal"
+            onClick={() => abrirModulo("mapa-producao", "Mapa Diário")}
+          >
+            Abrir mapa diário
+          </button>
+
+          <button
+            className="botao-secundario"
+            onClick={() => abrirModulo("producoes", "Produções")}
+          >
+            Registar produção
+          </button>
+
+          <button
+            className="botao-secundario"
+            onClick={() =>
+              abrirModulo("compras-inteligentes", "Compras Inteligentes")
+            }
+          >
+            Criar compras
+          </button>
+
+          <button
+            className="botao-secundario"
+            onClick={() => abrirModulo("desperdicio", "Desperdício")}
+          >
+            Registar desperdício
+          </button>
+        </div>
       </div>
 
       <div className="dashboard-section">

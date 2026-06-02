@@ -58,6 +58,7 @@ import Utilizadores from "./components/Utilizadores";
 import AssistenteIA from "./components/AssistenteIA";
 import Analytics from "./components/Analytics";
 import ComprasInteligentes from "./components/ComprasInteligentes";
+import MapaDiarioProducao from "./components/MapaDiarioProducao";
 
 import AccessibilityPanel from "./AccessibilityPanel";
 import "./App.css";
@@ -315,6 +316,18 @@ export default function App() {
     {
       id: "planeamento",
       label: "Planeamento",
+      icon: ChefHat,
+      perfis: [
+        "admin",
+        "direcao",
+        "cozinha",
+        "nutricionista",
+      ],
+    },
+
+    {
+      id: "mapa-producao",
+      label: "Mapa Diário",
       icon: ChefHat,
       perfis: [
         "admin",
@@ -755,6 +768,10 @@ export default function App() {
 
           {pagina === "planeamento" && (
             <PlaneamentoProducao />
+          )}
+
+          {pagina === "mapa-producao" && (
+            <MapaDiarioProducao />
           )}
 
           {pagina === "desperdicio" && (

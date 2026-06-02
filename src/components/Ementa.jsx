@@ -551,6 +551,126 @@ export default function Ementa() {
     return pontos;
   }
 
+
+  function obterAlternativaReceita(fichaAtual, refeicaoAtual) {
+    if (!fichaAtual) return null;
+
+    const alertasTexto = normalizarTexto(obterAlertasReceita(fichaAtual).join(" "));
+
+    const precisaSemLactose =
+      alertasTexto.includes("lactose") ||
+      alertasTexto.includes("leite");
+
+    const precisaSemGluten =
+      alertasTexto.includes("gluten") ||
+      alertasTexto.includes("gluten");
+
+    const precisaSemOvo = alertasTexto.includes("ovo");
+    const precisaSemPeixe = alertasTexto.includes("peixe");
+    const precisaSemMarisco = alertasTexto.includes("marisco");
+    const precisaSemSoja = alertasTexto.includes("soja");
+    const precisaSemFrutosSecos = alertasTexto.includes("frutos");
+    const precisaDiabetica = alertasTexto.includes("diabet");
+    const precisaHipossodica =
+      alertasTexto.includes("hipossod") || alertasTexto.includes("sem sal");
+    const precisaTriturada = alertasTexto.includes("triturada");
+    const precisaPastosa = alertasTexto.includes("pastosa");
+    const precisaLiquidosEspessados = alertasTexto.includes("espessados");
+    const precisaLiquida = alertasTexto.includes("liquida");
+
+    function textoFicha(ficha) {
+      return normalizarTexto(`
+        ${ficha?.nome || ""}
+        ${ficha?.categoria || ""}
+        ${ficha?.tipo || ""}
+        ${ficha?.alergenios || ""}
+        ${ficha?.modoPreparacao || ""}
+        ${ficha?.observacoes || ""}
+        ${(ficha?.ingredientes || []).map((item) => item.nome).join(" ")}
+      `);
+    }
+
+    function contemAlgum(texto, termos) {
+      return termos.some((termo) => texto.includes(normalizarTexto(termo)));
+    }
+
+    function eCompativel(ficha) {
+      const texto = textoFicha(ficha);
+
+      if (String(ficha.id) === String(fichaAtual.id)) return false;
+
+      if (precisaSemLactose && contemAlgum(texto, ["leite", "lactose", "iogurte", "queijo", "manteiga", "natas", "bechamel"])) {
+        return false;
+      }
+
+      if (precisaSemGluten && contemAlgum(texto, ["gluten", "glúten", "pao", "pão", "massa", "farinha", "bolacha", "cereais", "torrada"])) {
+        return false;
+      }
+
+      if (precisaSemOvo && contemAlgum(texto, ["ovo", "ovos", "gema", "gemas", "omelete"])) {
+        return false;
+      }
+
+      if (precisaSemPeixe && contemAlgum(texto, ["peixe", "pescada", "bacalhau", "atum", "douradinhos"])) {
+        return false;
+      }
+
+      if (precisaSemMarisco && contemAlgum(texto, ["marisco", "crustaceos", "crustáceos", "moluscos", "camarao", "camarão"])) {
+        return false;
+      }
+
+      if (precisaSemSoja && contemAlgum(texto, ["soja"])) {
+        return false;
+      }
+
+      if (precisaSemFrutosSecos && contemAlgum(texto, ["amendoa", "amêndoa", "noz", "avelã", "frutos secos", "frutos de casca"])) {
+        return false;
+      }
+
+      if (precisaDiabetica && contemAlgum(texto, ["acucar", "açúcar", "mel", "compota", "doce", "bolo", "leite creme", "arroz doce", "gelatina"])) {
+        return false;
+      }
+
+      if (precisaHipossodica && contemAlgum(texto, ["chourico", "chouriço", "alheira", "fiambre", "enchido", "salsicha", "bacalhau salgado"])) {
+        return false;
+      }
+
+      if (precisaTriturada && !contemAlgum(texto, ["triturada", "triturado", "creme", "sopa", "pure", "puré", "papa"])) {
+        return false;
+      }
+
+      if (precisaPastosa && !contemAlgum(texto, ["pastosa", "creme", "pure", "puré", "papa", "sopa"])) {
+        return false;
+      }
+
+      if (precisaLiquida && !contemAlgum(texto, ["liquida", "líquida", "creme", "sopa", "caldo", "batido", "leite"])) {
+        return false;
+      }
+
+      if (precisaLiquidosEspessados && !contemAlgum(texto, ["espessado", "creme", "papa"])) {
+        return false;
+      }
+
+      return true;
+    }
+
+    const candidatas = obterFichasPorRefeicao(refeicaoAtual)
+      .filter(eCompativel)
+      .map((ficha) => ({
+        ficha,
+        alertas: obterAlertasReceita(ficha).length,
+        custo: obterCustoPorDose(ficha),
+        stock: calcularDisponibilidadeStock(ficha).percentagem,
+      }))
+      .sort((a, b) => {
+        if (a.alertas !== b.alertas) return a.alertas - b.alertas;
+        if (b.stock !== a.stock) return b.stock - a.stock;
+        return a.custo - b.custo;
+      });
+
+    return candidatas[0]?.ficha || null;
+  }
+
   async function gerarEmentaIA() {
     if (fichas.length === 0) {
       alert("Ainda não existem fichas técnicas registadas.");
@@ -1032,71 +1152,112 @@ export default function Ementa() {
                           </div>
 
                           {obterAlertasReceita(ficha).length > 0 && (
-                            <details
-                              style={{
-                                marginTop: "12px",
-                                background: "#fff7ed",
-                                border: "1px solid #fdba74",
-                                borderRadius: "14px",
-                                overflow: "hidden",
-                                transition: "0.2s",
-                              }}
-                            >
-                              <summary
+                            <div style={{ marginTop: "12px" }}>
+                              <details
                                 style={{
-                                  cursor: "pointer",
-                                  padding: "12px 14px",
-                                  fontWeight: "600",
-                                  color: "#c2410c",
-                                  listStyle: "none",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  userSelect: "none",
-                                  fontSize: "14px",
+                                  background: "#fff7ed",
+                                  border: "1px solid #fdba74",
+                                  borderRadius: "14px",
+                                  overflow: "hidden",
+                                  transition: "0.2s",
                                 }}
                               >
-                                <span>
-                                  ⚠ Ver avisos ({obterAlertasReceita(ficha).length})
-                                </span>
-
-                                <span
+                                <summary
                                   style={{
-                                    fontSize: "18px",
-                                    fontWeight: "bold",
+                                    cursor: "pointer",
+                                    padding: "12px 14px",
+                                    fontWeight: "600",
+                                    color: "#c2410c",
+                                    listStyle: "none",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    userSelect: "none",
+                                    fontSize: "14px",
                                   }}
                                 >
-                                  ⌄
-                                </span>
-                              </summary>
+                                  <span>
+                                    ⚠ Ver avisos ({obterAlertasReceita(ficha).length})
+                                  </span>
 
-                              <div
+                                  <span
+                                    style={{
+                                      fontSize: "18px",
+                                      fontWeight: "bold",
+                                    }}
+                                  >
+                                    ⌄
+                                  </span>
+                                </summary>
+
+                                <div
+                                  style={{
+                                    padding: "14px",
+                                    borderTop: "1px solid #fdba74",
+                                    fontSize: "13px",
+                                    lineHeight: "1.6",
+                                    background: "#fffaf5",
+                                  }}
+                                >
+                                  {obterAlertasReceita(ficha).map(
+                                    (alerta, index) => (
+                                      <div
+                                        key={index}
+                                        style={{
+                                          marginBottom: "10px",
+                                          display: "flex",
+                                          alignItems: "flex-start",
+                                          gap: "8px",
+                                        }}
+                                      >
+                                        <span>•</span>
+                                        <span>{alerta}</span>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              </details>
+
+                              <button
+                                type="button"
                                 style={{
-                                  padding: "14px",
-                                  borderTop: "1px solid #fdba74",
+                                  marginTop: "10px",
+                                  width: "100%",
+                                  background: "#14532d",
+                                  color: "white",
+                                  border: "none",
+                                  padding: "11px 12px",
+                                  borderRadius: "12px",
+                                  cursor: "pointer",
+                                  fontWeight: "700",
                                   fontSize: "13px",
-                                  lineHeight: "1.6",
-                                  background: "#fffaf5",
+                                  boxShadow: "0 8px 18px rgba(20, 83, 45, 0.18)",
+                                }}
+                                onClick={() => {
+                                  const alternativa = obterAlternativaReceita(
+                                    ficha,
+                                    refeicao
+                                  );
+
+                                  if (!alternativa) {
+                                    alert(
+                                      "Não foi encontrada alternativa adequada para esta refeição. Cria primeiro uma ficha técnica compatível com a dieta/alergia identificada."
+                                    );
+                                    return;
+                                  }
+
+                                  const confirmar = window.confirm(
+                                    `Substituir "${ficha.nome}" por "${alternativa.nome}"?`
+                                  );
+
+                                  if (!confirmar) return;
+
+                                  atualizarEmenta(dia, refeicao, alternativa.id);
                                 }}
                               >
-                                {obterAlertasReceita(ficha).map(
-                                  (alerta, index) => (
-                                    <div
-                                      key={index}
-                                      style={{
-                                        marginBottom: "10px",
-                                        display: "flex",
-                                        alignItems: "flex-start",
-                                        gap: "8px",
-                                      }}
-                                    >
-                                      <span>•</span>
-                                      <span>{alerta}</span>
-                                    </div>
-                                  )
-                                )}
-                              </div>
-                            </details>
+                                🍽 Criar alternativa automática
+                              </button>
+                            </div>
                           )}
                         </>
                       )}

@@ -61,6 +61,24 @@ function ComprasInteligentes() {
       .replace(/[\u0300-\u036f]/g, "");
   }
 
+  function normalizarUnidade(unidade) {
+    const u = String(unidade || "")
+      .trim()
+      .toLowerCase();
+
+    if (u === "quilo" || u === "quilos" || u === "kg") return "kg";
+    if (u === "grama" || u === "gramas" || u === "g") return "g";
+    if (u === "litro" || u === "litros" || u === "l") return "L";
+    if (u === "mililitro" || u === "mililitros" || u === "ml") return "ml";
+    if (u === "unidade" || u === "unidades" || u === "un") return "un";
+    if (u === "embalagem" || u === "embalagens" || u === "emb") return "emb";
+    if (u === "lata" || u === "latas") return "lata";
+    if (u === "pacote" || u === "pacotes") return "pacote";
+    if (u === "dose" || u === "doses") return "dose";
+
+    return unidade || "g";
+  }
+
   function encontrarProdutoStock(nomeIngrediente) {
     return stocks.find((item) => {
       const nomeStock = normalizarTexto(item.produto || item.nome);
@@ -74,6 +92,75 @@ function ComprasInteligentes() {
     });
   }
 
+  function converterParaBase(valor, unidade) {
+    const quantidade = Number(valor) || 0;
+    const u = normalizarUnidade(unidade);
+
+    if (u === "kg") return quantidade * 1000;
+    if (u === "g") return quantidade;
+
+    if (u === "L") return quantidade * 1000;
+    if (u === "ml") return quantidade;
+
+    return quantidade;
+  }
+
+  function converterDaBase(valor, unidade) {
+    const quantidade = Number(valor) || 0;
+    const u = normalizarUnidade(unidade);
+
+    if (u === "kg") return quantidade / 1000;
+    if (u === "g") return quantidade;
+
+    if (u === "L") return quantidade / 1000;
+    if (u === "ml") return quantidade;
+
+    return quantidade;
+  }
+
+  function formatarQuantidade(valor, unidade) {
+    const quantidade = Number(valor) || 0;
+    const u = normalizarUnidade(unidade);
+
+    if (u === "kg") {
+      if (quantidade >= 1) {
+        return `${quantidade.toFixed(2)} kg`;
+      }
+
+      return `${(quantidade * 1000).toFixed(0)} g`;
+    }
+
+    if (u === "g") {
+      if (quantidade >= 1000) {
+        return `${(quantidade / 1000).toFixed(2)} kg`;
+      }
+
+      return `${quantidade.toFixed(0)} g`;
+    }
+
+    if (u === "L") {
+      if (quantidade >= 1) {
+        return `${quantidade.toFixed(2)} L`;
+      }
+
+      return `${(quantidade * 1000).toFixed(0)} ml`;
+    }
+
+    if (u === "ml") {
+      if (quantidade >= 1000) {
+        return `${(quantidade / 1000).toFixed(2)} L`;
+      }
+
+      return `${quantidade.toFixed(0)} ml`;
+    }
+
+    if (["un", "dose", "emb", "lata", "pacote"].includes(u)) {
+      return `${quantidade.toFixed(0)} ${u}`;
+    }
+
+    return `${quantidade.toFixed(2)} ${u || ""}`.trim();
+  }
+
   const produtosStockBaixo = stocks.filter(
     (item) =>
       Number(item.quantidade || 0) <=
@@ -85,7 +172,9 @@ function ComprasInteligentes() {
 
   Object.values(ementaAtual).forEach((refeicoesDia) => {
     Object.values(refeicoesDia || {}).forEach((receitaId) => {
-      const ficha = fichas.find((item) => String(item.id) === String(receitaId));
+      const ficha = fichas.find(
+        (item) => String(item.id) === String(receitaId)
+      );
 
       if (!ficha) return;
 
@@ -96,6 +185,7 @@ function ComprasInteligentes() {
           ingredientesPrevistos[chave] = {
             nome: ingrediente.nome,
             quantidadeNecessaria: 0,
+            unidadeOriginal: normalizarUnidade(ingrediente.unidade || "g"),
           };
         }
 
@@ -109,33 +199,58 @@ function ComprasInteligentes() {
   const sugestoesCompras = Object.values(ingredientesPrevistos)
     .map((ingrediente) => {
       const produtoStock = encontrarProdutoStock(ingrediente.nome);
-
-      const stockAtual = Number(produtoStock?.quantidade || 0);
-      const stockMinimo = Number(
-        produtoStock?.stock_minimo || produtoStock?.stockMinimo || 0
+      const unidade = normalizarUnidade(
+        produtoStock?.unidade || ingrediente.unidadeOriginal || "g"
       );
 
-      const quantidadeNecessariaKg = ingrediente.quantidadeNecessaria / 1000;
+      const quantidadeNecessariaBase = Number(
+        ingrediente.quantidadeNecessaria || 0
+      );
 
-      const quantidadeComprar = produtoStock
-        ? Math.max(0, quantidadeNecessariaKg + stockMinimo - stockAtual)
-        : quantidadeNecessariaKg;
+      const stockAtualBase = produtoStock
+        ? converterParaBase(produtoStock.quantidade, unidade)
+        : 0;
+
+      const stockMinimoBase = produtoStock
+        ? converterParaBase(
+            produtoStock.stock_minimo || produtoStock.stockMinimo || 0,
+            unidade
+          )
+        : 0;
+
+      const quantidadeComprarBase = produtoStock
+        ? Math.max(
+            0,
+            quantidadeNecessariaBase + stockMinimoBase - stockAtualBase
+          )
+        : quantidadeNecessariaBase;
+
+      const stockAtual = converterDaBase(stockAtualBase, unidade);
+      const stockMinimo = converterDaBase(stockMinimoBase, unidade);
+      const quantidadeComprar = converterDaBase(
+        quantidadeComprarBase,
+        unidade
+      );
+      const quantidadeNecessaria = converterDaBase(
+        quantidadeNecessariaBase,
+        unidade
+      );
 
       let prioridade = "normal";
 
       if (!produtoStock) prioridade = "alta";
-      else if (stockAtual <= stockMinimo) prioridade = "alta";
-      else if (quantidadeComprar > 0) prioridade = "média";
+      else if (stockAtualBase <= stockMinimoBase) prioridade = "alta";
+      else if (quantidadeComprarBase > 0) prioridade = "média";
 
       return {
         produto: ingrediente.nome,
         stockAtual,
         stockMinimo,
-        quantidadeNecessariaKg,
+        quantidadeNecessaria,
         quantidadeComprar,
         prioridade,
         existeStock: !!produtoStock,
-        unidade: produtoStock?.unidade || "kg",
+        unidade,
       };
     })
     .filter((item) => item.quantidadeComprar > 0 || item.prioridade === "alta")
@@ -153,20 +268,24 @@ function ComprasInteligentes() {
             normalizarTexto(produto.produto || produto.nome)
         )
     )
-    .map((produto) => ({
-      produto: produto.produto || produto.nome,
-      stockAtual: Number(produto.quantidade || 0),
-      stockMinimo: Number(produto.stock_minimo || produto.stockMinimo || 0),
-      quantidadeNecessariaKg: 0,
-      quantidadeComprar: Math.max(
-        0,
-        Number(produto.stock_minimo || produto.stockMinimo || 0) -
-          Number(produto.quantidade || 0)
-      ),
-      prioridade: "alta",
-      existeStock: true,
-      unidade: produto.unidade || "",
-    }));
+    .map((produto) => {
+      const unidade = normalizarUnidade(produto.unidade || "");
+      const stockAtual = Number(produto.quantidade || 0);
+      const stockMinimo = Number(
+        produto.stock_minimo || produto.stockMinimo || 0
+      );
+
+      return {
+        produto: produto.produto || produto.nome,
+        stockAtual,
+        stockMinimo,
+        quantidadeNecessaria: 0,
+        quantidadeComprar: Math.max(0, stockMinimo - stockAtual),
+        prioridade: "alta",
+        existeStock: true,
+        unidade,
+      };
+    });
 
   const listaComprasFinal = [
     ...sugestoesCompras,
@@ -188,14 +307,16 @@ function ComprasInteligentes() {
 
     autoTable(doc, {
       startY: 52,
-      head: [["Produto", "Stock atual", "Stock mínimo", "Comprar", "Prioridade"]],
+      head: [
+        ["Produto", "Stock atual", "Stock mínimo", "Comprar", "Prioridade"],
+      ],
       body:
         listaComprasFinal.length > 0
           ? listaComprasFinal.map((item) => [
               item.produto,
-              `${item.stockAtual} ${item.unidade}`,
-              `${item.stockMinimo} ${item.unidade}`,
-              `${item.quantidadeComprar.toFixed(2)} ${item.unidade}`,
+              formatarQuantidade(item.stockAtual, item.unidade),
+              formatarQuantidade(item.stockMinimo, item.unidade),
+              formatarQuantidade(item.quantidadeComprar, item.unidade),
               item.prioridade,
             ])
           : [["Sem compras sugeridas", "-", "-", "-", "-"]],
@@ -276,17 +397,21 @@ function ComprasInteligentes() {
               {listaComprasFinal.map((item, index) => (
                 <tr key={index}>
                   <td>{item.produto}</td>
-                  <td>
-                    {item.stockAtual} {item.unidade}
+
+                  <td style={{ whiteSpace: "nowrap" }}>
+                    {formatarQuantidade(item.stockAtual, item.unidade)}
                   </td>
-                  <td>
-                    {item.stockMinimo} {item.unidade}
+
+                  <td style={{ whiteSpace: "nowrap" }}>
+                    {formatarQuantidade(item.stockMinimo, item.unidade)}
                   </td>
-                  <td>
+
+                  <td style={{ whiteSpace: "nowrap" }}>
                     <strong>
-                      {item.quantidadeComprar.toFixed(2)} {item.unidade}
+                      {formatarQuantidade(item.quantidadeComprar, item.unidade)}
                     </strong>
                   </td>
+
                   <td>
                     <strong>{item.prioridade}</strong>
                   </td>

@@ -470,6 +470,33 @@ function Dashboard({ onNavigate } = {}) {
     return gramas;
   }
 
+  function obterUnidadeOperacional(item) {
+    return item?.produtoStock?.unidade || item?.unidade || "g";
+  }
+
+  function formatarQuantidadeOperacional(valorBase, unidade = "g") {
+    const valor = Number(valorBase || 0);
+    const unidadeNormalizada = String(unidade || "g");
+
+    if (["kg", "g"].includes(unidadeNormalizada)) {
+      if (Math.abs(valor) >= 1000) {
+        return `${(valor / 1000).toFixed(2)} kg`;
+      }
+
+      return `${valor.toFixed(0)} g`;
+    }
+
+    if (["L", "l", "ml"].includes(unidadeNormalizada)) {
+      if (Math.abs(valor) >= 1000) {
+        return `${(valor / 1000).toFixed(2)} L`;
+      }
+
+      return `${valor.toFixed(0)} ml`;
+    }
+
+    return `${valor.toFixed(2)} ${unidadeNormalizada}`;
+  }
+
   function encontrarProdutoStock(nomeIngrediente) {
     return stocks.find((item) => {
       const nomeStock = normalizarTexto(item.produto || item.nome);
@@ -699,6 +726,7 @@ function Dashboard({ onNavigate } = {}) {
         stockDepois,
         stockMinimo,
         produtoStock,
+        unidade: produtoStock?.unidade || "g",
         emFalta: !produtoStock || stockDepois < 0,
         ficaraCritico: produtoStock && stockDepois <= stockMinimo,
       };
@@ -1778,8 +1806,18 @@ function Dashboard({ onNavigate } = {}) {
               {produtosPrevisaoCritica.map((item, index) => (
                 <tr key={index}>
                   <td>{item.nome}</td>
-                  <td>{(item.necessario / 1000).toFixed(2)} kg</td>
-                  <td>{(item.stockDepois / 1000).toFixed(2)} kg</td>
+                  <td style={{ whiteSpace: "nowrap" }}>
+                    {formatarQuantidadeOperacional(
+                      item.necessario,
+                      obterUnidadeOperacional(item)
+                    )}
+                  </td>
+                  <td style={{ whiteSpace: "nowrap" }}>
+                    {formatarQuantidadeOperacional(
+                      item.stockDepois,
+                      obterUnidadeOperacional(item)
+                    )}
+                  </td>
                   <td>
                     {item.emFalta ? (
                       <span style={{ color: "#dc2626", fontWeight: "bold" }}>

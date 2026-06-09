@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 export default function Stocks() {
+  const { instituicaoAtual } = useInstituicao();
+
   const movimentosGuardados =
     JSON.parse(localStorage.getItem("ipssMovimentosStock")) || [];
 
@@ -22,14 +25,17 @@ export default function Stocks() {
   const [dosesPlaneadas, setDosesPlaneadas] = useState(0);
 
   useEffect(() => {
-    carregarStocks();
-    carregarFichasTecnicas();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarStocks();
+      carregarFichasTecnicas();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarStocks() {
     const { data, error } = await supabase
       .from("stocks")
       .select("*")
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -57,6 +63,7 @@ export default function Stocks() {
     const { data, error } = await supabase
       .from("fichas_tecnicas")
       .select("*")
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -138,6 +145,7 @@ export default function Stocks() {
     const { error } = await supabase.from("stocks").insert([
       {
         user_id: utilizador.id,
+        instituicao_id: instituicaoAtual.id,
         produto,
         categoria,
         quantidade: Number(quantidade),
@@ -411,8 +419,8 @@ export default function Stocks() {
       <h2>Gestão de Stocks</h2>
 
       <p className="subtitulo">
-        Controlo de produtos, entradas, saídas, validade, stock mínimo, preços,
-        produção e lista automática de compras.
+        {instituicaoAtual?.nome} — Controlo de produtos, entradas, saídas,
+        validade, stock mínimo, preços, produção e lista automática de compras.
       </p>
 
       <div className="dashboard-cards">

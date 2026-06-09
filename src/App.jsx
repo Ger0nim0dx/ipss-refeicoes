@@ -28,6 +28,7 @@ import {
   CalendarDays,
   ChefHat,
   Trash2,
+  Tag,
 } from "lucide-react";
 
 import { supabase } from "./supabaseClient";
@@ -59,6 +60,7 @@ import AssistenteIA from "./components/AssistenteIA";
 import Analytics from "./components/Analytics";
 import ComprasInteligentes from "./components/ComprasInteligentes";
 import MapaDiarioProducao from "./components/MapaDiarioProducao";
+import EtiquetasAutomaticas from "./components/EtiquetasAutomaticas";
 
 import AccessibilityPanel from "./AccessibilityPanel";
 import "./App.css";
@@ -428,6 +430,18 @@ export default function App() {
     },
 
     {
+      id: "etiquetas",
+      label: "Etiquetas",
+      icon: Tag,
+      perfis: [
+        "admin",
+        "direcao",
+        "cozinha",
+        "nutricionista",
+      ],
+    },
+
+    {
       id: "dietas",
       label: "Dietas",
       icon: Apple,
@@ -718,6 +732,7 @@ export default function App() {
               .filter((item) =>
                 [
                   "utentes",
+                  "etiquetas",
                   "utilizadores",
                   "dados-ipss",
                   "assistente-ia",
@@ -849,8 +864,8 @@ export default function App() {
           </header>
 
           {pagina === "dashboard" && (
-  <Dashboard onNavigate={setPagina} />
-)}
+            <Dashboard onNavigate={setPagina} />
+          )}
 
           {pagina === "estatisticas" && (
             <Estatisticas />
@@ -903,6 +918,10 @@ export default function App() {
           {pagina === "custos" && <Custos />}
 
           {pagina === "utentes" && <Utentes />}
+
+          {pagina === "etiquetas" && (
+            <EtiquetasAutomaticas />
+          )}
 
           {pagina === "dietas" && <Dietas />}
 

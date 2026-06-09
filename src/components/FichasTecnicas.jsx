@@ -3,8 +3,11 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { alimentos } from "../data/alimentos";
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 export default function FichasTecnicas() {
+  const { instituicaoAtual } = useInstituicao();
+
   const [listaFichas, setListaFichas] = useState([]);
   const [stocks, setStocks] = useState([]);
   const [pedidoIA, setPedidoIA] = useState("");
@@ -42,9 +45,11 @@ export default function FichasTecnicas() {
   }
 
   useEffect(() => {
-    carregarFichas();
-    carregarStocks();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarFichas();
+      carregarStocks();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarStocks() {
     const { data: userData } = await supabase.auth.getUser();
@@ -55,7 +60,7 @@ export default function FichasTecnicas() {
     const { data, error } = await supabase
       .from("stocks")
       .select("*")
-      .eq("user_id", userId);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     if (error) {
       console.error("Erro ao carregar stocks:", error);
@@ -69,6 +74,7 @@ export default function FichasTecnicas() {
     const { data, error } = await supabase
       .from("fichas_tecnicas")
       .select("*")
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -492,13 +498,14 @@ export default function FichasTecnicas() {
           dados,
         })
         .eq("id", fichaEmEdicaoId)
-        .eq("user_id", userData.user.id);
+        .eq("instituicao_id", instituicaoAtual.id);
 
       error = resultado.error;
     } else {
       const resultado = await supabase.from("fichas_tecnicas").insert([
         {
           user_id: userData.user.id,
+          instituicao_id: instituicaoAtual.id,
           nome,
           categoria,
           doses: Number(doses),
@@ -646,7 +653,7 @@ export default function FichasTecnicas() {
         <div>
           <h2>Fichas Técnicas</h2>
           <p className="subtitulo">
-            Registo estruturado de receitas, ingredientes por categoria
+            {instituicaoAtual?.nome} — Registo estruturado de receitas, ingredientes por categoria
             alimentar, custos, HACCP e valor nutricional.
           </p>
         </div>

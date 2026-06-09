@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 export default function Ementa() {
+  const { instituicaoAtual } = useInstituicao();
+
   const [fichas, setFichas] = useState([]);
   const [stocks, setStocks] = useState([]);
   const [utentes, setUtentes] = useState([]);
@@ -44,8 +47,10 @@ export default function Ementa() {
   );
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarDados();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarDados() {
     await carregarFichas();
@@ -58,6 +63,7 @@ export default function Ementa() {
     const { data, error } = await supabase
       .from("fichas_tecnicas")
       .select("*")
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -81,6 +87,7 @@ export default function Ementa() {
     const { data, error } = await supabase
       .from("stocks")
       .select("*")
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -107,7 +114,8 @@ export default function Ementa() {
     const { data, error } = await supabase
       .from("utentes")
       .select("*")
-      .eq("ativo", true);
+      .eq("ativo", true)
+      .eq("instituicao_id", instituicaoAtual.id);
 
     if (error) {
       console.error(error);
@@ -121,6 +129,7 @@ export default function Ementa() {
     const { data, error } = await supabase
       .from("ementas")
       .select("*")
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -167,6 +176,7 @@ export default function Ementa() {
     const { data: existente, error: procurarError } = await supabase
       .from("ementas")
       .select("id")
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -191,6 +201,7 @@ export default function Ementa() {
       const { error } = await supabase.from("ementas").insert([
         {
           user_id: userData.user.id,
+          instituicao_id: instituicaoAtual.id,
           dados: novaEmenta,
         },
       ]);
@@ -1424,9 +1435,9 @@ export default function Ementa() {
       <h1>Planeamento de Ementas</h1>
 
       <p className="descricao">
-        Organização semanal das refeições, com geração automática inteligente,
-        controlo de custos, valor nutricional, ingredientes necessários e lista
-        semanal de compras.
+        {instituicaoAtual?.nome} — Organização semanal das refeições, com geração
+        automática inteligente, controlo de custos, valor nutricional,
+        ingredientes necessários e lista semanal de compras.
       </p>
 
       <div className="dashboard-section">

@@ -1,12 +1,20 @@
 import { useEffect, useState } from "react";
-import { Tag, Download, Printer } from "lucide-react";
+import {
+  Tag,
+  Download,
+  Printer,
+  UtensilsCrossed,
+} from "lucide-react";
+
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { supabase } from "../supabaseClient";
 
 function EtiquetasAutomaticas() {
   const [utentes, setUtentes] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [refeicao, setRefeicao] =
+    useState("Almoço");
 
   useEffect(() => {
     carregarUtentes();
@@ -15,7 +23,9 @@ function EtiquetasAutomaticas() {
   async function carregarUtentes() {
     setLoading(true);
 
-    const { data: userData } = await supabase.auth.getUser();
+    const { data: userData } =
+      await supabase.auth.getUser();
+
     const user = userData?.user;
 
     if (!user) return;
@@ -31,46 +41,111 @@ function EtiquetasAutomaticas() {
   }
 
   function exportarPDF() {
-    const doc = new jsPDF();
+    const doc = new jsPDF("p", "mm", "a4");
 
-    doc.setFontSize(22);
-    doc.text("Etiquetas Automáticas", 14, 20);
+    const larguraEtiqueta = 90;
+    const alturaEtiqueta = 55;
 
-    doc.setFontSize(10);
-    doc.text(
-      `Gerado em ${new Date().toLocaleDateString("pt-PT")}`,
-      14,
-      28
-    );
+    let x = 10;
+    let y = 15;
 
-    autoTable(doc, {
-      startY: 40,
-      head: [
-        [
-          "Utente",
-          "Dieta",
-          "Textura",
-          "Alergias",
-          "Observações",
-        ],
-      ],
-      body: utentes.map((u) => [
-        u.nome || "-",
-        u.dieta || "-",
-        u.textura || "-",
-        u.alergias || "-",
-        u.observacoes || "-",
-      ]),
-      styles: {
-        fontSize: 10,
-        cellPadding: 4,
-      },
-      headStyles: {
-        fillColor: [22, 101, 52],
-      },
+    utentes.forEach((utente, index) => {
+      doc.setDrawColor(22, 101, 52);
+      doc.setLineWidth(0.8);
+
+      doc.roundedRect(
+        x,
+        y,
+        larguraEtiqueta,
+        alturaEtiqueta,
+        3,
+        3
+      );
+
+      doc.setFontSize(15);
+      doc.setTextColor(22, 101, 52);
+
+      doc.text(
+        String(utente.nome || "Utente"),
+        x + 4,
+        y + 10
+      );
+
+      doc.setFontSize(11);
+      doc.setTextColor(0, 0, 0);
+
+      doc.text(
+        `Dieta: ${
+          utente.dieta || "Normal"
+        }`,
+        x + 4,
+        y + 20
+      );
+
+      doc.text(
+        `Textura: ${
+          utente.textura || "Normal"
+        }`,
+        x + 4,
+        y + 28
+      );
+
+      doc.text(
+        `Alergias: ${
+          utente.alergias ||
+          "Sem alergias"
+        }`,
+        x + 4,
+        y + 36
+      );
+
+      doc.setFontSize(12);
+      doc.setTextColor(220, 38, 38);
+
+      doc.text(refeicao, x + 4, y + 46);
+
+      doc.setFontSize(9);
+      doc.setTextColor(80);
+
+      doc.text(
+        new Date().toLocaleDateString(
+          "pt-PT"
+        ),
+        x + 60,
+        y + 46
+      );
+
+      if (
+        utente.observacoes &&
+        utente.observacoes !== "-"
+      ) {
+        doc.setFontSize(8);
+        doc.setTextColor(120);
+
+        doc.text(
+          utente.observacoes,
+          x + 4,
+          y + 52
+        );
+      }
+
+      if (x === 10) {
+        x = 110;
+      } else {
+        x = 10;
+        y += 65;
+      }
+
+      if (y > 240 && index < utentes.length - 1) {
+        doc.addPage();
+        x = 10;
+        y = 15;
+      }
     });
 
-    doc.save("etiquetas-utentes.pdf");
+    doc.save(
+      `etiquetas-${refeicao}.pdf`
+    );
   }
 
   return (
@@ -81,7 +156,8 @@ function EtiquetasAutomaticas() {
       </h1>
 
       <p className="descricao">
-        Geração automática de etiquetas alimentares para cozinha,
+        Etiquetas profissionais para
+        refeições institucionais,
         dietas, texturas e alergias.
       </p>
 
@@ -90,14 +166,27 @@ function EtiquetasAutomaticas() {
           <Tag size={30} />
           <h3>Etiquetas</h3>
           <p>{utentes.length}</p>
-          <span>Total de utentes</span>
+          <span>
+            Etiquetas geradas
+          </span>
         </div>
 
         <div className="dashboard-card">
           <Printer size={30} />
           <h3>Impressão</h3>
-          <p>PDF</p>
-          <span>Formato profissional</span>
+          <p>A4</p>
+          <span>
+            Formato profissional
+          </span>
+        </div>
+
+        <div className="dashboard-card">
+          <UtensilsCrossed size={30} />
+          <h3>Refeição</h3>
+          <p>{refeicao}</p>
+          <span>
+            Etiquetas ativas
+          </span>
         </div>
       </div>
 
@@ -105,32 +194,77 @@ function EtiquetasAutomaticas() {
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
+            justifyContent:
+              "space-between",
             alignItems: "center",
-            marginBottom: "20px",
+            gap: "20px",
+            flexWrap: "wrap",
+            marginBottom: "25px",
           }}
         >
-          <h2>Etiquetas geradas</h2>
+          <div>
+            <h2>
+              Etiquetas individuais
+            </h2>
 
-          <button
-            className="botao-principal"
-            onClick={exportarPDF}
+            <p>
+              Preparadas para impressão
+              institucional.
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              alignItems: "center",
+            }}
           >
-            <Download size={18} />
-            Exportar PDF
-          </button>
+            <select
+              value={refeicao}
+              onChange={(e) =>
+                setRefeicao(
+                  e.target.value
+                )
+              }
+              className="input-form"
+            >
+              <option>
+                Pequeno-almoço
+              </option>
+
+              <option>Almoço</option>
+
+              <option>Lanche</option>
+
+              <option>Jantar</option>
+            </select>
+
+            <button
+              className="botao-principal"
+              onClick={exportarPDF}
+            >
+              <Download size={18} />
+              Exportar PDF
+            </button>
+          </div>
         </div>
 
         {loading ? (
-          <p>A carregar utentes...</p>
+          <p>
+            A carregar etiquetas...
+          </p>
         ) : utentes.length === 0 ? (
-          <p>Não existem utentes registados.</p>
+          <p>
+            Não existem utentes
+            registados.
+          </p>
         ) : (
           <div
             style={{
               display: "grid",
               gridTemplateColumns:
-                "repeat(auto-fit, minmax(320px, 1fr))",
+                "repeat(auto-fit, minmax(340px, 1fr))",
               gap: "20px",
             }}
           >
@@ -138,40 +272,96 @@ function EtiquetasAutomaticas() {
               <div
                 key={utente.id}
                 style={{
-                  border: "2px solid #166534",
+                  border:
+                    "2px solid #166534",
                   borderRadius: "16px",
-                  padding: "20px",
-                  background: "#ffffff",
+                  padding: "22px",
+                  background:
+                    "#ffffff",
+                  minHeight: "230px",
+                  display: "flex",
+                  flexDirection:
+                    "column",
+                  justifyContent:
+                    "space-between",
                 }}
               >
-                <h3
+                <div>
+                  <h2
+                    style={{
+                      color: "#166534",
+                      marginBottom:
+                        "16px",
+                    }}
+                  >
+                    {utente.nome}
+                  </h2>
+
+                  <p>
+                    <strong>
+                      Dieta:
+                    </strong>{" "}
+                    {utente.dieta ||
+                      "Normal"}
+                  </p>
+
+                  <p>
+                    <strong>
+                      Textura:
+                    </strong>{" "}
+                    {utente.textura ||
+                      "Normal"}
+                  </p>
+
+                  <p>
+                    <strong>
+                      Alergias:
+                    </strong>{" "}
+                    {utente.alergias ||
+                      "Sem alergias"}
+                  </p>
+
+                  <p>
+                    <strong>
+                      Observações:
+                    </strong>{" "}
+                    {utente.observacoes ||
+                      "-"}
+                  </p>
+                </div>
+
+                <div
                   style={{
-                    marginBottom: "10px",
-                    color: "#166534",
+                    marginTop: "20px",
+                    paddingTop: "14px",
+                    borderTop:
+                      "1px dashed #ccc",
+                    display: "flex",
+                    justifyContent:
+                      "space-between",
+                    alignItems:
+                      "center",
                   }}
                 >
-                  {utente.nome}
-                </h3>
+                  <strong
+                    style={{
+                      color: "#dc2626",
+                    }}
+                  >
+                    {refeicao}
+                  </strong>
 
-                <p>
-                  <strong>Dieta:</strong>{" "}
-                  {utente.dieta || "Normal"}
-                </p>
-
-                <p>
-                  <strong>Textura:</strong>{" "}
-                  {utente.textura || "Normal"}
-                </p>
-
-                <p>
-                  <strong>Alergias:</strong>{" "}
-                  {utente.alergias || "Sem alergias"}
-                </p>
-
-                <p>
-                  <strong>Observações:</strong>{" "}
-                  {utente.observacoes || "-"}
-                </p>
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      color: "#666",
+                    }}
+                  >
+                    {new Date().toLocaleDateString(
+                      "pt-PT"
+                    )}
+                  </span>
+                </div>
               </div>
             ))}
           </div>

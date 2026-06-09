@@ -4,9 +4,13 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.jsx";
 
+import { InstituicaoProvider } from "./context/InstituicaoContext";
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <App />
+    <InstituicaoProvider>
+      <App />
+    </InstituicaoProvider>
   </StrictMode>
 );
 
@@ -17,7 +21,9 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker
       .register("/service-worker.js")
       .then(() => {
-        console.log("Service Worker registado com sucesso");
+        console.log(
+          "Service Worker registado com sucesso"
+        );
       })
       .catch((error) => {
         console.log(

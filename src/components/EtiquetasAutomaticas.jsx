@@ -5,6 +5,7 @@ import {
   Printer,
   UtensilsCrossed,
   Filter,
+  CalendarDays,
 } from "lucide-react";
 
 import jsPDF from "jspdf";
@@ -13,16 +14,30 @@ import { supabase } from "../supabaseClient";
 
 function EtiquetasAutomaticas() {
   const [utentes, setUtentes] = useState([]);
+  const [ementas, setEmentas] = useState([]);
+  const [fichas, setFichas] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [refeicao, setRefeicao] = useState("Almoço");
   const [filtro, setFiltro] = useState("todos");
   const [modoMapaDiario, setModoMapaDiario] = useState(true);
+  const [diaSemana, setDiaSemana] = useState("Segunda-feira");
+
+  const diasSemana = [
+    "Segunda-feira",
+    "Terça-feira",
+    "Quarta-feira",
+    "Quinta-feira",
+    "Sexta-feira",
+    "Sábado",
+    "Domingo",
+  ];
 
   useEffect(() => {
-    carregarUtentes();
+    carregarDados();
   }, []);
 
-  async function carregarUtentes() {
+  async function carregarDados() {
     setLoading(true);
 
     const { data: userData } = await supabase.auth.getUser();
@@ -33,13 +48,34 @@ function EtiquetasAutomaticas() {
       return;
     }
 
-    const { data } = await supabase
+    const { data: utentesData } = await supabase
       .from("utentes")
       .select("*")
       .eq("user_id", user.id)
       .order("nome");
 
-    setUtentes(data || []);
+    const { data: ementasData } = await supabase
+      .from("ementas")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    const { data: fichasData } = await supabase
+      .from("fichas_tecnicas")
+      .select("*")
+      .eq("user_id", user.id);
+
+    const fichasFormatadas = (fichasData || []).map((ficha) => ({
+      id: ficha.id,
+      nome: ficha.nome,
+      categoria: ficha.categoria,
+      doses: ficha.doses,
+      ...ficha.dados,
+    }));
+
+    setUtentes(utentesData || []);
+    setEmentas(ementasData || []);
+    setFichas(fichasFormatadas);
     setLoading(false);
   }
 
@@ -57,6 +93,22 @@ function EtiquetasAutomaticas() {
 
     return fallback;
   }
+
+  function obterReceitaAtual() {
+    const ementaAtual = ementas[0]?.dados || {};
+    const refeicoesDia = ementaAtual?.[diaSemana] || {};
+
+    const receitaId =
+      refeicoesDia?.[refeicao] ||
+      refeicoesDia?.[refeicao.toLowerCase()] ||
+      refeicoesDia?.[normalizarTexto(refeicao)];
+
+    const ficha = fichas.find((item) => String(item.id) === String(receitaId));
+
+    return ficha?.nome || "Sem receita definida";
+  }
+
+  const receitaAtual = obterReceitaAtual();
 
   function obterCorEtiqueta(utente) {
     const dieta = normalizarTexto(
@@ -144,10 +196,8 @@ function EtiquetasAutomaticas() {
     );
 
     const dietaEspecial = dieta && dieta !== "normal";
-
     const texturaAdaptada =
       textura.includes("tritur") || textura.includes("pastosa");
-
     const temAlergias = alergias && alergias !== "sem alergias";
 
     if (modoMapaDiario) {
@@ -244,7 +294,11 @@ function EtiquetasAutomaticas() {
       doc.setTextColor(...cores.pdfBorda);
       doc.text(limparTextoPDF(refeicao), x + 4, y + 47);
 
-      doc.setFontSize(9);
+      doc.setFontSize(8);
+      doc.setTextColor(80);
+      doc.text(limparTextoPDF(diaSemana), x + 4, y + 52);
+
+      doc.setFontSize(8);
       doc.setTextColor(80);
       doc.text(new Date().toLocaleDateString("pt-PT"), x + 58, y + 47);
 
@@ -252,13 +306,15 @@ function EtiquetasAutomaticas() {
         doc.setFontSize(7);
         doc.setTextColor(90);
 
-        const linhasObs = doc.splitTextToSize(observacoes, 50);
-        doc.text(linhasObs.slice(0, 1), x + 4, y + 53);
+        const linhasObs = doc.splitTextToSize(observacoes, 48);
+        doc.text(linhasObs.slice(0, 1), x + 4, y + 55);
       }
 
       const qrTexto = `
 Utente: ${nome}
+Dia: ${diaSemana}
 Refeição: ${refeicao}
+Receita: ${receitaAtual}
 Data: ${new Date().toLocaleDateString("pt-PT")}
 Dieta: ${dieta}
 Textura: ${textura}
@@ -287,7 +343,9 @@ Observações: ${observacoes || "-"}
     }
 
     doc.save(
-      `etiquetas-${refeicao}-${modoMapaDiario ? "mapa-diario" : filtro}.pdf`
+      `etiquetas-${diaSemana}-${refeicao}-${
+        modoMapaDiario ? "mapa-diario" : filtro
+      }.pdf`
     );
   }
 
@@ -300,7 +358,7 @@ Observações: ${observacoes || "-"}
 
       <p className="descricao">
         Etiquetas profissionais para refeições institucionais, dietas, texturas
-        e alergias, com QR Code, cores automáticas e modo de mapa diário.
+        e alergias, com QR Code, cores automáticas e ligação à ementa do dia.
       </p>
 
       <div className="dashboard-cards">
@@ -324,7 +382,7 @@ Observações: ${observacoes || "-"}
           <UtensilsCrossed size={30} />
           <h3>Refeição</h3>
           <p>{refeicao}</p>
-          <span>Etiquetas ativas</span>
+          <span>{receitaAtual}</span>
         </div>
 
         <div className="dashboard-card">
@@ -332,6 +390,63 @@ Observações: ${observacoes || "-"}
           <h3>Modo</h3>
           <p>{modoMapaDiario ? "Mapa" : filtro}</p>
           <span>Seleção atual</span>
+        </div>
+      </div>
+
+      <div
+        className="dashboard-section"
+        style={{
+          background: "#ecfdf5",
+          border: "2px solid #166534",
+        }}
+      >
+        <h2>
+          <CalendarDays size={24} /> Ementa automática do dia
+        </h2>
+
+        <p className="descricao">
+          Seleciona o dia e a refeição para gerar etiquetas alinhadas com a
+          ementa/mapeamento diário da cozinha.
+        </p>
+
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            flexWrap: "wrap",
+            marginBottom: "18px",
+          }}
+        >
+          {diasSemana.map((dia) => (
+            <button
+              key={dia}
+              className={diaSemana === dia ? "botao-principal" : "botao-secundario"}
+              onClick={() => setDiaSemana(dia)}
+            >
+              {dia}
+            </button>
+          ))}
+        </div>
+
+        <div
+          style={{
+            background: "white",
+            borderRadius: "14px",
+            padding: "18px",
+            border: "1px solid #bbf7d0",
+          }}
+        >
+          <p>
+            <strong>Dia:</strong> {diaSemana}
+          </p>
+
+          <p>
+            <strong>Refeição:</strong> {refeicao}
+          </p>
+
+          <p>
+            <strong>Receita ativa:</strong> {receitaAtual}
+          </p>
         </div>
       </div>
 
@@ -348,6 +463,7 @@ Observações: ${observacoes || "-"}
         >
           <div>
             <h2>Etiquetas por refeição</h2>
+
             <p>
               No modo mapa diário, aparecem apenas utentes com dietas especiais,
               alergias ou texturas adaptadas.
@@ -469,7 +585,7 @@ Observações: ${observacoes || "-"}
                     borderRadius: "16px",
                     padding: "22px",
                     background: cores.fundo,
-                    minHeight: "230px",
+                    minHeight: "250px",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
@@ -530,12 +646,25 @@ Observações: ${observacoes || "-"}
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
+                      gap: "12px",
                     }}
                   >
-                    <strong style={{ color: cores.borda }}>{refeicao}</strong>
+                    <div>
+                      <strong style={{ color: cores.borda }}>{refeicao}</strong>
+
+                      <p
+                        style={{
+                          fontSize: "12px",
+                          marginTop: "4px",
+                          color: "#475569",
+                        }}
+                      >
+                        {diaSemana} · {receitaAtual}
+                      </p>
+                    </div>
 
                     <span style={{ fontSize: "13px", color: "#475569" }}>
-                      QR no PDF · {new Date().toLocaleDateString("pt-PT")}
+                      QR no PDF
                     </span>
                   </div>
                 </div>

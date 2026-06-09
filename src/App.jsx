@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 
 import { supabase } from "./supabaseClient";
+import { useInstituicao } from "./context/InstituicaoContext";
 
 import Dashboard from "./components/Dashboard";
 import Estatisticas from "./components/Estatisticas";
@@ -81,6 +82,12 @@ export default function App() {
 
   const [perfil, setPerfil] = useState("admin");
   const [nomePerfil, setNomePerfil] = useState("");
+
+  const {
+    instituicoes,
+    instituicaoAtual,
+    selecionarInstituicao,
+  } = useInstituicao();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -849,15 +856,50 @@ export default function App() {
                 )}
               </div>
 
-              <div className="user-box">
-                <UserCircle size={26} />
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "16px",
+                  flexWrap: "wrap",
+                }}
+              >
+                {instituicoes.length > 0 && (
+                  <select
+                    value={instituicaoAtual?.id || ""}
+                    onChange={(e) => {
+                      const instituicao = instituicoes.find(
+                        (item) =>
+                          String(item.id) === String(e.target.value)
+                      );
 
-                <div>
-                  <strong>
-                    {nomePerfil || session.user?.email}
-                  </strong>
+                      selecionarInstituicao(instituicao);
+                    }}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: "12px",
+                      border: "1px solid #d1d5db",
+                      background: "white",
+                      fontWeight: "600",
+                      minWidth: "220px",
+                    }}
+                  >
+                    {instituicoes.map((instituicao) => (
+                      <option key={instituicao.id} value={instituicao.id}>
+                        {instituicao.nome}
+                      </option>
+                    ))}
+                  </select>
+                )}
 
-                  <span>{perfil}</span>
+                <div className="user-box">
+                  <UserCircle size={26} />
+
+                  <div>
+                    <strong>{nomePerfil || session.user?.email}</strong>
+
+                    <span>{perfil}</span>
+                  </div>
                 </div>
               </div>
             </div>

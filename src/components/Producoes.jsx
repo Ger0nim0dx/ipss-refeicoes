@@ -8,6 +8,8 @@ import {
   Package,
   AlertTriangle,
   CheckCircle2,
+  UtensilsCrossed,
+  Users,
 } from "lucide-react";
 
 import { supabase } from "../supabaseClient";
@@ -16,41 +18,76 @@ function Producoes() {
   const [producoes, setProducoes] = useState([]);
   const [fichas, setFichas] = useState([]);
   const [stocks, setStocks] = useState([]);
+  const [utentes, setUtentes] = useState([]);
+  const [ementas, setEmentas] = useState([]);
 
   const [pesquisa, setPesquisa] = useState("");
   const [fichaSelecionadaId, setFichaSelecionadaId] = useState("");
   const [dosesProduzir, setDosesProduzir] = useState(10);
   const [mensagem, setMensagem] = useState("");
 
+  const [diaSemana, setDiaSemana] =
+    useState("Segunda-feira");
+
+  const [
+    refeicaoSelecionada,
+    setRefeicaoSelecionada,
+  ] = useState("Almoço");
+
   useEffect(() => {
     carregarDados();
   }, []);
 
   async function carregarDados() {
-    const { data: userData } = await supabase.auth.getUser();
+    const { data: userData } =
+      await supabase.auth.getUser();
+
     const user = userData?.user;
 
     if (!user) return;
 
-    const { data: producoesData } = await supabase
-      .from("producoes")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+    const { data: producoesData } =
+      await supabase
+        .from("producoes")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", {
+          ascending: false,
+        });
 
-    const { data: fichasData } = await supabase
-      .from("fichas_tecnicas")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+    const { data: fichasData } =
+      await supabase
+        .from("fichas_tecnicas")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", {
+          ascending: false,
+        });
 
-    const { data: stocksData } = await supabase
-      .from("stocks")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+    const { data: stocksData } =
+      await supabase
+        .from("stocks")
+        .select("*")
+        .eq("user_id", user.id);
 
-    const fichasFormatadas = (fichasData || []).map((ficha) => ({
+    const { data: utentesData } =
+      await supabase
+        .from("utentes")
+        .select("*")
+        .eq("user_id", user.id);
+
+    const { data: ementasData } =
+      await supabase
+        .from("ementas")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", {
+          ascending: false,
+        });
+
+    const fichasFormatadas = (
+      fichasData || []
+    ).map((ficha) => ({
       id: ficha.id,
       nome: ficha.nome,
       categoria: ficha.categoria,
@@ -61,6 +98,8 @@ function Producoes() {
     setProducoes(producoesData || []);
     setFichas(fichasFormatadas);
     setStocks(stocksData || []);
+    setUtentes(utentesData || []);
+    setEmentas(ementasData || []);
   }
 
   function normalizarTexto(texto) {
@@ -71,113 +110,302 @@ function Producoes() {
       .replace(/[\u0300-\u036f]/g, "");
   }
 
-  function converterParaBase(quantidade, unidade) {
-    const valor = Number(quantidade) || 0;
+  function converterParaBase(
+    quantidade,
+    unidade
+  ) {
+    const valor =
+      Number(quantidade) || 0;
 
-    if (unidade === "kg") return valor * 1000;
-    if (unidade === "g") return valor;
-    if (unidade === "L") return valor * 1000;
-    if (unidade === "ml") return valor;
+    if (unidade === "kg")
+      return valor * 1000;
+
+    if (unidade === "g")
+      return valor;
+
+    if (unidade === "L")
+      return valor * 1000;
+
+    if (unidade === "ml")
+      return valor;
 
     return valor;
   }
 
-  function converterDaBase(valorBase, unidade) {
-    if (unidade === "kg") return valorBase / 1000;
-    if (unidade === "g") return valorBase;
-    if (unidade === "L") return valorBase / 1000;
-    if (unidade === "ml") return valorBase;
+  function converterDaBase(
+    valorBase,
+    unidade
+  ) {
+    if (unidade === "kg")
+      return valorBase / 1000;
+
+    if (unidade === "g")
+      return valorBase;
+
+    if (unidade === "L")
+      return valorBase / 1000;
+
+    if (unidade === "ml")
+      return valorBase;
 
     return valorBase;
   }
 
-  function formatarQuantidadeOperacional(valorBase, unidade = "g") {
-    const valor = Number(valorBase) || 0;
+  function formatarQuantidadeOperacional(
+    valorBase,
+    unidade = "g"
+  ) {
+    const valor =
+      Number(valorBase) || 0;
 
-    if (unidade === "L" || unidade === "ml") {
-      return `${(valor / 1000).toFixed(2)} L`;
+    if (
+      unidade === "L" ||
+      unidade === "ml"
+    ) {
+      return `${(
+        valor / 1000
+      ).toFixed(2)} L`;
     }
 
-    return `${(valor / 1000).toFixed(2)} kg`;
+    return `${(
+      valor / 1000
+    ).toFixed(2)} kg`;
   }
 
-  function encontrarProdutoStock(nomeIngrediente) {
-    const ingredienteNormalizado = normalizarTexto(nomeIngrediente);
+  function encontrarProdutoStock(
+    nomeIngrediente
+  ) {
+    const ingredienteNormalizado =
+      normalizarTexto(
+        nomeIngrediente
+      );
 
     return stocks.find((item) => {
-      const nomeStock = normalizarTexto(item.produto || item.nome);
+      const nomeStock =
+        normalizarTexto(
+          item.produto || item.nome
+        );
 
       return (
-        nomeStock === ingredienteNormalizado ||
-        nomeStock.includes(ingredienteNormalizado) ||
-        ingredienteNormalizado.includes(nomeStock)
+        nomeStock ===
+          ingredienteNormalizado ||
+        nomeStock.includes(
+          ingredienteNormalizado
+        ) ||
+        ingredienteNormalizado.includes(
+          nomeStock
+        )
       );
     });
   }
 
-  const fichaSelecionada = fichas.find(
-    (ficha) => String(ficha.id) === String(fichaSelecionadaId)
-  );
+  function obterValor(
+    utente,
+    campos,
+    fallback = ""
+  ) {
+    for (const campo of campos) {
+      if (utente?.[campo])
+        return utente[campo];
+    }
+
+    return fallback;
+  }
+
+  function obterReceitaAtual() {
+    const ementaAtual =
+      ementas?.[0]?.dados || {};
+
+    const refeicoesDia =
+      ementaAtual?.[diaSemana] ||
+      {};
+
+    const receitaId =
+      refeicoesDia?.[
+        refeicaoSelecionada
+      ] ||
+      refeicoesDia?.[
+        refeicaoSelecionada.toLowerCase()
+      ];
+
+    const ficha = fichas.find(
+      (item) =>
+        String(item.id) ===
+        String(receitaId)
+    );
+
+    return ficha || null;
+  }
+
+  const receitaAutomatica =
+    obterReceitaAtual();
+
+  const totalUtentes =
+    utentes.length;
+
+  const totalDietas =
+    utentes.filter((utente) => {
+      const dieta =
+        normalizarTexto(
+          obterValor(
+            utente,
+            ["dieta", "tipo_dieta"],
+            ""
+          )
+        );
+
+      return (
+        dieta &&
+        dieta !== "normal"
+      );
+    }).length;
+
+  const totalTexturas =
+    utentes.filter((utente) => {
+      const textura =
+        normalizarTexto(
+          obterValor(
+            utente,
+            [
+              "textura",
+              "textura_alimentar",
+            ],
+            ""
+          )
+        );
+
+      return (
+        textura.includes(
+          "tritur"
+        ) ||
+        textura.includes(
+          "pastosa"
+        )
+      );
+    }).length;
+
+  const totalAlergias =
+    utentes.filter((utente) => {
+      const alergias =
+        normalizarTexto(
+          obterValor(
+            utente,
+            [
+              "alergias",
+              "alergenios",
+            ],
+            ""
+          )
+        );
+
+      return (
+        alergias &&
+        alergias !==
+          "sem alergias"
+      );
+    }).length;
+
+  const producaoPrincipal =
+    totalUtentes -
+    totalDietas -
+    totalTexturas;
+
+  const fichaSelecionada =
+    receitaAutomatica ||
+    fichas.find(
+      (ficha) =>
+        String(ficha.id) ===
+        String(
+          fichaSelecionadaId
+        )
+    );
 
   const ingredientesCalculados =
-    fichaSelecionada?.ingredientes?.map((ingrediente) => {
-      const dosesBase = Number(fichaSelecionada.doses || 1);
-      const fator = Number(dosesProduzir || 0) / dosesBase;
+    fichaSelecionada?.ingredientes?.map(
+      (ingrediente) => {
+        const dosesBase =
+          Number(
+            fichaSelecionada.doses ||
+              1
+          );
 
-      const quantidadeNecessariaBase =
-        Number(ingrediente.quantidade || 0) * fator;
+        const fator =
+          Number(
+            dosesProduzir || 0
+          ) / dosesBase;
 
-      const produtoStock = encontrarProdutoStock(ingrediente.nome);
+        const quantidadeNecessariaBase =
+          Number(
+            ingrediente.quantidade ||
+              0
+          ) * fator;
 
-      const unidadeStock = produtoStock?.unidade || "g";
+        const produtoStock =
+          encontrarProdutoStock(
+            ingrediente.nome
+          );
 
-      const stockAtualBase = produtoStock
-        ? converterParaBase(produtoStock.quantidade, unidadeStock)
-        : 0;
+        const unidadeStock =
+          produtoStock?.unidade ||
+          "g";
 
-      const stockDepoisBase = stockAtualBase - quantidadeNecessariaBase;
+        const stockAtualBase =
+          produtoStock
+            ? converterParaBase(
+                produtoStock.quantidade,
+                unidadeStock
+              )
+            : 0;
 
-      return {
-        nome: ingrediente.nome,
-        quantidadeNecessariaBase,
-        produtoStock,
-        stockAtualBase,
-        stockDepoisBase,
-        unidadeStock,
-        suficiente: produtoStock && stockDepoisBase >= 0,
-      };
-    }) || [];
+        const stockDepoisBase =
+          stockAtualBase -
+          quantidadeNecessariaBase;
 
-  const ingredientesEmFalta = ingredientesCalculados.filter(
-    (item) => !item.suficiente
-  );
+        return {
+          nome: ingrediente.nome,
+          quantidadeNecessariaBase,
+          produtoStock,
+          stockAtualBase,
+          stockDepoisBase,
+          unidadeStock,
+          suficiente:
+            produtoStock &&
+            stockDepoisBase >= 0,
+        };
+      }
+    ) || [];
+
+  const ingredientesEmFalta =
+    ingredientesCalculados.filter(
+      (item) => !item.suficiente
+    );
 
   async function executarProducao() {
     setMensagem("");
 
     if (!fichaSelecionada) {
-      alert("Seleciona uma ficha técnica.");
-      return;
-    }
-
-    if (!dosesProduzir || Number(dosesProduzir) <= 0) {
-      alert("Indica um número de doses válido.");
+      alert(
+        "Seleciona uma ficha técnica."
+      );
       return;
     }
 
     if (
-      !fichaSelecionada.ingredientes ||
-      fichaSelecionada.ingredientes.length === 0
+      !dosesProduzir ||
+      Number(dosesProduzir) <= 0
     ) {
-      alert("A ficha técnica selecionada não tem ingredientes definidos.");
+      alert(
+        "Indica um número de doses válido."
+      );
       return;
     }
 
-    if (ingredientesEmFalta.length > 0) {
+    if (
+      ingredientesEmFalta.length >
+      0
+    ) {
       alert(
-        `Não é possível executar a produção.\n\nIngredientes em falta ou sem stock suficiente:\n\n${ingredientesEmFalta
-          .map((item) => `• ${item.nome}`)
-          .join("\n")}`
+        "Existem ingredientes sem stock suficiente."
       );
       return;
     }
@@ -188,73 +416,79 @@ function Producoes() {
 
     if (!confirmar) return;
 
-    const { data: userData } = await supabase.auth.getUser();
+    const { data: userData } =
+      await supabase.auth.getUser();
+
     const user = userData?.user;
 
-    if (!user) {
-      alert("Sessão inválida.");
-      return;
-    }
+    if (!user) return;
 
     const movimentos = [];
 
     for (const ingrediente of ingredientesCalculados) {
-      const produtoStock = ingrediente.produtoStock;
+      const produtoStock =
+        ingrediente.produtoStock;
 
-      if (!produtoStock) continue;
+      if (!produtoStock)
+        continue;
 
-      const novaQuantidade = converterDaBase(
-        ingrediente.stockDepoisBase,
-        produtoStock.unidade
-      );
+      const novaQuantidade =
+        converterDaBase(
+          ingrediente.stockDepoisBase,
+          produtoStock.unidade
+        );
 
-      const { error: updateError } = await supabase
+      await supabase
         .from("stocks")
         .update({
-          quantidade: Number(novaQuantidade.toFixed(3)),
+          quantidade: Number(
+            novaQuantidade.toFixed(
+              3
+            )
+          ),
         })
-        .eq("id", produtoStock.id);
-
-      if (updateError) {
-        alert(updateError.message);
-        return;
-      }
+        .eq(
+          "id",
+          produtoStock.id
+        );
 
       movimentos.push({
         user_id: user.id,
-        produto: produtoStock.produto || produtoStock.nome || ingrediente.nome,
+        produto:
+          produtoStock.produto ||
+          produtoStock.nome ||
+          ingrediente.nome,
         tipo: `Produção: ${fichaSelecionada.nome}`,
-        quantidade: Number(ingrediente.quantidadeNecessariaBase.toFixed(0)),
+        quantidade: Number(
+          ingrediente.quantidadeNecessariaBase.toFixed(
+            0
+          )
+        ),
         unidade: "g/ml",
         observacoes: `${dosesProduzir} doses produzidas`,
       });
     }
 
     if (movimentos.length > 0) {
-      const { error: movimentosError } = await supabase
-        .from("movimentos_stock")
+      await supabase
+        .from(
+          "movimentos_stock"
+        )
         .insert(movimentos);
-
-      if (movimentosError) {
-        alert(movimentosError.message);
-        return;
-      }
     }
 
-    const { error: producaoError } = await supabase.from("producoes").insert({
-      user_id: user.id,
-      dias: [],
-      total_movimentos: movimentos.length,
-      observacoes: `Produção inteligente: ${fichaSelecionada.nome} — ${dosesProduzir} doses`,
-    });
-
-    if (producaoError) {
-      alert(producaoError.message);
-      return;
-    }
+    await supabase
+      .from("producoes")
+      .insert({
+        user_id: user.id,
+        dias: [diaSemana],
+        total_movimentos:
+          movimentos.length,
+        observacoes: `Produção automática: ${fichaSelecionada.nome} | ${refeicaoSelecionada}`,
+      });
 
     setMensagem(
-      `Produção executada com sucesso: ${fichaSelecionada.nome}, ${dosesProduzir} doses. Foram gerados ${movimentos.length} movimentos de stock.`
+      `Produção executada com sucesso.`
     );
 
     setFichaSelecionadaId("");
@@ -263,217 +497,206 @@ function Producoes() {
     await carregarDados();
   }
 
-  const producoesFiltradas = producoes.filter((producao) =>
-    JSON.stringify(producao).toLowerCase().includes(pesquisa.toLowerCase())
-  );
+  const producoesFiltradas =
+    producoes.filter((producao) =>
+      JSON.stringify(producao)
+        .toLowerCase()
+        .includes(
+          pesquisa.toLowerCase()
+        )
+    );
 
   return (
     <div className="pagina">
       <div className="topo-dashboard">
         <div>
           <h1>
-            <Factory size={28} /> Produções Inteligentes
+            <Factory size={28} />
+            Produções Inteligentes
           </h1>
 
           <p className="dashboard-subtitle">
-            Execução de produção com consumo automático de stock.
+            Produção automática
+            baseada em utentes,
+            dietas, alergias,
+            texturas e ementas.
           </p>
-        </div>
-      </div>
-
-      <div className="dashboard-section">
-        <h2>
-          <Factory size={22} /> Nova produção
-        </h2>
-
-        <div className="formulario">
-          <label>Ficha técnica</label>
-
-          <select
-            value={fichaSelecionadaId}
-            onChange={(e) => setFichaSelecionadaId(e.target.value)}
-          >
-            <option value="">Selecionar receita</option>
-
-            {fichas.map((ficha) => (
-              <option key={ficha.id} value={ficha.id}>
-                {ficha.nome} — {ficha.doses} doses base
-              </option>
-            ))}
-          </select>
-
-          <label>Número de doses a produzir</label>
-
-          <input
-            type="number"
-            min="1"
-            value={dosesProduzir}
-            onChange={(e) => setDosesProduzir(e.target.value)}
-          />
-        </div>
-
-        {fichaSelecionada && (
-          <div style={{ marginTop: "22px" }}>
-            <h3>Ingredientes necessários</h3>
-
-            <table className="dashboard-table">
-              <thead>
-                <tr>
-                  <th>Ingrediente</th>
-                  <th>Necessário</th>
-                  <th>Stock atual</th>
-                  <th>Stock depois</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {ingredientesCalculados.map((item, index) => (
-                  <tr key={index}>
-                    <td>{item.nome}</td>
-
-                    <td>
-                      {formatarQuantidadeOperacional(
-                        item.quantidadeNecessariaBase,
-                        item.unidadeStock
-                      )}
-                    </td>
-
-                    <td>
-                      {formatarQuantidadeOperacional(
-                        item.stockAtualBase,
-                        item.unidadeStock
-                      )}
-                    </td>
-
-                    <td>
-                      {formatarQuantidadeOperacional(
-                        item.stockDepoisBase,
-                        item.unidadeStock
-                      )}
-                    </td>
-
-                    <td>
-                      {item.suficiente ? (
-                        <span style={{ color: "#16a34a", fontWeight: "bold" }}>
-                          OK
-                        </span>
-                      ) : (
-                        <span style={{ color: "#dc2626", fontWeight: "bold" }}>
-                          Em falta
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {ingredientesEmFalta.length > 0 && (
-              <p style={{ color: "#dc2626", fontWeight: "bold", marginTop: 12 }}>
-                <AlertTriangle size={18} /> Existem ingredientes sem stock
-                suficiente.
-              </p>
-            )}
-
-            {ingredientesEmFalta.length === 0 && (
-              <p className="success-message" style={{ marginTop: 12 }}>
-                <CheckCircle2 size={18} /> Stock suficiente para executar esta
-                produção.
-              </p>
-            )}
-          </div>
-        )}
-
-        <div className="botoes-formulario">
-          <button className="botao-principal" onClick={executarProducao}>
-            Executar produção
-          </button>
-        </div>
-
-        {mensagem && <p className="success-message">{mensagem}</p>}
-      </div>
-
-      <div className="dashboard-section">
-        <div className="topbar-search">
-          <Search size={18} />
-
-          <input
-            type="text"
-            placeholder="Pesquisar produção..."
-            value={pesquisa}
-            onChange={(e) => setPesquisa(e.target.value)}
-          />
         </div>
       </div>
 
       <div className="dashboard-cards">
-        <div className="dashboard-card">
-          <Factory size={30} />
-          <h3>Total produções</h3>
-          <p>{producoes.length}</p>
-          <span>Registos operacionais</span>
+        <div className="dashboard-card destaque">
+          <Users size={30} />
+          <h3>Utentes</h3>
+          <p>{totalUtentes}</p>
+          <span>
+            Total registado
+          </span>
         </div>
 
         <div className="dashboard-card">
-          <ClipboardList size={30} />
-          <h3>Total movimentos</h3>
+          <UtensilsCrossed size={30} />
+          <h3>
+            Produção principal
+          </h3>
           <p>
-            {producoes.reduce(
-              (total, item) => total + Number(item.total_movimentos || 0),
-              0
-            )}
+            {producaoPrincipal}
           </p>
-          <span>Movimentos gerados</span>
+          <span>
+            Doses normais
+          </span>
+        </div>
+
+        <div className="dashboard-card">
+          <AlertTriangle size={30} />
+          <h3>Dietas</h3>
+          <p>{totalDietas}</p>
+          <span>
+            Dietas especiais
+          </span>
         </div>
 
         <div className="dashboard-card">
           <Package size={30} />
-          <h3>Fichas técnicas</h3>
-          <p>{fichas.length}</p>
-          <span>Receitas disponíveis</span>
+          <h3>Texturas</h3>
+          <p>{totalTexturas}</p>
+          <span>Adaptadas</span>
         </div>
       </div>
 
       <div className="dashboard-section">
         <h2>
-          <CalendarDays size={20} /> Histórico de Produções
+          <CalendarDays size={22} />
+          Produção automática
+          diária
         </h2>
 
-        {producoesFiltradas.length === 0 ? (
-          <p>Ainda não existem produções registadas.</p>
-        ) : (
-          <table className="dashboard-table">
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Dias produzidos</th>
-                <th>Movimentos</th>
-                <th>Observações</th>
-              </tr>
-            </thead>
+        <div
+          style={{
+            display: "flex",
+            gap: "12px",
+            flexWrap: "wrap",
+            marginBottom: "20px",
+          }}
+        >
+          {[
+            "Segunda-feira",
+            "Terça-feira",
+            "Quarta-feira",
+            "Quinta-feira",
+            "Sexta-feira",
+            "Sábado",
+            "Domingo",
+          ].map((dia) => (
+            <button
+              key={dia}
+              className={
+                diaSemana === dia
+                  ? "botao-principal"
+                  : "botao-secundario"
+              }
+              onClick={() =>
+                setDiaSemana(dia)
+              }
+            >
+              {dia}
+            </button>
+          ))}
+        </div>
 
-            <tbody>
-              {producoesFiltradas.map((producao, index) => (
-                <tr key={index}>
-                  <td>
-                    {new Date(producao.created_at).toLocaleDateString("pt-PT")}
-                  </td>
+        <div className="formulario">
+          <label>Refeição</label>
 
-                  <td>
-                    {Array.isArray(producao.dias) && producao.dias.length > 0
-                      ? producao.dias.join(", ")
-                      : "-"}
-                  </td>
+          <select
+            value={
+              refeicaoSelecionada
+            }
+            onChange={(e) =>
+              setRefeicaoSelecionada(
+                e.target.value
+              )
+            }
+          >
+            <option>
+              Pequeno-almoço
+            </option>
+            <option>
+              Almoço
+            </option>
+            <option>
+              Lanche
+            </option>
+            <option>
+              Jantar
+            </option>
+          </select>
+        </div>
 
-                  <td>{producao.total_movimentos}</td>
+        <div
+          style={{
+            marginTop: "20px",
+            background: "#ecfdf5",
+            border:
+              "2px solid #166534",
+            borderRadius: "16px",
+            padding: "20px",
+          }}
+        >
+          <h3>
+            Receita automática
+          </h3>
 
-                  <td>{producao.observacoes}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+          <p>
+            <strong>Dia:</strong>{" "}
+            {diaSemana}
+          </p>
+
+          <p>
+            <strong>
+              Refeição:
+            </strong>{" "}
+            {
+              refeicaoSelecionada
+            }
+          </p>
+
+          <p>
+            <strong>
+              Receita:
+            </strong>{" "}
+            {receitaAutomatica?.nome ||
+              "Sem receita"}
+          </p>
+
+          <p>
+            <strong>
+              Produção principal:
+            </strong>{" "}
+            {producaoPrincipal}{" "}
+            doses
+          </p>
+
+          <p>
+            <strong>
+              Dietas:
+            </strong>{" "}
+            {totalDietas}
+          </p>
+
+          <p>
+            <strong>
+              Texturas:
+            </strong>{" "}
+            {totalTexturas}
+          </p>
+
+          <p>
+            <strong>
+              Alergias:
+            </strong>{" "}
+            {totalAlergias}
+          </p>
+        </div>
       </div>
     </div>
   );

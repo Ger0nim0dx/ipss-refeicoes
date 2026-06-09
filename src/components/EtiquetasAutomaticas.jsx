@@ -4,17 +4,19 @@ import {
   Download,
   Printer,
   UtensilsCrossed,
+  Filter,
 } from "lucide-react";
 
 import jsPDF from "jspdf";
+import QRCode from "qrcode";
 import { supabase } from "../supabaseClient";
 
 function EtiquetasAutomaticas() {
   const [utentes, setUtentes] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const [refeicao, setRefeicao] =
-    useState("Almoço");
+  const [refeicao, setRefeicao] = useState("Almoço");
+  const [filtro, setFiltro] = useState("todos");
+  const [modoMapaDiario, setModoMapaDiario] = useState(true);
 
   useEffect(() => {
     carregarUtentes();
@@ -23,12 +25,13 @@ function EtiquetasAutomaticas() {
   async function carregarUtentes() {
     setLoading(true);
 
-    const { data: userData } =
-      await supabase.auth.getUser();
-
+    const { data: userData } = await supabase.auth.getUser();
     const user = userData?.user;
 
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     const { data } = await supabase
       .from("utentes")
@@ -40,7 +43,147 @@ function EtiquetasAutomaticas() {
     setLoading(false);
   }
 
-  function exportarPDF() {
+  function normalizarTexto(texto) {
+    return String(texto || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function obterValor(utente, campos, fallback = "") {
+    for (const campo of campos) {
+      if (utente?.[campo]) return utente[campo];
+    }
+
+    return fallback;
+  }
+
+  function obterCorEtiqueta(utente) {
+    const dieta = normalizarTexto(
+      obterValor(utente, ["dieta", "tipo_dieta"], "")
+    );
+
+    const textura = normalizarTexto(
+      obterValor(utente, ["textura", "textura_alimentar"], "")
+    );
+
+    const alergias = normalizarTexto(
+      obterValor(utente, ["alergias", "alergenios"], "")
+    );
+
+    if (alergias && alergias !== "sem alergias") {
+      return {
+        fundo: "#fee2e2",
+        borda: "#dc2626",
+        titulo: "#991b1b",
+        pdfFundo: [254, 226, 226],
+        pdfBorda: [220, 38, 38],
+        pdfTitulo: [153, 27, 27],
+        etiqueta: "ALERGIA",
+      };
+    }
+
+    if (textura.includes("tritur") || textura.includes("pastosa")) {
+      return {
+        fundo: "#dbeafe",
+        borda: "#2563eb",
+        titulo: "#1e40af",
+        pdfFundo: [219, 234, 254],
+        pdfBorda: [37, 99, 235],
+        pdfTitulo: [30, 64, 175],
+        etiqueta: "TEXTURA",
+      };
+    }
+
+    if (dieta.includes("diab")) {
+      return {
+        fundo: "#fef9c3",
+        borda: "#ca8a04",
+        titulo: "#854d0e",
+        pdfFundo: [254, 249, 195],
+        pdfBorda: [202, 138, 4],
+        pdfTitulo: [133, 77, 14],
+        etiqueta: "DIABÉTICA",
+      };
+    }
+
+    if (dieta.includes("hiposs") || dieta.includes("sem sal")) {
+      return {
+        fundo: "#ffedd5",
+        borda: "#ea580c",
+        titulo: "#9a3412",
+        pdfFundo: [255, 237, 213],
+        pdfBorda: [234, 88, 12],
+        pdfTitulo: [154, 52, 18],
+        etiqueta: "HIPOSSÓDICA",
+      };
+    }
+
+    return {
+      fundo: "#dcfce7",
+      borda: "#166534",
+      titulo: "#166534",
+      pdfFundo: [220, 252, 231],
+      pdfBorda: [22, 101, 52],
+      pdfTitulo: [22, 101, 52],
+      etiqueta: "NORMAL",
+    };
+  }
+
+  function utenteCumpreFiltro(utente) {
+    const dieta = normalizarTexto(
+      obterValor(utente, ["dieta", "tipo_dieta"], "")
+    );
+
+    const textura = normalizarTexto(
+      obterValor(utente, ["textura", "textura_alimentar"], "")
+    );
+
+    const alergias = normalizarTexto(
+      obterValor(utente, ["alergias", "alergenios"], "")
+    );
+
+    const dietaEspecial = dieta && dieta !== "normal";
+
+    const texturaAdaptada =
+      textura.includes("tritur") || textura.includes("pastosa");
+
+    const temAlergias = alergias && alergias !== "sem alergias";
+
+    if (modoMapaDiario) {
+      return dietaEspecial || texturaAdaptada || temAlergias;
+    }
+
+    if (filtro === "todos") return true;
+    if (filtro === "dietas") return dietaEspecial;
+    if (filtro === "texturas") return texturaAdaptada;
+    if (filtro === "alergias") return temAlergias;
+
+    return true;
+  }
+
+  const utentesFiltrados = utentes.filter(utenteCumpreFiltro);
+
+  function limparTextoPDF(texto) {
+    return String(texto || "")
+      .replace(/[^\x20-\x7EÀ-ÿ]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  async function gerarQRCode(texto) {
+    try {
+      return await QRCode.toDataURL(texto, {
+        width: 120,
+        margin: 1,
+      });
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
+  }
+
+  async function exportarPDF() {
     const doc = new jsPDF("p", "mm", "a4");
 
     const larguraEtiqueta = 90;
@@ -49,84 +192,84 @@ function EtiquetasAutomaticas() {
     let x = 10;
     let y = 15;
 
-    utentes.forEach((utente, index) => {
-      doc.setDrawColor(22, 101, 52);
+    for (let index = 0; index < utentesFiltrados.length; index++) {
+      const utente = utentesFiltrados[index];
+      const cores = obterCorEtiqueta(utente);
+
+      const nome = limparTextoPDF(
+        obterValor(utente, ["nome", "nome_completo"], "Utente")
+      );
+
+      const dieta = limparTextoPDF(
+        obterValor(utente, ["dieta", "tipo_dieta"], "Normal")
+      );
+
+      const textura = limparTextoPDF(
+        obterValor(utente, ["textura", "textura_alimentar"], "Normal")
+      );
+
+      const alergias = limparTextoPDF(
+        obterValor(utente, ["alergias", "alergenios"], "Sem alergias")
+      );
+
+      const observacoes = limparTextoPDF(
+        obterValor(utente, ["observacoes", "observacao", "notas"], "")
+      );
+
+      doc.setFillColor(...cores.pdfFundo);
+      doc.setDrawColor(...cores.pdfBorda);
       doc.setLineWidth(0.8);
+      doc.roundedRect(x, y, larguraEtiqueta, alturaEtiqueta, 3, 3, "FD");
 
-      doc.roundedRect(
-        x,
-        y,
-        larguraEtiqueta,
-        alturaEtiqueta,
-        3,
-        3
-      );
+      doc.setFillColor(...cores.pdfBorda);
+      doc.roundedRect(x + 64, y + 4, 21, 7, 2, 2, "F");
 
-      doc.setFontSize(15);
-      doc.setTextColor(22, 101, 52);
+      doc.setFontSize(7);
+      doc.setTextColor(255, 255, 255);
+      doc.text(cores.etiqueta, x + 66, y + 9);
 
-      doc.text(
-        String(utente.nome || "Utente"),
-        x + 4,
-        y + 10
-      );
+      doc.setFontSize(14);
+      doc.setTextColor(...cores.pdfTitulo);
 
-      doc.setFontSize(11);
+      const linhasNome = doc.splitTextToSize(nome, 50);
+      doc.text(linhasNome.slice(0, 2), x + 4, y + 10);
+
+      doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
-
-      doc.text(
-        `Dieta: ${
-          utente.dieta || "Normal"
-        }`,
-        x + 4,
-        y + 20
-      );
-
-      doc.text(
-        `Textura: ${
-          utente.textura || "Normal"
-        }`,
-        x + 4,
-        y + 28
-      );
-
-      doc.text(
-        `Alergias: ${
-          utente.alergias ||
-          "Sem alergias"
-        }`,
-        x + 4,
-        y + 36
-      );
+      doc.text(`Dieta: ${dieta || "Normal"}`, x + 4, y + 22);
+      doc.text(`Textura: ${textura || "Normal"}`, x + 4, y + 30);
+      doc.text(`Alergias: ${alergias || "Sem alergias"}`, x + 4, y + 38);
 
       doc.setFontSize(12);
-      doc.setTextColor(220, 38, 38);
-
-      doc.text(refeicao, x + 4, y + 46);
+      doc.setTextColor(...cores.pdfBorda);
+      doc.text(limparTextoPDF(refeicao), x + 4, y + 47);
 
       doc.setFontSize(9);
       doc.setTextColor(80);
+      doc.text(new Date().toLocaleDateString("pt-PT"), x + 58, y + 47);
 
-      doc.text(
-        new Date().toLocaleDateString(
-          "pt-PT"
-        ),
-        x + 60,
-        y + 46
-      );
+      if (observacoes) {
+        doc.setFontSize(7);
+        doc.setTextColor(90);
 
-      if (
-        utente.observacoes &&
-        utente.observacoes !== "-"
-      ) {
-        doc.setFontSize(8);
-        doc.setTextColor(120);
+        const linhasObs = doc.splitTextToSize(observacoes, 50);
+        doc.text(linhasObs.slice(0, 1), x + 4, y + 53);
+      }
 
-        doc.text(
-          utente.observacoes,
-          x + 4,
-          y + 52
-        );
+      const qrTexto = `
+Utente: ${nome}
+Refeição: ${refeicao}
+Data: ${new Date().toLocaleDateString("pt-PT")}
+Dieta: ${dieta}
+Textura: ${textura}
+Alergias: ${alergias}
+Observações: ${observacoes || "-"}
+      `.trim();
+
+      const qrCode = await gerarQRCode(qrTexto);
+
+      if (qrCode) {
+        doc.addImage(qrCode, "PNG", x + 66, y + 15, 18, 18);
       }
 
       if (x === 10) {
@@ -136,15 +279,15 @@ function EtiquetasAutomaticas() {
         y += 65;
       }
 
-      if (y > 240 && index < utentes.length - 1) {
+      if (y > 240 && index < utentesFiltrados.length - 1) {
         doc.addPage();
         x = 10;
         y = 15;
       }
-    });
+    }
 
     doc.save(
-      `etiquetas-${refeicao}.pdf`
+      `etiquetas-${refeicao}-${modoMapaDiario ? "mapa-diario" : filtro}.pdf`
     );
   }
 
@@ -156,18 +299,17 @@ function EtiquetasAutomaticas() {
       </h1>
 
       <p className="descricao">
-        Etiquetas profissionais para
-        refeições institucionais,
-        dietas, texturas e alergias.
+        Etiquetas profissionais para refeições institucionais, dietas, texturas
+        e alergias, com QR Code, cores automáticas e modo de mapa diário.
       </p>
 
       <div className="dashboard-cards">
         <div className="dashboard-card destaque">
           <Tag size={30} />
           <h3>Etiquetas</h3>
-          <p>{utentes.length}</p>
+          <p>{utentesFiltrados.length}</p>
           <span>
-            Etiquetas geradas
+            {modoMapaDiario ? "Casos relevantes" : "Etiquetas filtradas"}
           </span>
         </div>
 
@@ -175,18 +317,21 @@ function EtiquetasAutomaticas() {
           <Printer size={30} />
           <h3>Impressão</h3>
           <p>A4</p>
-          <span>
-            Formato profissional
-          </span>
+          <span>Com QR Code</span>
         </div>
 
         <div className="dashboard-card">
           <UtensilsCrossed size={30} />
           <h3>Refeição</h3>
           <p>{refeicao}</p>
-          <span>
-            Etiquetas ativas
-          </span>
+          <span>Etiquetas ativas</span>
+        </div>
+
+        <div className="dashboard-card">
+          <Filter size={30} />
+          <h3>Modo</h3>
+          <p>{modoMapaDiario ? "Mapa" : filtro}</p>
+          <span>Seleção atual</span>
         </div>
       </div>
 
@@ -194,8 +339,7 @@ function EtiquetasAutomaticas() {
         <div
           style={{
             display: "flex",
-            justifyContent:
-              "space-between",
+            justifyContent: "space-between",
             alignItems: "center",
             gap: "20px",
             flexWrap: "wrap",
@@ -203,13 +347,10 @@ function EtiquetasAutomaticas() {
           }}
         >
           <div>
-            <h2>
-              Etiquetas individuais
-            </h2>
-
+            <h2>Etiquetas por refeição</h2>
             <p>
-              Preparadas para impressão
-              institucional.
+              No modo mapa diário, aparecem apenas utentes com dietas especiais,
+              alergias ou texturas adaptadas.
             </p>
           </div>
 
@@ -218,152 +359,188 @@ function EtiquetasAutomaticas() {
               display: "flex",
               gap: "12px",
               alignItems: "center",
+              flexWrap: "wrap",
             }}
           >
+            <button
+              className={modoMapaDiario ? "botao-principal" : "botao-secundario"}
+              onClick={() => setModoMapaDiario(!modoMapaDiario)}
+            >
+              {modoMapaDiario ? "Mapa diário ativo" : "Modo completo"}
+            </button>
+
+            {!modoMapaDiario && (
+              <select
+                value={filtro}
+                onChange={(e) => setFiltro(e.target.value)}
+                className="input-form"
+              >
+                <option value="todos">Todos</option>
+                <option value="dietas">Dietas especiais</option>
+                <option value="texturas">Texturas adaptadas</option>
+                <option value="alergias">Alergias</option>
+              </select>
+            )}
+
             <select
               value={refeicao}
-              onChange={(e) =>
-                setRefeicao(
-                  e.target.value
-                )
-              }
+              onChange={(e) => setRefeicao(e.target.value)}
               className="input-form"
             >
-              <option>
-                Pequeno-almoço
-              </option>
-
+              <option>Pequeno-almoço</option>
+              <option>Reforço da manhã</option>
               <option>Almoço</option>
-
               <option>Lanche</option>
-
               <option>Jantar</option>
+              <option>Reforço da noite</option>
             </select>
 
-            <button
-              className="botao-principal"
-              onClick={exportarPDF}
-            >
+            <button className="botao-principal" onClick={exportarPDF}>
               <Download size={18} />
-              Exportar PDF
+              Exportar PDF com QR
             </button>
           </div>
         </div>
 
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            flexWrap: "wrap",
+            marginBottom: "22px",
+          }}
+        >
+          <span className="badge badge-success">Normal</span>
+          <span className="badge badge-warning">Diabética</span>
+          <span className="badge badge-info">Textura adaptada</span>
+          <span className="badge badge-danger">Alergias</span>
+        </div>
+
         {loading ? (
-          <p>
-            A carregar etiquetas...
-          </p>
-        ) : utentes.length === 0 ? (
-          <p>
-            Não existem utentes
-            registados.
-          </p>
+          <p>A carregar etiquetas...</p>
+        ) : utentesFiltrados.length === 0 ? (
+          <p>Não existem etiquetas para o modo/filtro selecionado.</p>
         ) : (
           <div
             style={{
               display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(340px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
               gap: "20px",
             }}
           >
-            {utentes.map((utente) => (
-              <div
-                key={utente.id}
-                style={{
-                  border:
-                    "2px solid #166534",
-                  borderRadius: "16px",
-                  padding: "22px",
-                  background:
-                    "#ffffff",
-                  minHeight: "230px",
-                  display: "flex",
-                  flexDirection:
-                    "column",
-                  justifyContent:
-                    "space-between",
-                }}
-              >
-                <div>
-                  <h2
-                    style={{
-                      color: "#166534",
-                      marginBottom:
-                        "16px",
-                    }}
-                  >
-                    {utente.nome}
-                  </h2>
+            {utentesFiltrados.map((utente) => {
+              const cores = obterCorEtiqueta(utente);
 
-                  <p>
-                    <strong>
-                      Dieta:
-                    </strong>{" "}
-                    {utente.dieta ||
-                      "Normal"}
-                  </p>
+              const nome = obterValor(
+                utente,
+                ["nome", "nome_completo"],
+                "Utente"
+              );
 
-                  <p>
-                    <strong>
-                      Textura:
-                    </strong>{" "}
-                    {utente.textura ||
-                      "Normal"}
-                  </p>
+              const dieta = obterValor(
+                utente,
+                ["dieta", "tipo_dieta"],
+                "Normal"
+              );
 
-                  <p>
-                    <strong>
-                      Alergias:
-                    </strong>{" "}
-                    {utente.alergias ||
-                      "Sem alergias"}
-                  </p>
+              const textura = obterValor(
+                utente,
+                ["textura", "textura_alimentar"],
+                "Normal"
+              );
 
-                  <p>
-                    <strong>
-                      Observações:
-                    </strong>{" "}
-                    {utente.observacoes ||
-                      "-"}
-                  </p>
-                </div>
+              const alergias = obterValor(
+                utente,
+                ["alergias", "alergenios"],
+                "Sem alergias"
+              );
 
+              const observacoes = obterValor(
+                utente,
+                ["observacoes", "observacao", "notas"],
+                "-"
+              );
+
+              return (
                 <div
+                  key={utente.id}
                   style={{
-                    marginTop: "20px",
-                    paddingTop: "14px",
-                    borderTop:
-                      "1px dashed #ccc",
+                    border: `2px solid ${cores.borda}`,
+                    borderRadius: "16px",
+                    padding: "22px",
+                    background: cores.fundo,
+                    minHeight: "230px",
                     display: "flex",
-                    justifyContent:
-                      "space-between",
-                    alignItems:
-                      "center",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    boxShadow: "0 10px 24px rgba(15, 23, 42, 0.08)",
                   }}
                 >
-                  <strong
-                    style={{
-                      color: "#dc2626",
-                    }}
-                  >
-                    {refeicao}
-                  </strong>
+                  <div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: "12px",
+                        alignItems: "flex-start",
+                        marginBottom: "14px",
+                      }}
+                    >
+                      <h2 style={{ color: cores.titulo, marginBottom: 0 }}>
+                        {nome}
+                      </h2>
 
-                  <span
+                      <span
+                        style={{
+                          background: cores.borda,
+                          color: "white",
+                          borderRadius: "999px",
+                          padding: "6px 10px",
+                          fontSize: "11px",
+                          fontWeight: 800,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {cores.etiqueta}
+                      </span>
+                    </div>
+
+                    <p>
+                      <strong>Dieta:</strong> {dieta || "Normal"}
+                    </p>
+
+                    <p>
+                      <strong>Textura:</strong> {textura || "Normal"}
+                    </p>
+
+                    <p>
+                      <strong>Alergias:</strong> {alergias || "Sem alergias"}
+                    </p>
+
+                    <p>
+                      <strong>Observações:</strong> {observacoes || "-"}
+                    </p>
+                  </div>
+
+                  <div
                     style={{
-                      fontSize: "13px",
-                      color: "#666",
+                      marginTop: "20px",
+                      paddingTop: "14px",
+                      borderTop: `1px dashed ${cores.borda}`,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
                     }}
                   >
-                    {new Date().toLocaleDateString(
-                      "pt-PT"
-                    )}
-                  </span>
+                    <strong style={{ color: cores.borda }}>{refeicao}</strong>
+
+                    <span style={{ fontSize: "13px", color: "#475569" }}>
+                      QR no PDF · {new Date().toLocaleDateString("pt-PT")}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

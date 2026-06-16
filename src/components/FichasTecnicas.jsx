@@ -535,7 +535,8 @@ export default function FichasTecnicas() {
     const { error } = await supabase
       .from("fichas_tecnicas")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("instituicao_id", instituicaoAtual.id);
 
     if (error) {
       alert("Erro ao eliminar ficha.");

@@ -36,8 +36,10 @@ import {
 } from "recharts";
 
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 function Dashboard({ onNavigate } = {}) {
+  const { instituicaoAtual } = useInstituicao();
   const [dadosIPSS, setDadosIPSS] = useState({});
   const [stocks, setStocks] = useState([]);
   const [movimentos, setMovimentos] = useState([]);
@@ -52,8 +54,10 @@ function Dashboard({ onNavigate } = {}) {
   const [mensagemOperacional, setMensagemOperacional] = useState("");
 
   useEffect(() => {
-    carregarDashboard();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarDashboard();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarDashboard() {
     const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -74,19 +78,19 @@ function Dashboard({ onNavigate } = {}) {
     const { data: stocksData } = await supabase
       .from("stocks")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false });
 
     const { data: fichasData } = await supabase
       .from("fichas_tecnicas")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false });
 
     const { data: ementasData } = await supabase
       .from("ementas")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false });
 
     const { data: dietasData } = await supabase
@@ -104,7 +108,7 @@ function Dashboard({ onNavigate } = {}) {
     const { data: utentesData, error: utentesError } = await supabase
       .from("utentes")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false });
 
     if (utentesError) {
@@ -1132,7 +1136,7 @@ function Dashboard({ onNavigate } = {}) {
         <div>
           <h1>Dashboard Geral</h1>
           <p className="dashboard-subtitle">
-            Gestão alimentar inteligente da IPSS.
+            {instituicaoAtual?.nome || "IPSS"} — Gestão alimentar inteligente.
           </p>
         </div>
 

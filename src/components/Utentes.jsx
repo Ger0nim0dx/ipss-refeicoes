@@ -205,6 +205,44 @@ export default function Utentes() {
     return new Date(data).toLocaleDateString("pt-PT");
   }
 
+  function calcularIdade(dataNascimento) {
+    if (!dataNascimento) return "-";
+
+    const hoje = new Date();
+    const nascimento = new Date(dataNascimento);
+
+    let idade = hoje.getFullYear() - nascimento.getFullYear();
+
+    const mes = hoje.getMonth() - nascimento.getMonth();
+
+    if (
+      mes < 0 ||
+      (mes === 0 && hoje.getDate() < nascimento.getDate())
+    ) {
+      idade--;
+    }
+
+    return idade;
+  }
+
+  const utentesAtivos = utentes.filter((item) => item.ativo);
+
+  const utentesComAlergias = utentes.filter(
+    (item) => item.alergias && item.alergias.trim() !== ""
+  );
+
+  const aniversariosHoje = utentes.filter((utente) => {
+    if (!utente.data_nascimento) return false;
+
+    const hoje = new Date();
+    const nascimento = new Date(utente.data_nascimento);
+
+    return (
+      nascimento.getDate() === hoje.getDate() &&
+      nascimento.getMonth() === hoje.getMonth()
+    );
+  });
+
   function exportarPDF() {
     const doc = new jsPDF();
 
@@ -221,6 +259,7 @@ export default function Utentes() {
         [
           "Nome",
           "Nascimento",
+          "Idade",
           "Quarto",
           "Valência",
           "Dieta",
@@ -232,6 +271,7 @@ export default function Utentes() {
       body: utentes.map((item) => [
         item.nome || "-",
         formatarData(item.data_nascimento),
+        calcularIdade(item.data_nascimento),
         item.quarto || "-",
         item.valencia || "-",
         item.dieta || "-",
@@ -244,12 +284,6 @@ export default function Utentes() {
     doc.save("relatorio-utentes-ipss.pdf");
   }
 
-  const utentesAtivos = utentes.filter((item) => item.ativo);
-
-  const utentesComAlergias = utentes.filter(
-    (item) => item.alergias && item.alergias.trim() !== ""
-  );
-
   return (
     <div className="pagina">
       <div className="historico-topo">
@@ -257,7 +291,8 @@ export default function Utentes() {
           <h2>Gestão de Utentes</h2>
 
           <p className="subtitulo">
-            {instituicaoAtual?.nome} — Registo de utentes, dietas, alergias e observações alimentares.
+            {instituicaoAtual?.nome} — Registo de utentes, dietas, alergias e
+            observações alimentares.
           </p>
         </div>
 
@@ -286,7 +321,53 @@ export default function Utentes() {
           <h3>Dietas registadas</h3>
           <p>{dietas.length}</p>
         </div>
+
+        <div className="dashboard-card destaque">
+          <h3>🎂 Aniversários Hoje</h3>
+          <p>{aniversariosHoje.length}</p>
+        </div>
       </div>
+
+      {aniversariosHoje.length > 0 && (
+        <div
+          className="dashboard-section"
+          style={{
+            background: "#fff7ed",
+            border: "2px solid #fb923c",
+          }}
+        >
+          <h2>🎂 Aviso para a cozinha</h2>
+
+          <p>
+            Existem utentes que fazem anos hoje. Poderá ser preparada sobremesa,
+            bolo ou atenção especial, de acordo com a dieta de cada utente.
+          </p>
+
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Utente</th>
+                <th>Idade</th>
+                <th>Quarto/Sala</th>
+                <th>Dieta</th>
+                <th>Alergias</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {aniversariosHoje.map((utente) => (
+                <tr key={utente.id}>
+                  <td>{utente.nome}</td>
+                  <td>{calcularIdade(utente.data_nascimento)} anos</td>
+                  <td>{utente.quarto || "-"}</td>
+                  <td>{utente.dieta || "Normal"}</td>
+                  <td>{utente.alergias || "Nenhuma"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="painel">
         <h3>{modoEdicao ? "Editar utente" : "Novo utente"}</h3>
@@ -403,6 +484,11 @@ export default function Utentes() {
               <p>
                 <strong>Nascimento:</strong>{" "}
                 {formatarData(item.data_nascimento)}
+              </p>
+
+              <p>
+                <strong>Idade:</strong>{" "}
+                {calcularIdade(item.data_nascimento)} anos
               </p>
 
               <p>

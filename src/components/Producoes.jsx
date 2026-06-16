@@ -13,8 +13,11 @@ import {
 } from "lucide-react";
 
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 function Producoes() {
+  const { instituicaoAtual } = useInstituicao();
+
   const [producoes, setProducoes] = useState([]);
   const [fichas, setFichas] = useState([]);
   const [stocks, setStocks] = useState([]);
@@ -35,8 +38,10 @@ function Producoes() {
   ] = useState("Almoço");
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarDados();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarDados() {
     const { data: userData } =
@@ -50,7 +55,7 @@ function Producoes() {
       await supabase
         .from("producoes")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("instituicao_id", instituicaoAtual.id)
         .order("created_at", {
           ascending: false,
         });
@@ -59,7 +64,7 @@ function Producoes() {
       await supabase
         .from("fichas_tecnicas")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("instituicao_id", instituicaoAtual.id)
         .order("created_at", {
           ascending: false,
         });
@@ -68,19 +73,19 @@ function Producoes() {
       await supabase
         .from("stocks")
         .select("*")
-        .eq("user_id", user.id);
+        .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: utentesData } =
       await supabase
         .from("utentes")
         .select("*")
-        .eq("user_id", user.id);
+        .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: ementasData } =
       await supabase
         .from("ementas")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("instituicao_id", instituicaoAtual.id)
         .order("created_at", {
           ascending: false,
         });
@@ -450,10 +455,15 @@ function Producoes() {
         .eq(
           "id",
           produtoStock.id
+        )
+        .eq(
+          "instituicao_id",
+          instituicaoAtual.id
         );
 
       movimentos.push({
         user_id: user.id,
+        instituicao_id: instituicaoAtual.id,
         produto:
           produtoStock.produto ||
           produtoStock.nome ||
@@ -481,6 +491,7 @@ function Producoes() {
       .from("producoes")
       .insert({
         user_id: user.id,
+        instituicao_id: instituicaoAtual.id,
         dias: [diaSemana],
         total_movimentos:
           movimentos.length,
@@ -516,7 +527,7 @@ function Producoes() {
           </h1>
 
           <p className="dashboard-subtitle">
-            Produção automática
+            {instituicaoAtual?.nome} — Produção automática
             baseada em utentes,
             dietas, alergias,
             texturas e ementas.

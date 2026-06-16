@@ -9,36 +9,41 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 function ComprasInteligentes() {
+  const { instituicaoAtual } = useInstituicao();
+
   const [stocks, setStocks] = useState([]);
   const [ementas, setEmentas] = useState([]);
   const [fichas, setFichas] = useState([]);
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarDados();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarDados() {
     const { data: userData } = await supabase.auth.getUser();
     const user = userData?.user;
-    if (!user) return;
+    if (!user || !instituicaoAtual?.id) return;
 
     const { data: stocksData } = await supabase
       .from("stocks")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: ementasData } = await supabase
       .from("ementas")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false });
 
     const { data: fichasData } = await supabase
       .from("fichas_tecnicas")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const fichasFormatadas = (fichasData || []).map((ficha) => ({
       id: ficha.id,
@@ -297,7 +302,7 @@ function ComprasInteligentes() {
     const dataAtual = new Date().toLocaleDateString("pt-PT");
 
     doc.setFontSize(20);
-    doc.text("IPSS Gestão", 14, 20);
+    doc.text(instituicaoAtual?.nome || "IPSS Gestão", 14, 20);
 
     doc.setFontSize(16);
     doc.text("Lista de Compras Inteligente", 14, 32);
@@ -335,8 +340,8 @@ function ComprasInteligentes() {
       </h1>
 
       <p className="descricao">
-        Lista automática de compras com base no stock atual, stock mínimo e
-        ementa planeada.
+        {instituicaoAtual?.nome} — Lista automática de compras com base no stock
+        atual, stock mínimo e ementa planeada.
       </p>
 
       <div className="dashboard-cards">

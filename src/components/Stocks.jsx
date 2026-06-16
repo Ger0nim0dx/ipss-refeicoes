@@ -5,8 +5,12 @@ import { useInstituicao } from "../context/InstituicaoContext";
 export default function Stocks() {
   const { instituicaoAtual } = useInstituicao();
 
+  const chaveMovimentosStock = instituicaoAtual?.id
+    ? `ipssMovimentosStock_${instituicaoAtual.id}`
+    : "ipssMovimentosStock";
+
   const movimentosGuardados =
-    JSON.parse(localStorage.getItem("ipssMovimentosStock")) || [];
+    JSON.parse(localStorage.getItem(chaveMovimentosStock)) || [];
 
   const [produto, setProduto] = useState("");
   const [categoria, setCategoria] = useState("Mercearia");
@@ -28,6 +32,11 @@ export default function Stocks() {
     if (instituicaoAtual?.id) {
       carregarStocks();
       carregarFichasTecnicas();
+
+      const movimentosDaInstituicao =
+        JSON.parse(localStorage.getItem(chaveMovimentosStock)) || [];
+
+      setMovimentos(movimentosDaInstituicao);
     }
   }, [instituicaoAtual]);
 
@@ -116,7 +125,7 @@ export default function Stocks() {
   function guardarMovimentos(novosMovimentos) {
     setMovimentos(novosMovimentos);
     localStorage.setItem(
-      "ipssMovimentosStock",
+      chaveMovimentosStock,
       JSON.stringify(novosMovimentos)
     );
   }
@@ -198,7 +207,8 @@ export default function Stocks() {
     const { error } = await supabase
       .from("stocks")
       .update({ quantidade: novaQuantidade })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("instituicao_id", instituicaoAtual.id);
 
     if (error) {
       alert(error.message);
@@ -236,7 +246,8 @@ export default function Stocks() {
     const { error } = await supabase
       .from("stocks")
       .update({ quantidade: novaQuantidade })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("instituicao_id", instituicaoAtual.id);
 
     if (error) {
       alert(error.message);
@@ -261,7 +272,11 @@ export default function Stocks() {
     const confirmar = confirm("Tens a certeza que queres apagar este produto?");
     if (!confirmar) return;
 
-    const { error } = await supabase.from("stocks").delete().eq("id", id);
+    const { error } = await supabase
+      .from("stocks")
+      .delete()
+      .eq("id", id)
+      .eq("instituicao_id", instituicaoAtual.id);
 
     if (error) {
       alert(error.message);
@@ -389,7 +404,8 @@ export default function Stocks() {
       const { error } = await supabase
         .from("stocks")
         .update({ quantidade: Number(novaQuantidade.toFixed(3)) })
-        .eq("id", produtoStock.id);
+        .eq("id", produtoStock.id)
+        .eq("instituicao_id", instituicaoAtual.id);
 
       if (error) {
         alert(error.message);

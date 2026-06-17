@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 function Definicoes() {
+  const { instituicaoAtual } = useInstituicao();
   const [dados, setDados] = useState({
     nomeInstituicao: "",
     nif: "",
@@ -20,19 +22,21 @@ function Definicoes() {
   const [registoId, setRegistoId] = useState(null);
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarDados();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarDados() {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
 
-    if (!userId) return;
+    if (!userId || !instituicaoAtual?.id) return;
 
     const { data, error } = await supabase
       .from("dados_ipss")
       .select("*")
-      .eq("user_id", userId)
+      .eq("instituicao_id", instituicaoAtual.id)
       .single();
 
     if (error && error.code !== "PGRST116") {
@@ -75,13 +79,14 @@ function Definicoes() {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData?.user?.id;
 
-    if (!userId) {
-      alert("Sessão inválida.");
+    if (!userId || !instituicaoAtual?.id) {
+      alert("Sessão inválida ou instituição não selecionada.");
       return;
     }
 
     const payload = {
       user_id: userId,
+      instituicao_id: instituicaoAtual.id,
       nomeinstituicao: dados.nomeInstituicao,
       nif: dados.nif,
       morada: dados.morada,
@@ -102,7 +107,8 @@ function Definicoes() {
       const resultado = await supabase
         .from("dados_ipss")
         .update(payload)
-        .eq("id", registoId);
+        .eq("id", registoId)
+        .eq("instituicao_id", instituicaoAtual.id);
 
       error = resultado.error;
     } else {
@@ -139,7 +145,8 @@ function Definicoes() {
       const { error } = await supabase
         .from("dados_ipss")
         .delete()
-        .eq("id", registoId);
+        .eq("id", registoId)
+        .eq("instituicao_id", instituicaoAtual.id);
 
       if (error) {
         alert(error.message);

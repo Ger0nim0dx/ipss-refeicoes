@@ -11,8 +11,10 @@ import {
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 function EtiquetasAutomaticas() {
+  const { instituicaoAtual } = useInstituicao();
   const [utentes, setUtentes] = useState([]);
   const [ementas, setEmentas] = useState([]);
   const [fichas, setFichas] = useState([]);
@@ -34,16 +36,15 @@ function EtiquetasAutomaticas() {
   ];
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarDados();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarDados() {
     setLoading(true);
 
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-
-    if (!user) {
+    if (!instituicaoAtual?.id) {
       setLoading(false);
       return;
     }
@@ -51,19 +52,19 @@ function EtiquetasAutomaticas() {
     const { data: utentesData } = await supabase
       .from("utentes")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("nome");
 
     const { data: ementasData } = await supabase
       .from("ementas")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false });
 
     const { data: fichasData } = await supabase
       .from("fichas_tecnicas")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const fichasFormatadas = (fichasData || []).map((ficha) => ({
       id: ficha.id,
@@ -357,8 +358,9 @@ Observações: ${observacoes || "-"}
       </h1>
 
       <p className="descricao">
-        Etiquetas profissionais para refeições institucionais, dietas, texturas
-        e alergias, com QR Code, cores automáticas e ligação à ementa do dia.
+        {instituicaoAtual?.nome} — Etiquetas profissionais para refeições
+        institucionais, dietas, texturas e alergias, com QR Code, cores
+        automáticas e ligação à ementa do dia.
       </p>
 
       <div className="dashboard-cards">

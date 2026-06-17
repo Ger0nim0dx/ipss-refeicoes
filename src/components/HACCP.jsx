@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 import {
   ResponsiveContainer,
@@ -17,6 +18,8 @@ import {
 } from "recharts";
 
 export default function HACCP() {
+  const { instituicaoAtual } = useInstituicao();
+
   const [temperaturas, setTemperaturas] = useState([]);
   const [checklists, setChecklists] = useState([]);
   const [naoConformidades, setNaoConformidades] = useState([]);
@@ -46,13 +49,16 @@ export default function HACCP() {
   });
 
   useEffect(() => {
-    carregarRegistos();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarRegistos();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarRegistos() {
     const { data, error } = await supabase
       .from("haccp")
       .select("*")
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -167,6 +173,7 @@ export default function HACCP() {
     const { error } = await supabase.from("haccp").insert([
       {
         user_id: utilizador.id,
+        instituicao_id: instituicaoAtual.id,
         tipo_registo: "temperatura",
         data_registo: temperatura.data || null,
         area: temperatura.equipamento,
@@ -205,6 +212,7 @@ export default function HACCP() {
     const { error } = await supabase.from("haccp").insert([
       {
         user_id: utilizador.id,
+        instituicao_id: instituicaoAtual.id,
         tipo_registo: "checklist",
         data_registo: checklist.data || null,
         area: checklist.area,
@@ -241,6 +249,7 @@ export default function HACCP() {
     const { error } = await supabase.from("haccp").insert([
       {
         user_id: utilizador.id,
+        instituicao_id: instituicaoAtual.id,
         tipo_registo: "nao_conformidade",
         data_registo: naoConformidade.data || null,
         descricao: naoConformidade.descricao,
@@ -277,7 +286,11 @@ export default function HACCP() {
 
     if (!confirmar) return;
 
-    const { error } = await supabase.from("haccp").delete().eq("id", id);
+    const { error } = await supabase
+      .from("haccp")
+      .delete()
+      .eq("id", id)
+      .eq("instituicao_id", instituicaoAtual.id);
 
     if (error) {
       alert(error.message);
@@ -292,7 +305,7 @@ export default function HACCP() {
     const doc = new jsPDF("landscape");
 
     doc.setFontSize(18);
-    doc.text("Relatório HACCP Digital - IPSS", 14, 18);
+    doc.text(`Relatório HACCP Digital - ${instituicaoAtual?.nome || "IPSS"}`, 14, 18);
 
     doc.setFontSize(10);
     doc.text(`Data de emissão: ${new Date().toLocaleDateString("pt-PT")}`, 14, 26);
@@ -372,7 +385,7 @@ export default function HACCP() {
       <h1>HACCP Digital</h1>
 
       <p className="descricao">
-        Controlo de temperaturas, higienização, não conformidades, alertas e
+        {instituicaoAtual?.nome} — Controlo de temperaturas, higienização, não conformidades, alertas e
         relatórios automáticos de segurança alimentar.
       </p>
 

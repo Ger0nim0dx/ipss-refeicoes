@@ -13,8 +13,10 @@ import {
 } from "lucide-react";
 
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 export default function RelatoriosPremium() {
+  const { instituicaoAtual } = useInstituicao();
   const [dadosIPSS, setDadosIPSS] = useState({});
   const [stocks, setStocks] = useState([]);
   const [fichas, setFichas] = useState([]);
@@ -23,46 +25,48 @@ export default function RelatoriosPremium() {
   const [utentes, setUtentes] = useState([]);
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarDados();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarDados() {
     const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
+    if (!userData?.user || !instituicaoAtual?.id) return;
 
     const user = userData.user;
 
     const { data: dadosData } = await supabase
       .from("dados_ipss")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("instituicao_id", instituicaoAtual.id)
       .maybeSingle();
 
     const { data: stocksData } = await supabase
       .from("stocks")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: fichasData } = await supabase
       .from("fichas_tecnicas")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: ementasData } = await supabase
       .from("ementas")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false });
 
     const { data: haccpData } = await supabase
       .from("haccp")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: utentesData } = await supabase
       .from("utentes")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const fichasFormatadas = (fichasData || []).map((ficha) => ({
       id: ficha.id,
@@ -261,7 +265,7 @@ export default function RelatoriosPremium() {
         <div>
           <h1>Relatórios Premium</h1>
           <p className="dashboard-subtitle">
-            Geração de relatórios profissionais para direção, cozinha, nutrição,
+            {instituicaoAtual?.nome || "IPSS"} — Geração de relatórios profissionais para direção, cozinha, nutrição,
             HACCP e auditorias.
           </p>
         </div>

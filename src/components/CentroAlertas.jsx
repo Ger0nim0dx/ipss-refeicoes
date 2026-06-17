@@ -13,8 +13,10 @@ import {
 } from "lucide-react";
 
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 export default function CentroAlertas() {
+  const { instituicaoAtual } = useInstituicao();
   const [stocks, setStocks] = useState([]);
   const [haccp, setHaccp] = useState([]);
   const [utentes, setUtentes] = useState([]);
@@ -23,39 +25,38 @@ export default function CentroAlertas() {
   const [filtro, setFiltro] = useState("todos");
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarDados();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarDados() {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
-
-    const user = userData.user;
+    if (!instituicaoAtual?.id) return;
 
     const { data: stocksData } = await supabase
       .from("stocks")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: haccpData } = await supabase
       .from("haccp")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: utentesData } = await supabase
       .from("utentes")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: fichasData } = await supabase
       .from("fichas_tecnicas")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: ementaData } = await supabase
       .from("ementas")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();

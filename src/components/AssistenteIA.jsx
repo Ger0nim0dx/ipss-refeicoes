@@ -10,8 +10,11 @@ import {
 } from "lucide-react";
 
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 function AssistenteIA() {
+  const { instituicaoAtual } = useInstituicao();
+
   const [pergunta, setPergunta] = useState("");
   const [resposta, setResposta] = useState("");
 
@@ -21,8 +24,10 @@ function AssistenteIA() {
   const [movimentos, setMovimentos] = useState([]);
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarDados();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarDados() {
     const { data: userData } =
@@ -30,31 +35,31 @@ function AssistenteIA() {
 
     const user = userData?.user;
 
-    if (!user) return;
+    if (!user || !instituicaoAtual?.id) return;
 
     const { data: stocksData } =
       await supabase
         .from("stocks")
         .select("*")
-        .eq("user_id", user.id);
+        .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: haccpData } =
       await supabase
         .from("haccp")
         .select("*")
-        .eq("user_id", user.id);
+        .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: dietasData } =
       await supabase
         .from("dietas")
         .select("*")
-        .eq("user_id", user.id);
+        .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: movimentosData } =
       await supabase
         .from("movimentos_stock")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("instituicao_id", instituicaoAtual.id)
         .order("created_at", {
           ascending: false,
         })

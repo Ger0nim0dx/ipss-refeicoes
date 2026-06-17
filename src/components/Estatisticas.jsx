@@ -26,43 +26,60 @@ import {
 } from "recharts";
 
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 function Estatisticas() {
+  const { instituicaoAtual } = useInstituicao();
+
   const [fichas, setFichas] = useState([]);
   const [stocks, setStocks] = useState([]);
   const [movimentos, setMovimentos] = useState([]);
   const [haccp, setHaccp] = useState([]);
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarDados();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarDados() {
-    const { data: userData } = await supabase.auth.getUser();
+    if (!instituicaoAtual?.id) return;
 
-    if (!userData?.user) return;
-
-    const user = userData.user;
-
-    const { data: fichasData } = await supabase
+    const { data: fichasData, error: fichasError } = await supabase
       .from("fichas_tecnicas")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
-    const { data: stocksData } = await supabase
+    if (fichasError) {
+      console.error("Erro ao carregar fichas técnicas:", fichasError);
+    }
+
+    const { data: stocksData, error: stocksError } = await supabase
       .from("stocks")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
-    const { data: movimentosData } = await supabase
+    if (stocksError) {
+      console.error("Erro ao carregar stocks:", stocksError);
+    }
+
+    const { data: movimentosData, error: movimentosError } = await supabase
       .from("movimentos_stock")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
-    const { data: haccpData } = await supabase
+    if (movimentosError) {
+      console.error("Erro ao carregar movimentos de stock:", movimentosError);
+    }
+
+    const { data: haccpData, error: haccpError } = await supabase
       .from("haccp")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
+
+    if (haccpError) {
+      console.error("Erro ao carregar HACCP:", haccpError);
+    }
 
     setFichas(fichasData || []);
     setStocks(stocksData || []);
@@ -72,7 +89,7 @@ function Estatisticas() {
 
   const custoTotalReceitas = fichas.reduce(
     (total, ficha) =>
-      total + Number(ficha?.dados?.custoTotal || 0),
+      total + Number(ficha?.dados?.custoTotal || ficha?.custoTotal || 0),
     0
   );
 
@@ -90,7 +107,8 @@ function Estatisticas() {
   const alertasHaccp = haccp.filter(
     (item) =>
       item.estado === "Crítico" ||
-      item.estado === "Não conforme"
+      item.estado === "Não conforme" ||
+      item.tipo_registo === "nao_conformidade"
   );
 
   const totalEntradas = movimentos.filter((m) =>
@@ -99,22 +117,22 @@ function Estatisticas() {
       .includes("entrada")
   ).length;
 
-  const totalSaidas = movimentos.filter((m) =>
-    String(m.tipo || "")
-      .toLowerCase()
-      .includes("produção")
-  ).length;
+  const totalSaidas = movimentos.filter((m) => {
+    const tipo = String(m.tipo || "").toLowerCase();
 
-  const topReceitas = fichas
+    return tipo.includes("produção") || tipo.includes("saída");
+  }).length;
+
+  const topReceitas = [...fichas]
     .sort(
       (a, b) =>
-        Number(b?.dados?.custoTotal || 0) -
-        Number(a?.dados?.custoTotal || 0)
+        Number(b?.dados?.custoTotal || b?.custoTotal || 0) -
+        Number(a?.dados?.custoTotal || a?.custoTotal || 0)
     )
     .slice(0, 5)
     .map((item) => ({
       nome: item.nome,
-      custo: Number(item?.dados?.custoTotal || 0),
+      custo: Number(item?.dados?.custoTotal || item?.custoTotal || 0),
     }));
 
   const graficoStock = stocks.slice(0, 8).map((item) => ({
@@ -152,7 +170,8 @@ function Estatisticas() {
           <h1>Estatísticas</h1>
 
           <p className="dashboard-subtitle">
-            Indicadores estratégicos e análise da operação alimentar.
+            {instituicaoAtual?.nome} — Indicadores estratégicos e análise da
+            operação alimentar.
           </p>
         </div>
       </div>

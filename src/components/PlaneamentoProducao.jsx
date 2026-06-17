@@ -3,26 +3,23 @@ import { useEffect, useState } from "react";
 import {
   ChefHat,
   Clock3,
-  UtensilsCrossed,
   PackageCheck,
   AlertTriangle,
   CheckCircle2,
-  BrainCircuit,
-  PlayCircle,
-  PauseCircle,
   ClipboardList,
   Euro,
 } from "lucide-react";
 
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 export default function PlaneamentoProducao() {
+  const { instituicaoAtual } = useInstituicao();
+
   const [fichas, setFichas] = useState([]);
   const [ementa, setEmenta] = useState({});
   const [stocks, setStocks] = useState([]);
-  const [diaSelecionado, setDiaSelecionado] =
-    useState("Segunda-feira");
-
+  const [diaSelecionado, setDiaSelecionado] = useState("Segunda-feira");
   const [tarefas, setTarefas] = useState({});
 
   const diasSemana = [
@@ -45,46 +42,51 @@ export default function PlaneamentoProducao() {
   ];
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarDados();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarDados() {
-    const { data: userData } =
-      await supabase.auth.getUser();
+    if (!instituicaoAtual?.id) return;
 
-    if (!userData?.user) return;
-
-    const user = userData.user;
-
-    const { data: fichasData } = await supabase
+    const { data: fichasData, error: fichasError } = await supabase
       .from("fichas_tecnicas")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
-    const { data: ementaData } = await supabase
+    if (fichasError) {
+      console.error(fichasError);
+    }
+
+    const { data: ementaData, error: ementaError } = await supabase
       .from("ementas")
       .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", {
-        ascending: false,
-      })
+      .eq("instituicao_id", instituicaoAtual.id)
+      .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    const { data: stocksData } = await supabase
+    if (ementaError) {
+      console.error(ementaError);
+    }
+
+    const { data: stocksData, error: stocksError } = await supabase
       .from("stocks")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
-    const fichasFormatadas = (fichasData || []).map(
-      (ficha) => ({
-        id: ficha.id,
-        nome: ficha.nome,
-        categoria: ficha.categoria,
-        doses: ficha.doses,
-        ...ficha.dados,
-      })
-    );
+    if (stocksError) {
+      console.error(stocksError);
+    }
+
+    const fichasFormatadas = (fichasData || []).map((ficha) => ({
+      id: ficha.id,
+      nome: ficha.nome,
+      categoria: ficha.categoria,
+      doses: ficha.doses,
+      ...ficha.dados,
+    }));
 
     setFichas(fichasFormatadas);
     setEmenta(ementaData?.dados || {});
@@ -99,17 +101,13 @@ export default function PlaneamentoProducao() {
   }
 
   function obterFicha(id) {
-    return fichas.find(
-      (ficha) => String(ficha.id) === String(id)
-    );
+    return fichas.find((ficha) => String(ficha.id) === String(id));
   }
 
   function receitasDoDia() {
     return refeicoes
       .map((refeicao) => {
-        const receitaId =
-          ementa[diaSelecionado]?.[refeicao];
-
+        const receitaId = ementa[diaSelecionado]?.[refeicao];
         const ficha = obterFicha(receitaId);
 
         return ficha
@@ -126,33 +124,24 @@ export default function PlaneamentoProducao() {
     const acumulador = {};
 
     receitasDoDia().forEach((item) => {
-      item.ficha.ingredientes?.forEach(
-        (ingrediente) => {
-          const chave = normalizar(
-            ingrediente.nome
-          );
+      item.ficha.ingredientes?.forEach((ingrediente) => {
+        const chave = normalizar(ingrediente.nome);
 
-          if (!acumulador[chave]) {
-            acumulador[chave] = {
-              nome: ingrediente.nome,
-              quantidade: 0,
-            };
-          }
-
-          acumulador[chave].quantidade += Number(
-            ingrediente.quantidade || 0
-          );
+        if (!acumulador[chave]) {
+          acumulador[chave] = {
+            nome: ingrediente.nome,
+            quantidade: 0,
+          };
         }
-      );
+
+        acumulador[chave].quantidade += Number(ingrediente.quantidade || 0);
+      });
     });
 
     return Object.values(acumulador);
   }
 
-  function converterParaGramas(
-    quantidade,
-    unidade
-  ) {
+  function converterParaGramas(quantidade, unidade) {
     const valor = Number(quantidade) || 0;
 
     if (unidade === "kg") return valor * 1000;
@@ -163,17 +152,10 @@ export default function PlaneamentoProducao() {
     return valor;
   }
 
-  function encontrarProdutoStock(
-    nomeIngrediente
-  ) {
+  function encontrarProdutoStock(nomeIngrediente) {
     return stocks.find((item) => {
-      const nomeStock = normalizar(
-        item.produto || item.nome
-      );
-
-      const nomeIng = normalizar(
-        nomeIngrediente
-      );
+      const nomeStock = normalizar(item.produto || item.nome);
+      const nomeIng = normalizar(nomeIngrediente);
 
       return (
         nomeStock === nomeIng ||
@@ -184,22 +166,16 @@ export default function PlaneamentoProducao() {
   }
 
   function verificarStock(ingrediente) {
-    const produto = encontrarProdutoStock(
-      ingrediente.nome
-    );
+    const produto = encontrarProdutoStock(ingrediente.nome);
 
     if (!produto) {
       return {
         estado: "em falta",
-        mensagem:
-          "Sem produto correspondente no stock",
+        mensagem: "Sem produto correspondente no stock",
       };
     }
 
-    const disponivel = converterParaGramas(
-      produto.quantidade,
-      produto.unidade
-    );
+    const disponivel = converterParaGramas(produto.quantidade, produto.unidade);
 
     if (disponivel < ingrediente.quantidade) {
       return {
@@ -219,15 +195,11 @@ export default function PlaneamentoProducao() {
       return `${(gramas / 1000).toFixed(2)} kg`;
     }
 
-    return `${Number(gramas || 0).toFixed(
-      0
-    )} g`;
+    return `${Number(gramas || 0).toFixed(0)} g`;
   }
 
   function tempoEstimadoReceita(ficha) {
-    const texto = normalizar(
-      `${ficha.nome} ${ficha.categoria}`
-    );
+    const texto = normalizar(`${ficha.nome} ${ficha.categoria}`);
 
     if (texto.includes("sopa")) return 60;
     if (texto.includes("assado")) return 120;
@@ -242,15 +214,11 @@ export default function PlaneamentoProducao() {
 
   function planoAutomatico() {
     const receitas = receitasDoDia();
-
     let horaBase = 7 * 60 + 30;
 
     return receitas.map((item, index) => {
-      const duracao =
-        tempoEstimadoReceita(item.ficha);
-
+      const duracao = tempoEstimadoReceita(item.ficha);
       const inicio = horaBase;
-
       const fim = inicio + duracao;
 
       horaBase = fim + 10;
@@ -265,29 +233,18 @@ export default function PlaneamentoProducao() {
         duracao,
         inicio,
         fim,
-        custo: Number(
-          item.ficha.custoTotal || 0
-        ),
-        alergenios:
-          item.ficha.alergenios ||
-          "Sem alergénios registados",
-
-        haccp:
-          item.ficha.haccp ||
-          "Sem observações HACCP registadas",
+        custo: Number(item.ficha.custoTotal || 0),
+        alergenios: item.ficha.alergenios || "Sem alergénios registados",
+        haccp: item.ficha.haccp || "Sem observações HACCP registadas",
       };
     });
   }
 
   function formatarHora(minutos) {
     const h = Math.floor(minutos / 60);
-
     const m = minutos % 60;
 
-    return `${String(h).padStart(
-      2,
-      "0"
-    )}h${String(m).padStart(2, "0")}`;
+    return `${String(h).padStart(2, "0")}h${String(m).padStart(2, "0")}`;
   }
 
   function estadoTarefa(id) {
@@ -302,44 +259,27 @@ export default function PlaneamentoProducao() {
   }
 
   const receitas = receitasDoDia();
-
   const ingredientes = ingredientesDoDia();
-
   const plano = planoAutomatico();
 
-  const ingredientesCriticos =
-    ingredientes.filter((item) => {
-      const verificacao =
-        verificarStock(item);
-
-      return (
-        verificacao.estado !== "suficiente"
-      );
-    });
+  const ingredientesCriticos = ingredientes.filter((item) => {
+    const verificacao = verificarStock(item);
+    return verificacao.estado !== "suficiente";
+  });
 
   const custoDia = receitas.reduce(
-    (total, item) =>
-      total +
-      Number(item.ficha.custoTotal || 0),
+    (total, item) => total + Number(item.ficha.custoTotal || 0),
     0
   );
 
-  const tempoTotal = plano.reduce(
-    (total, item) => total + item.duracao,
-    0
-  );
+  const tempoTotal = plano.reduce((total, item) => total + item.duracao, 0);
 
   const concluidas = plano.filter(
-    (item) =>
-      estadoTarefa(item.id) === "concluido"
+    (item) => estadoTarefa(item.id) === "concluido"
   ).length;
 
   const progresso =
-    plano.length > 0
-      ? Math.round(
-          (concluidas / plano.length) * 100
-        )
-      : 0;
+    plano.length > 0 ? Math.round((concluidas / plano.length) * 100) : 0;
 
   return (
     <div className="dashboard">
@@ -348,10 +288,9 @@ export default function PlaneamentoProducao() {
           <h1>Planeamento de Produção</h1>
 
           <p className="dashboard-subtitle">
-            Organização diária da cozinha
-            com receitas, tempos,
-            ingredientes, stock, alergénios,
-            HACCP e estado de execução.
+            {instituicaoAtual?.nome} — Organização diária da cozinha com
+            receitas, tempos, ingredientes, stock, alergénios, HACCP e estado de
+            execução.
           </p>
         </div>
 
@@ -368,13 +307,9 @@ export default function PlaneamentoProducao() {
             <button
               key={dia}
               className={
-                diaSelecionado === dia
-                  ? "botao-principal"
-                  : "botao-secundario"
+                diaSelecionado === dia ? "botao-principal" : "botao-secundario"
               }
-              onClick={() =>
-                setDiaSelecionado(dia)
-              }
+              onClick={() => setDiaSelecionado(dia)}
             >
               {dia}
             </button>
@@ -385,71 +320,161 @@ export default function PlaneamentoProducao() {
       <div className="dashboard-cards">
         <div className="dashboard-card destaque">
           <ClipboardList size={30} />
-
           <h3>Produções do dia</h3>
-
           <p>{plano.length}</p>
-
           <span>Receitas planeadas</span>
         </div>
 
         <div className="dashboard-card">
           <Clock3 size={30} />
-
           <h3>Tempo estimado</h3>
-
           <p>{Math.round(tempoTotal / 60)}h</p>
-
           <span>Tempo total previsto</span>
         </div>
 
         <div className="dashboard-card">
           <PackageCheck size={30} />
-
           <h3>Ingredientes</h3>
-
           <p>{ingredientes.length}</p>
-
           <span>Necessários</span>
         </div>
 
         <div className="dashboard-card">
           <AlertTriangle size={30} />
-
           <h3>Críticos</h3>
-
-          <p>
-            {ingredientesCriticos.length}
-          </p>
-
-          <span>
-            Em falta ou insuficientes
-          </span>
+          <p>{ingredientesCriticos.length}</p>
+          <span>Em falta ou insuficientes</span>
         </div>
 
         <div className="dashboard-card">
           <Euro size={30} />
-
           <h3>Custo do dia</h3>
-
           <p>{custoDia.toFixed(2)} €</p>
-
-          <span>
-            Com base nas fichas técnicas
-          </span>
+          <span>Com base nas fichas técnicas</span>
         </div>
 
         <div className="dashboard-card">
           <CheckCircle2 size={30} />
-
           <h3>Progresso</h3>
-
           <p>{progresso}%</p>
-
-          <span>
-            Produção concluída
-          </span>
+          <span>Produção concluída</span>
         </div>
+      </div>
+
+      <div className="dashboard-section">
+        <h2>Plano automático do dia</h2>
+
+        {plano.length === 0 ? (
+          <p>Não existem receitas planeadas para este dia.</p>
+        ) : (
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Ordem</th>
+                <th>Hora</th>
+                <th>Refeição</th>
+                <th>Receita</th>
+                <th>Doses</th>
+                <th>Duração</th>
+                <th>Custo</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {plano.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.ordem}</td>
+                  <td>
+                    {formatarHora(item.inicio)} - {formatarHora(item.fim)}
+                  </td>
+                  <td>{item.refeicao}</td>
+                  <td>{item.receita}</td>
+                  <td>{item.doses}</td>
+                  <td>{item.duracao} min</td>
+                  <td>{item.custo.toFixed(2)} €</td>
+                  <td>
+                    <select
+                      value={estadoTarefa(item.id)}
+                      onChange={(e) => atualizarEstado(item.id, e.target.value)}
+                    >
+                      <option value="pendente">Pendente</option>
+                      <option value="em_execucao">Em execução</option>
+                      <option value="concluido">Concluído</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="dashboard-section">
+        <h2>Ingredientes necessários</h2>
+
+        {ingredientes.length === 0 ? (
+          <p>Não existem ingredientes associados ao plano deste dia.</p>
+        ) : (
+          <table className="dashboard-table">
+            <thead>
+              <tr>
+                <th>Ingrediente</th>
+                <th>Quantidade</th>
+                <th>Estado stock</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {ingredientes.map((item) => {
+                const verificacao = verificarStock(item);
+
+                return (
+                  <tr key={item.nome}>
+                    <td>{item.nome}</td>
+                    <td>{formatarQuantidade(item.quantidade)}</td>
+                    <td>
+                      {verificacao.estado === "suficiente" ? (
+                        <span style={{ color: "#16a34a", fontWeight: "bold" }}>
+                          ✔ {verificacao.mensagem}
+                        </span>
+                      ) : (
+                        <span style={{ color: "#dc2626", fontWeight: "bold" }}>
+                          ⚠ {verificacao.mensagem}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="dashboard-section">
+        <h2>Alergénios e HACCP</h2>
+
+        {plano.length === 0 ? (
+          <p>Não existem dados para apresentar.</p>
+        ) : (
+          <div className="historico-grid">
+            {plano.map((item) => (
+              <div className="historico-card" key={item.id}>
+                <h3>{item.receita}</h3>
+                <p>
+                  <strong>Refeição:</strong> {item.refeicao}
+                </p>
+                <p>
+                  <strong>Alergénios:</strong> {item.alergenios}
+                </p>
+                <p>
+                  <strong>HACCP:</strong> {item.haccp}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

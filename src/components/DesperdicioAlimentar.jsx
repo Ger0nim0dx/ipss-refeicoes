@@ -30,8 +30,11 @@ import {
 } from "recharts";
 
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 export default function DesperdicioAlimentar() {
+  const { instituicaoAtual } = useInstituicao();
+
   const [registos, setRegistos] = useState([]);
 
   const [data, setData] = useState(new Date().toISOString().split("T")[0]);
@@ -45,17 +48,18 @@ export default function DesperdicioAlimentar() {
   const [observacoes, setObservacoes] = useState("");
 
   useEffect(() => {
-    carregarRegistos();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarRegistos();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarRegistos() {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
+    if (!instituicaoAtual?.id) return;
 
     const { data, error } = await supabase
       .from("desperdicio_alimentar")
       .select("*")
-      .eq("user_id", userData.user.id)
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("data", { ascending: false });
 
     if (error) {
@@ -75,8 +79,14 @@ export default function DesperdicioAlimentar() {
       return;
     }
 
+    if (!instituicaoAtual?.id) {
+      alert("Seleciona uma instituição antes de guardar o registo.");
+      return;
+    }
+
     const novoRegisto = {
       user_id: userData.user.id,
+      instituicao_id: instituicaoAtual.id,
       data,
       valencia,
       refeicao,
@@ -116,7 +126,8 @@ export default function DesperdicioAlimentar() {
     const { error } = await supabase
       .from("desperdicio_alimentar")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("instituicao_id", instituicaoAtual.id);
 
     if (error) {
       console.error(error);
@@ -241,7 +252,11 @@ export default function DesperdicioAlimentar() {
     const doc = new jsPDF();
 
     doc.setFontSize(20);
-    doc.text("Relatório Ambiental de Desperdício", 14, 20);
+    doc.text(
+      `Relatório Ambiental de Desperdício - ${instituicaoAtual?.nome || "IPSS"}`,
+      14,
+      20
+    );
 
     doc.setFontSize(11);
     doc.text(`Data: ${new Date().toLocaleDateString("pt-PT")}`, 14, 30);
@@ -320,7 +335,6 @@ export default function DesperdicioAlimentar() {
     doc.save("relatorio-ambiental-desperdicio.pdf");
   }
 
-
   const previsoesIA = rankingReceitas.map((item) => {
     const registosReceita = registos.filter((r) => r.receita === item.nome);
 
@@ -382,8 +396,8 @@ export default function DesperdicioAlimentar() {
         <div>
           <h1>Desperdício Alimentar</h1>
           <p className="dashboard-subtitle">
-            Monitorização do desperdício por refeição, valência, custo e impacto
-            operacional.
+            {instituicaoAtual?.nome} — Monitorização do desperdício por refeição,
+            valência, custo e impacto operacional.
           </p>
         </div>
 
@@ -640,7 +654,6 @@ export default function DesperdicioAlimentar() {
         )}
       </div>
 
-
       <div className="dashboard-section">
         <h2>
           <BrainCircuit size={22} /> Previsão IA de Desperdício
@@ -690,9 +703,8 @@ export default function DesperdicioAlimentar() {
           ) : (
             <>
               <p>
-                Foram registados{" "}
-                <strong>{totalDesperdicio.toFixed(1)} kg</strong> de desperdício
-                alimentar, com um custo estimado de{" "}
+                Foram registados <strong>{totalDesperdicio.toFixed(1)} kg</strong>{" "}
+                de desperdício alimentar, com um custo estimado de{" "}
                 <strong>{custoTotalDesperdicio.toFixed(2)} €</strong>.
               </p>
 

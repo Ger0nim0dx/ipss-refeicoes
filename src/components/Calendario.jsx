@@ -10,8 +10,11 @@ import {
 } from "lucide-react";
 
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 export default function Calendario() {
+  const { instituicaoAtual } = useInstituicao();
+
   const [fichas, setFichas] = useState([]);
   const [ementa, setEmenta] = useState({});
   const [stocks, setStocks] = useState([]);
@@ -39,24 +42,24 @@ export default function Calendario() {
   ];
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarDados();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarDados() {
     const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
-
-    const user = userData.user;
+    if (!userData?.user || !instituicaoAtual?.id) return;
 
     const { data: fichasData } = await supabase
       .from("fichas_tecnicas")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: ementaData } = await supabase
       .from("ementas")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -64,17 +67,17 @@ export default function Calendario() {
     const { data: stocksData } = await supabase
       .from("stocks")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: haccpData } = await supabase
       .from("haccp")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: utentesData } = await supabase
       .from("utentes")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const fichasFormatadas = (fichasData || []).map((ficha) => ({
       id: ficha.id,

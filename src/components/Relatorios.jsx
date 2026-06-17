@@ -6,8 +6,10 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 import { supabase } from "../supabaseClient";
+import { useInstituicao } from "../context/InstituicaoContext";
 
 function Relatorios() {
+  const { instituicaoAtual } = useInstituicao();
   const [dadosIPSS, setDadosIPSS] = useState({});
   const [stocks, setStocks] = useState([]);
   const [movimentos, setMovimentos] = useState([]);
@@ -17,8 +19,10 @@ function Relatorios() {
   const [dataRelatorio, setDataRelatorio] = useState("");
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+    if (instituicaoAtual?.id) {
+      carregarDados();
+    }
+  }, [instituicaoAtual]);
 
   async function carregarDados() {
     const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -30,31 +34,33 @@ function Relatorios() {
 
     const user = userData.user;
 
+    if (!instituicaoAtual?.id) return;
+
     const { data: dadosData } = await supabase
       .from("dados_ipss")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("instituicao_id", instituicaoAtual.id)
       .maybeSingle();
 
     const { data: stocksData } = await supabase
       .from("stocks")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: dietasData } = await supabase
       .from("dietas")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: haccpData } = await supabase
       .from("haccp")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("instituicao_id", instituicaoAtual.id);
 
     const { data: movimentosData } = await supabase
       .from("movimentos_stock")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("instituicao_id", instituicaoAtual.id)
       .order("created_at", { ascending: false });
 
     setDadosIPSS(dadosData || {});
@@ -143,7 +149,7 @@ function Relatorios() {
     const dataAtual = new Date().toLocaleDateString("pt-PT");
 
     doc.setFontSize(22);
-    doc.text("IPSS Gestão", 14, 20);
+    doc.text(instituicaoAtual?.nome || "IPSS Gestão", 14, 20);
 
     doc.setFontSize(17);
     doc.text("Relatório Executivo", 14, 32);
@@ -248,7 +254,7 @@ function Relatorios() {
       <h1>Relatórios Automáticos</h1>
 
       <p className="descricao">
-        Geração automática de relatórios com base nos dados registados na app.
+        {instituicaoAtual?.nome} — Geração automática de relatórios com base nos dados registados na app.
       </p>
 
       <div className="dashboard-cards">
